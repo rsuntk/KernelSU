@@ -3,6 +3,8 @@ set -eu
 
 GKI_ROOT=$(pwd)
 
+echo -e '\e]8;;https://github.com/tiann/KernelSU\e\\[i] You are using unofficial KernelSU, click this link for Official KernelSU repository.\e]8;;\e\\'
+
 display_usage() {
     echo "Usage: $0 [--cleanup | <commit-or-tag>]"
     echo "  --cleanup:              Cleans up previous modifications made by the script."
