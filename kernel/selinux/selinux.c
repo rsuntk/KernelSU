@@ -54,8 +54,8 @@ if (!is_domain_permissive) {
 
 void setenforce(bool enforce)
 {
-#ifdef KSU_COMPAT_USE_SELINUX_STATE
 #ifdef CONFIG_SECURITY_SELINUX_DEVELOP
+#ifdef KSU_COMPAT_USE_SELINUX_STATE
 	selinux_state.enforcing = enforce;
 #else
 	selinux_enforcing = enforce;
