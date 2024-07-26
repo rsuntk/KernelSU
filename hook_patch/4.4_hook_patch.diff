@@ -148,6 +148,8 @@
         return dentry;
  }
 
+!! THIS PATCH IS UNTESTED !!
+
 +#ifdef CONFIG_KSU
 +extern int ksu_handle_devpts(struct inode*);
 +#endif
