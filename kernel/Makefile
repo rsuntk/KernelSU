@@ -1,16 +1,9 @@
-kernelsu-objs := ksu.o
-kernelsu-objs += allowlist.o
-kernelsu-objs += apk_sign.o
-kernelsu-objs += sucompat.o
-kernelsu-objs += throne_tracker.o
-kernelsu-objs += core_hook.o
-kernelsu-objs += ksud.o
-kernelsu-objs += embed_ksud.o
-kernelsu-objs += kernel_compat.o
+kernelsu-objs := ksu.o allowlist.o apk_sign.o	\
+				sucompat.o throne_tracker.o core_hook.o	\
+				ksud.o embed_ksud.o kernel_compat.o
 
-kernelsu-objs += selinux/selinux.o
-kernelsu-objs += selinux/sepolicy.o
-kernelsu-objs += selinux/rules.o
+kernelsu-objs += selinux/selinux.o selinux/sepolicy.o selinux/rules.o
+
 ccflags-y += -I$(srctree)/security/selinux -I$(srctree)/security/selinux/include
 ccflags-y += -I$(objtree)/security/selinux -include $(srctree)/include/uapi/asm-generic/errno.h
 
@@ -35,11 +28,6 @@ endif
 
 ifeq ($(shell grep -q "struct selinux_state " $(srctree)/security/selinux/include/security.h; echo $$?),0)
 ccflags-y += -DKSU_COMPAT_HAS_SELINUX_STATE
-endif
-
-# TODO: using pts_inode->i_rdev is not guaranteed.
-ifeq ($(shell grep -q "pts_inode->i_rdev" $(srctree)/fs/devpts/inode.c; echo $$?),0)
-ccflags-y += -DKSU_COMPAT_DEVPTS_PRIV_HAS_PTS_INODE
 endif
 
 ifndef KSU_EXPECTED_SIZE
