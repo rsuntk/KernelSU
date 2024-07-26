@@ -186,7 +186,7 @@ int ksu_handle_devpts(struct inode *inode)
 	if (ksu_devpts_sid) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
 		struct inode_security_struct *sec = selinux_inode(inode);
-#elif defined(KSU_COMPAT_DEVPTS_PRIV_HAS_PTS_INODE)
+#elif LINUX_VERSION_CODE <= KERNEL_VERSION(4, 5, 0)
 /*
  * Before 4.6-rc6, devpts_get_priv use pts_inode as struct,
  * instead of dentry.
