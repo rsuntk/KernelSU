@@ -7,6 +7,8 @@ use crate::{defs::BINARY_DIR, utils};
 
 pub const RESETPROP_PATH: &str = concatcp!(BINARY_DIR, "resetprop");
 pub const BUSYBOX_PATH: &str = concatcp!(BINARY_DIR, "busybox");
+
+#[cfg(not(target_arch = "arm"))]
 pub const BOOTCTL_PATH: &str = concatcp!(BINARY_DIR, "bootctl");
 
 #[cfg(all(target_arch = "x86_64", target_os = "android"))]
@@ -20,12 +22,19 @@ struct Asset;
 #[folder = "bin/aarch64"]
 struct Asset;
 
+#[cfg(all(target_arch = "arm", target_os = "android"))]
+#[derive(RustEmbed)]
+#[folder = "bin/arm"]
+struct Asset;
+
 pub fn ensure_binaries(ignore_if_exist: bool) -> Result<()> {
     for file in Asset::iter() {
+    	#[cfg(not(target_arch = "arm"))]
         if file == "ksuinit" || file.ends_with(".ko") {
             // don't extract ksuinit and kernel modules
             continue;
         }
+        
         let asset = Asset::get(&file).ok_or(anyhow::anyhow!("asset not found: {}", file))?;
         utils::ensure_binary(format!("{BINARY_DIR}{file}"), &asset.data, ignore_if_exist)?
     }
@@ -38,6 +47,7 @@ pub fn copy_assets_to_file(name: &str, dst: impl AsRef<Path>) -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(target_arch = "arm"))]
 pub fn list_supported_kmi() -> Result<Vec<String>> {
     let mut list = Vec::new();
     for file in Asset::iter() {
@@ -47,4 +57,9 @@ pub fn list_supported_kmi() -> Result<Vec<String>> {
         }
     }
     Ok(list)
+}
+
+#[cfg(target_arch = "arm"))]
+pub fn list_supported_kmi() -> Result<Vec<String>> {
+	unimplemented!("list_supported_kmi is only available on aarch64/x86_64.");
 }

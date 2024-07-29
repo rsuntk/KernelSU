@@ -60,6 +60,7 @@ enum Commands {
     },
 
     /// Patch boot or init_boot images to apply KernelSU
+	#[cfg(not(target_arch = "arm"))]
     BootPatch {
         /// boot image path, if not specified, will try to find the boot image automatically
         #[arg(short, long)]
@@ -99,6 +100,7 @@ enum Commands {
     },
 
     /// Restore boot or init_boot images patched by KernelSU
+	#[cfg(not(target_arch = "arm"))]
     BootRestore {
         /// boot image path, if not specified, will try to find the boot image automatically
         #[arg(short, long)]
@@ -114,6 +116,7 @@ enum Commands {
     },
 
     /// Show boot information
+	#[cfg(not(target_arch = "arm"))]
     BootInfo {
         #[command(subcommand)]
         command: BootInfo,
@@ -125,6 +128,7 @@ enum Commands {
     },
 }
 
+#[cfg(not(target_arch = "arm"))]
 #[derive(clap::Subcommand, Debug)]
 enum BootInfo {
     /// show current kmi version
@@ -353,6 +357,7 @@ pub fn run() -> Result<()> {
             Debug::Test => assets::ensure_binaries(false),
         },
 
+	#[cfg(not(target_arch = "arm"))]
         Commands::BootPatch {
             boot,
             init,
@@ -365,6 +370,7 @@ pub fn run() -> Result<()> {
             kmi,
         } => crate::boot_patch::patch(boot, kernel, module, init, ota, flash, out, magiskboot, kmi),
 
+	#[cfg(not(target_arch = "arm"))]
         Commands::BootInfo { command } => match command {
             BootInfo::CurrentKmi => {
                 let kmi = crate::boot_patch::get_current_kmi()?;
@@ -378,6 +384,7 @@ pub fn run() -> Result<()> {
                 return Ok(());
             }
         },
+	#[cfg(not(target_arch = "arm"))]
         Commands::BootRestore {
             boot,
             magiskboot,
