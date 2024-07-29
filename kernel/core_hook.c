@@ -25,11 +25,13 @@
 #include <linux/namei.h>
 
 #ifdef MODULE
+#ifndef KSU_ARM
 #include <linux/list.h>
 #include <linux/irqflags.h>
 #include <linux/mm_types.h>
 #include <linux/rcupdate.h>
 #include <linux/vmalloc.h>
+#endif
 #endif
 
 #include "allowlist.h"
@@ -267,10 +269,14 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 			pr_err("prctl reply error, cmd: %lu\n", arg2);
 		}
 #ifdef MODULE
+#ifdef KSU_ARM
+#error "Cannot build as LKM for ARM!"
+#else
 		u32 is_lkm = 0x1;
+#endif /* KSU_ARM */
 #else
 		u32 is_lkm = 0x0;
-#endif
+#endif /* MODULE */
 		if (arg4 && copy_to_user(arg4, &is_lkm, sizeof(is_lkm))) {
 			pr_err("prctl reply error, cmd: %lu\n", arg2);
 		}

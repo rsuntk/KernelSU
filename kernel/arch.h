@@ -32,6 +32,14 @@
 #define SYS_EXECVE_SYMBOL "sys_execve"
 #endif
 
+#elif defined(__arm__)
+
+#ifdef CONFIG_KPROBES
+#error "KRPOBES is not supported on ARM!"
+#endif
+
+#define KSU_ARM
+
 #elif defined(__x86_64__)
 
 #define __PT_PARM1_REG di
