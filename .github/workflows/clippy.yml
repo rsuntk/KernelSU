@@ -4,12 +4,14 @@ on:
   push:
     branches:
       - main
+      - 'staging'
     paths:
       - '.github/workflows/clippy.yml'
       - 'userspace/ksud/**'
   pull_request:
     branches:
       - main
+      - 'staging'
     paths:
       - '.github/workflows/clippy.yml'
       - 'userspace/ksud/**'
@@ -34,4 +36,5 @@ jobs:
       - name: Run clippy
         run: |
           cross clippy --manifest-path userspace/ksud/Cargo.toml --target aarch64-linux-android --release
+          cross clippy --manifest-path userspace/ksud/Cargo.toml --target armv7-linux-androideabi --release
           cross clippy --manifest-path userspace/ksud/Cargo.toml --target x86_64-linux-android --release
