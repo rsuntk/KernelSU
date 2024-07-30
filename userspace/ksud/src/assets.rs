@@ -29,7 +29,7 @@ struct Asset;
 
 pub fn ensure_binaries(ignore_if_exist: bool) -> Result<()> {
     for file in Asset::iter() {
-    	#[cfg(not(target_arch = "arm"))]
+    	#[cfg(not(target_arch = "arm")]
         if file == "ksuinit" || file.ends_with(".ko") {
             // don't extract ksuinit and kernel modules
             continue;
@@ -47,7 +47,7 @@ pub fn copy_assets_to_file(name: &str, dst: impl AsRef<Path>) -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(target_arch = "arm"))]
+#[cfg(not(target_arch = "arm")]
 pub fn list_supported_kmi() -> Result<Vec<String>> {
     let mut list = Vec::new();
     for file in Asset::iter() {
@@ -59,7 +59,7 @@ pub fn list_supported_kmi() -> Result<Vec<String>> {
     Ok(list)
 }
 
-#[cfg(target_arch = "arm"))]
+#[cfg(target_arch = "arm")]
 pub fn list_supported_kmi() -> Result<Vec<String>> {
 	unimplemented!("list_supported_kmi is only available on aarch64/x86_64.");
 }
