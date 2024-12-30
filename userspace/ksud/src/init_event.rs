@@ -3,7 +3,8 @@ use crate::module::{handle_updated_modules, prune_modules};
 use crate::{assets, defs, ksucalls, restorecon, utils};
 use anyhow::{Context, Result};
 use log::{info, warn};
-use rustix::fs::{MountFlags, mount};
+use rustix::fs::{MountFlags, MountPropagationFlags, mount};
+use rustix::mount::mount_change;
 use std::path::Path;
 
 // https://github.com/tiann/KernelSU/blob/v0.9.5/userspace/ksud/src/mount.rs#L158
@@ -16,6 +17,7 @@ fn mount_tmpfs(dest: impl AsRef<Path>) -> Result<()> {
         MountFlags::empty(),
         "",
     )?;
+    mount_change(dest.as_ref(), MountPropagationFlags::PRIVATE).context("make tmpfs private")?;
     Ok(())
 }
 
