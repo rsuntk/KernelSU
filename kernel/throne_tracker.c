@@ -186,9 +186,8 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 			}
 
 			bool is_manager = is_manager_apk(dirpath);
-			pr_info("Found new base.apk at path: %s, is_manager: %d\n",
-				dirpath, is_manager);
 			if (is_manager) {
+				pr_info("Found new base.apk at path: %s\n", dirpath);
 				crown_manager(dirpath, my_ctx->private_data);
 				*my_ctx->stop = 1;
 
