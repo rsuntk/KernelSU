@@ -41,9 +41,12 @@ endif
 ifeq ($(shell grep -q "get_cred_rcu" $(srctree)/include/linux/cred.h; echo $$?),0)
 ccflags-y += -DKSU_COMPAT_GET_CRED_RCU
 else
-$(info -- Your kernel does not support get_cred_rcu, its recommended to backport it.)
-$(info -- How to backport: https://github.com/tiann/KernelSU/pull/2320#issuecomment-2564232958)
-$(info -- Fallback to old changes.)
+ifeq ($(shell grep -q "atomic_long_inc_not_zero" $(srctree)/include/linux/cred.h; echo $$?),0)
+$(info -- KernelSU compat: atomic_long_inc_not_zero detected.)
+ccflags-y += -DKSU_COMPAT_LONG_INC
+else
+$(info -- KernelSU compat: atomic_inc_not_zero detected.)
+endif
 endif
 
 ifndef KSU_EXPECTED_SIZE
