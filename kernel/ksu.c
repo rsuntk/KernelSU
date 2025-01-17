@@ -4,10 +4,6 @@
 #include <linux/module.h>
 #include <linux/workqueue.h>
 
-#ifdef CONFIG_KSU_CMDLINE
-#include <linux/init.h>
-#endif
-
 #include "allowlist.h"
 #include "arch.h"
 #include "core_hook.h"
@@ -16,7 +12,10 @@
 #include "throne_tracker.h"
 
 #ifdef CONFIG_KSU_CMDLINE
-unsigned int enable_kernelsu = 1;
+#include <linux/init.h>
+
+unsigned int enable_kernelsu = 1; // enabled by default
+
 static int __init read_kernelsu_state(char *s)
 {
 	if (s)
@@ -24,10 +23,13 @@ static int __init read_kernelsu_state(char *s)
 	return 1;
 }
 __setup("kernelsu.enabled=", read_kernelsu_state);
+
+#if 0
 unsigned int get_ksu_state(void)
 {
 	return enable_kernelsu;
 }
+#endif
 #endif
 
 static struct workqueue_struct *ksu_workqueue;
@@ -60,7 +62,7 @@ int __init kernelsu_init(void)
 {
 #ifdef CONFIG_KSU_CMDLINE
 	if (enable_kernelsu < 1) {
-		pr_info_once(" is disabled");
+		pr_info_once("drivers is disabled.");
 		return 0;
 	}
 #endif

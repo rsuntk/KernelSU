@@ -25,11 +25,11 @@ config KSU_ALLOWLIST_WORKAROUND
           Useful for situations where the SU allowlist is not kept after a reboot.
 
 config KSU_CMDLINE
-	bool "Enable KernelSU toggle cmdline"
+	bool "Enable KernelSU cmdline"
 	depends on KSU
 	default n
 	help
-	  Enable a cmdline called kernelsu.enabled.
+	  Enable a cmdline called kernelsu.enabled
 	  Value 1 means enabled, value 0 means disabled.
 	  
 endmenu
