@@ -134,7 +134,7 @@ static void disable_seccomp(void)
 }
 
 /* 
- * If developer not backport this, we'll enable this function
+ * If kernel devs not backport this, we'll enable this function
  * (Must put this on kernel_compat.c, but anyway)
  */
 #if !defined(KSU_GET_CRED_RCU)
@@ -498,15 +498,11 @@ static bool should_umount(struct path *path)
 
 static void ksu_umount_mnt(struct path *path, int flags)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) || defined(KSU_UMOUNT)
 	int err = path_umount(path, flags);
 	if (err) {
-		pr_info("umount %s failed, ret: %d\n", path->dentry->d_iname, err);
+		pr_info("umount %s failed, ret: %d\n",
+			path->dentry->d_iname, err);
 	}
-#else
-#error "Backporting path_umount is needed!"
-#error "Read: https://kernelsu.org/guide/how-to-integrate-for-non-gki.html#how-to-backport-path-umount"
-#endif
 }
 
 static void try_umount(const char *mnt, bool check_mnt, int flags)
