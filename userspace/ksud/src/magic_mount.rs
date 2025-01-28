@@ -425,7 +425,7 @@ pub fn magic_mount() -> Result<()> {
             tmp_dir = PathBuf::from(MAGIC_MOUNT_WORK_DIR);
         }
         ensure_dir_exists(&tmp_dir)?;
-        log::info!("magic mount workdir path: {}", tmp_dir);
+        log::info!("magic mount workdir path: {}", &tmp_dir);
         mount(KSU_MOUNT_SOURCE, &tmp_dir, "tmpfs", MountFlags::empty(), "").context("mount tmp")?;
         mount_change(&tmp_dir, MountPropagationFlags::PRIVATE).context("make tmp private")?;
         let result = do_magic_mount("/", &tmp_dir, root, false);
