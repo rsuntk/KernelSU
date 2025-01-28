@@ -1,9 +1,10 @@
 use crate::defs::{
-    DISABLE_FILE_NAME, KSU_MOUNT_SOURCE, MAGIC_MOUNT_WORK_DIR, MODULE_DIR, SKIP_MOUNT_FILE_NAME,
+    DISABLE_FILE_NAME, KSU_MOUNT_SOURCE, MAGIC_MOUNT_WORK_DIR, 
+    MAGIC_MOUNT_WORK_DIR_LEGACY, MODULE_DIR, SKIP_MOUNT_FILE_NAME,
 };
 use crate::magic_mount::NodeFileType::{Directory, RegularFile, Symlink, Whiteout};
 use crate::restorecon::{lgetfilecon, lsetfilecon};
-use crate::utils::ensure_dir_exists;
+use crate::utils::{ensure_dir_exists, legacy_tempdir_ok};
 use anyhow::{bail, Context, Result};
 use extattr::lgetxattr;
 use rustix::fs::{
@@ -417,8 +418,14 @@ fn do_magic_mount<P: AsRef<Path>, WP: AsRef<Path>>(
 pub fn magic_mount() -> Result<()> {
     if let Some(root) = collect_module_files()? {
         log::debug!("collected: {:#?}", root);
-        let tmp_dir = PathBuf::from(MAGIC_MOUNT_WORK_DIR);
+        let tmp_dir;
+        if legacy_tempdir_ok() {
+            tmp_dir = PathBuf::from(MAGIC_MOUNT_WORK_DIR_LEGACY);
+        } else {
+            tmp_dir = PathBuf::from(MAGIC_MOUNT_WORK_DIR);
+        }
         ensure_dir_exists(&tmp_dir)?;
+        log::info!("magic mount workdir path: {}", tmp_dir);
         mount(KSU_MOUNT_SOURCE, &tmp_dir, "tmpfs", MountFlags::empty(), "").context("mount tmp")?;
         mount_change(&tmp_dir, MountPropagationFlags::PRIVATE).context("make tmp private")?;
         let result = do_magic_mount("/", &tmp_dir, root, false);

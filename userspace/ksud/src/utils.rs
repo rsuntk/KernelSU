@@ -177,6 +177,16 @@ pub fn has_magisk() -> bool {
     which::which("magisk").is_ok()
 }
 
+pub fn legacy_tempdir_ok() -> bool {
+    if std::fs::metadata(defs::TEMP_DIR_LEGACY).is_ok() {
+        log::info!("temp dir: {}", defs::TEMP_DIR_LEGACY);
+        return true;
+    } else {
+        log::info!("temp dir: {}", defs::TEMP_DIR);
+        return false;
+    }
+}
+
 #[cfg(target_os = "android")]
 fn link_ksud_to_bin() -> Result<()> {
     let ksu_bin = PathBuf::from(defs::DAEMON_PATH);
