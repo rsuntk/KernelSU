@@ -1,4 +1,4 @@
-use crate::defs::{KSU_MOUNT_SOURCE, NO_MOUNT_PATH, NO_TMPFS_PATH, TEMP_DIR};
+use crate::defs::{KSU_MOUNT_SOURCE, NO_MOUNT_PATH, NO_TMPFS_PATH};
 use crate::module::{handle_updated_modules, prune_modules};
 use crate::{assets, defs, ksucalls, restorecon, utils};
 use anyhow::{Context, Result};
@@ -102,7 +102,7 @@ pub fn on_post_data_fs() -> Result<()> {
 
     // mount temp dir
     if !Path::new(NO_TMPFS_PATH).exists() {
-        if let Err(e) = mount_tmpfs(TEMP_DIR) {
+        if let Err(e) = mount_tmpfs(utils::get_tmp_path()) {
             warn!("do temp dir mount failed: {}", e);
         }
     } else {

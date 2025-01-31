@@ -10,6 +10,7 @@ use std::{
 };
 
 use crate::{assets, boot_patch, defs, ksucalls, module, restorecon};
+use std::fs::metadata;
 #[allow(unused_imports)]
 use std::fs::{set_permissions, Permissions};
 #[cfg(unix)]
@@ -175,6 +176,21 @@ pub fn umask(_mask: u32) {
 
 pub fn has_magisk() -> bool {
     which::which("magisk").is_ok()
+}
+
+pub fn get_tmp_path() -> &'static str {
+    if metadata(defs::TEMP_DIR_LEGACY).is_ok() {
+        return defs::TEMP_DIR_LEGACY;
+    }
+    if metadata(defs::TEMP_DIR).is_ok() {
+        return defs::TEMP_DIR;
+    }
+    ""
+}
+
+pub fn get_work_dir() -> String {
+    let tmp_path = get_tmp_path();
+    format!("{}/workdir/", tmp_path)
 }
 
 #[cfg(target_os = "android")]
