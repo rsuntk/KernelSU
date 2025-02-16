@@ -8,11 +8,7 @@
 #include <linux/types.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
 #include <linux/sched/task_stack.h>
-#else
-#include <linux/sched.h>
-#endif
 
 #include "objsec.h"
 #include "allowlist.h"
@@ -184,12 +180,7 @@ int ksu_handle_devpts(struct inode *inode)
 		return 0;
 
 	if (ksu_devpts_sid) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
 		struct inode_security_struct *sec = selinux_inode(inode);
-#else
-		struct inode_security_struct *sec =
-			(struct inode_security_struct *)inode->i_security;
-#endif
 		if (sec) {
 			sec->sid = ksu_devpts_sid;
 		}
@@ -199,20 +190,7 @@ int ksu_handle_devpts(struct inode *inode)
 }
 
 #ifdef KSU_HOOK_WITH_KPROBES
-
-__maybe_unused static int faccessat_handler_pre(struct kprobe *p,
-						struct pt_regs *regs)
-{
-	int *dfd = (int *)&PT_REGS_PARM1(regs);
-	const char __user **filename_user = (const char **)&PT_REGS_PARM2(regs);
-	int *mode = (int *)&PT_REGS_PARM3(regs);
-	// Both sys_ and do_ is C function
-	int *flags = (int *)&PT_REGS_CCALL_PARM4(regs);
-
-	return ksu_handle_faccessat(dfd, filename_user, mode, flags);
-}
-
-static int sys_faccessat_handler_pre(struct kprobe *p, struct pt_regs *regs)
+static int faccessat_handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
 	struct pt_regs *real_regs = PT_REAL_REGS(regs);
 	int *dfd = (int *)&PT_REGS_PARM1(real_regs);
@@ -223,23 +201,7 @@ static int sys_faccessat_handler_pre(struct kprobe *p, struct pt_regs *regs)
 	return ksu_handle_faccessat(dfd, filename_user, mode, NULL);
 }
 
-__maybe_unused static int newfstatat_handler_pre(struct kprobe *p,
-						 struct pt_regs *regs)
-{
-	int *dfd = (int *)&PT_REGS_PARM1(regs);
-	const char __user **filename_user = (const char **)&PT_REGS_PARM2(regs);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
-	// static int vfs_statx(int dfd, const char __user *filename, int flags, struct kstat *stat, u32 request_mask)
-	int *flags = (int *)&PT_REGS_PARM3(regs);
-#else
-	// int vfs_fstatat(int dfd, const char __user *filename, struct kstat *stat,int flag)
-	int *flags = (int *)&PT_REGS_CCALL_PARM4(regs);
-#endif
-
-	return ksu_handle_stat(dfd, filename_user, flags);
-}
-
-static int sys_newfstatat_handler_pre(struct kprobe *p, struct pt_regs *regs)
+static int newfstatat_handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
 	struct pt_regs *real_regs = PT_REAL_REGS(regs);
 	int *dfd = (int *)&PT_REGS_PARM1(real_regs);
@@ -250,17 +212,7 @@ static int sys_newfstatat_handler_pre(struct kprobe *p, struct pt_regs *regs)
 	return ksu_handle_stat(dfd, filename_user, flags);
 }
 
-// https://elixir.bootlin.com/linux/v5.10.158/source/fs/exec.c#L1864
 static int execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
-{
-	int *fd = (int *)&PT_REGS_PARM1(regs);
-	struct filename **filename_ptr =
-		(struct filename **)&PT_REGS_PARM2(regs);
-
-	return ksu_handle_execveat_sucompat(fd, filename_ptr, NULL, NULL, NULL);
-}
-
-static int sys_execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
 	struct pt_regs *real_regs = PT_REAL_REGS(regs);
 	const char __user **filename_user =
@@ -270,126 +222,60 @@ static int sys_execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 					  NULL);
 }
 
-#if 1
-static struct kprobe faccessat_kp = {
-	.symbol_name = SYS_FACCESSAT_SYMBOL,
-	.pre_handler = sys_faccessat_handler_pre,
-};
-#else
-static struct kprobe faccessat_kp = {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
-	.symbol_name = "do_faccessat",
-#else
-	.symbol_name = "sys_faccessat",
-#endif
-	.pre_handler = faccessat_handler_pre,
-};
-#endif
-
-#if 1
-static struct kprobe newfstatat_kp = {
-	.symbol_name = SYS_NEWFSTATAT_SYMBOL,
-	.pre_handler = sys_newfstatat_handler_pre,
-};
-#else
-static struct kprobe newfstatat_kp = {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
-	.symbol_name = "vfs_statx",
-#else
-	.symbol_name = "vfs_fstatat",
-#endif
-	.pre_handler = newfstatat_handler_pre,
-};
-#endif
-
-#ifdef CONFIG_KSU_COMPAT_SYSCALL
-static struct kprobe fstatat64_kp = {
-	.symbol_name = SYS_FSTATAT64_SYMBOL,
-	.pre_handler = sys_newfstatat_handler_pre,
-};
-#endif
-
-#if 1
-static struct kprobe execve_kp = {
-	.symbol_name = SYS_EXECVE_SYMBOL,
-	.pre_handler = sys_execve_handler_pre,
-};
-#else
-static struct kprobe execve_kp = {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
-	.symbol_name = "do_execveat_common",
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
-	.symbol_name = "__do_execve_file",
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0)
-	.symbol_name = "do_execveat_common",
-#endif
-	.pre_handler = execve_handler_pre,
-};
-#endif
-
-#ifdef CONFIG_KSU_COMPAT_SYSCALL
-static struct kprobe execve_compat_kp = {
-	.symbol_name = SYS_EXECVE_COMPAT_SYMBOL,
-	.pre_handler = sys_execve_handler_pre,
-};
-#endif
-
 static int pts_unix98_lookup_pre(struct kprobe *p, struct pt_regs *regs)
 {
 	struct inode *inode;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
 	struct file *file = (struct file *)PT_REGS_PARM2(regs);
 	inode = file->f_path.dentry->d_inode;
-#else
-	inode = (struct inode *)PT_REGS_PARM2(regs);
-#endif
 
 	return ksu_handle_devpts(inode);
 }
 
-static struct kprobe pts_unix98_lookup_kp = { .symbol_name =
-						      "pts_unix98_lookup",
-					      .pre_handler =
-						      pts_unix98_lookup_pre };
+static struct kprobe *init_kprobe(const char *name,
+				  kprobe_pre_handler_t handler)
+{
+	struct kprobe *kp = kzalloc(sizeof(struct kprobe), GFP_KERNEL);
+	if (!kp)
+		return NULL;
+	kp->symbol_name = name;
+	kp->pre_handler = handler;
 
-#endif
+	int ret = register_kprobe(kp);
+	pr_info("sucompat: register_%s kprobe: %d\n", name, ret);
+	if (ret) {
+		kfree(kp);
+		return NULL;
+	}
+
+	return kp;
+}
+
+static void destroy_kprobe(struct kprobe **kp_ptr)
+{
+	struct kprobe *kp = *kp_ptr;
+	if (!kp)
+		return;
+	unregister_kprobe(kp);
+	synchronize_rcu();
+	kfree(kp);
+	*kp_ptr = NULL;
+}
+
+static struct kprobe *su_kps[4];
 
 // sucompat: permited process can execute 'su' to gain root access.
 void ksu_sucompat_init()
 {
-#ifdef KSU_HOOK_WITH_KPROBES
-	int ret;
-	ret = register_kprobe(&execve_kp);
-	pr_info("sucompat: execve_kp: %d\n", ret);
-#ifdef CONFIG_KSU_COMPAT_SYSCALL
-	ret = register_kprobe(&execve_compat_kp);
-	pr_info("sucompat: execve_compat_kp: %d\n", ret);
-#endif
-	ret = register_kprobe(&newfstatat_kp);
-	pr_info("sucompat: newfstatat_kp: %d\n", ret);
-#ifdef CONFIG_KSU_COMPAT_SYSCALL
-	ret = register_kprobe(&fstatat64_kp);
-	pr_info("sucompat: fstatat64_kp: %d\n", ret);
-#endif
-	ret = register_kprobe(&faccessat_kp);
-	pr_info("sucompat: faccessat_kp: %d\n", ret);
-	ret = register_kprobe(&pts_unix98_lookup_kp);
-	pr_info("sucompat: devpts_kp: %d\n", ret);
-#endif
+	su_kps[0] = init_kprobe(SYS_EXECVE_SYMBOL, execve_handler_pre);
+	su_kps[1] = init_kprobe(SYS_FACCESSAT_SYMBOL, faccessat_handler_pre);
+	su_kps[2] = init_kprobe(SYS_NEWFSTATAT_SYMBOL, newfstatat_handler_pre);
+	su_kps[3] = init_kprobe("pts_unix98_lookup", pts_unix98_lookup_pre);
 }
 
 void ksu_sucompat_exit()
 {
-#ifdef KSU_HOOK_WITH_KPROBES
-	unregister_kprobe(&execve_kp);
-#ifdef CONFIG_KSU_COMPAT_SYSCALL
-	unregister_kprobe(&execve_compat_kp);
-#endif
-	unregister_kprobe(&newfstatat_kp);
-#ifdef CONFIG_KSU_COMPAT_SYSCALL
-	unregister_kprobe(&fstatat64_kp);
-#endif
-	unregister_kprobe(&faccessat_kp);
-	unregister_kprobe(&pts_unix98_lookup_kp);
-#endif
+	for (int i = 0; i < ARRAY_SIZE(su_kps); i++) {
+		destroy_kprobe(&su_kps[i]);
+	}
 }
+#els
