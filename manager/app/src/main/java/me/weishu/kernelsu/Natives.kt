@@ -21,6 +21,10 @@ object Natives {
     // 11640: Support query working mode, LKM or GKI
     // when MINIMAL_SUPPORTED_KERNEL > 11640, we can remove this constant.
     const val MINIMAL_SUPPORTED_KERNEL_LKM = 11648
+
+    // 12040: Support disable sucompat mode
+    // + 31: Rissu's fork.
+    const val MINIMAL_SUPPORTED_SU_COMPAT = 12071
     const val KERNEL_SU_DOMAIN = "u:r:su:s0"
 
     const val ROOT_UID = 0
@@ -54,6 +58,15 @@ object Natives {
      */
     external fun getAppProfile(key: String?, uid: Int): Profile
     external fun setAppProfile(profile: Profile?): Boolean
+
+    /**
+     * `su` compat mode can be disabled temporarily.
+     *  0: disabled
+     *  1: enabled
+     *  negative : error
+     */
+    external fun isSuEnabled(): Boolean
+    external fun setSuEnabled(enabled: Boolean): Boolean
 
     private const val NON_ROOT_DEFAULT_PROFILE_KEY = "$"
     private const val NOBODY_UID = 9999
