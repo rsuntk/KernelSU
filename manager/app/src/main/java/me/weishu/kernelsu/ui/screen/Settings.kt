@@ -176,7 +176,7 @@ fun SettingScreen(navigator: DestinationsNavigator) {
             val lkmMode = Natives.version >= Natives.MINIMAL_SUPPORTED_KERNEL_LKM && Natives.isLkmMode
             val suCompatToggle = Natives.version >= Natives.MINIMAL_SUPPORTED_SU_COMPAT && kernelVersion.isGKI()
 
-            if (lkmMode && suCompatToggle) {
+            if (lkmMode || suCompatToggle) {
                 var isSuDisabled by rememberSaveable {
                     mutableStateOf(!Natives.isSuEnabled())
                 }
