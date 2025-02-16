@@ -133,4 +133,6 @@
     <string name="flashing">Pasang</string>
     <string name="flash_failed">Pemasangan Gagal</string>
     <string name="save_log">Simpan Log</string>
+    <string name="settings_disable_su">Nonaktifkan perintah \"su\"</string>
+    <string name="settings_disable_su_summary">Nonaktifkan sementara perintah \"su\" dari semua aplikasi yang mendapat akses root melalui perintah \"su\" (tidak akan mempengaruhi proses root yang sudah ada)</string>
 </resources>
