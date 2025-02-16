@@ -79,7 +79,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.BuildConfig
 import me.weishu.kernelsu.Natives
-import me.weishu.kernelsu.Kernels
+import me.weishu.kernelsu.*
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.AboutDialog
 import me.weishu.kernelsu.ui.component.ConfirmResult
@@ -90,7 +90,6 @@ import me.weishu.kernelsu.ui.component.rememberCustomDialog
 import me.weishu.kernelsu.ui.component.rememberLoadingDialog
 import me.weishu.kernelsu.ui.util.LocalSnackbarHost
 import me.weishu.kernelsu.ui.util.getBugreportFile
-import me.weishu.kernelsu.ui.util.getKernelVersion
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -172,7 +171,7 @@ fun SettingScreen(navigator: DestinationsNavigator) {
                     umountChecked = it
                 }
             }
-
+            
             val kernelVersion = getKernelVersion()
             val lkmMode = Natives.version >= Natives.MINIMAL_SUPPORTED_KERNEL_LKM && Natives.isLkmMode
             val suCompatToggle = Natives.version >= Natives.MINIMAL_SUPPORTED_SU_COMPAT && kernelVersion.isGKI()
