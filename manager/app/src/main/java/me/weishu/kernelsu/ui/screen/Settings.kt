@@ -90,6 +90,7 @@ import me.weishu.kernelsu.ui.component.rememberCustomDialog
 import me.weishu.kernelsu.ui.component.rememberLoadingDialog
 import me.weishu.kernelsu.ui.util.LocalSnackbarHost
 import me.weishu.kernelsu.ui.util.getBugreportFile
+import me.weishu.kernelsu.ui.util.getKernelVersion
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -172,7 +173,7 @@ fun SettingScreen(navigator: DestinationsNavigator) {
                 }
             }
 
-            val kernelVersion = Kernels.getKernelVersion()
+            val kernelVersion = getKernelVersion()
             val lkmMode = Natives.version >= Natives.MINIMAL_SUPPORTED_KERNEL_LKM && Natives.isLkmMode
             val suCompatToggle = Natives.version >= Natives.MINIMAL_SUPPORTED_SU_COMPAT && kernelVersion.isGKI()
 
