@@ -54,11 +54,9 @@ static bool ksu_module_mounted = false;
 
 extern int handle_sepolicy(unsigned long arg3, void __user *arg4);
 
-#ifdef KSU_HOOK_WITH_KPROBES
 static bool ksu_su_compat_enabled = true;
-extern void ksu_sucompat_init();
+extern void ksu_sucompat_allow();
 extern void ksu_sucompat_exit();
-#endif
 
 static inline bool is_allow_su()
 {
@@ -467,8 +465,6 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 		return 0;
 	}
 
-	// non-GKI Kernel or manual hook shouldn't access this interface !!
-#ifdef KSU_HOOK_WITH_KPROBES
 	if (arg2 == CMD_IS_SU_ENABLED) {
 		if (copy_to_user(arg3, &ksu_su_compat_enabled,
 				 sizeof(ksu_su_compat_enabled))) {
@@ -487,24 +483,17 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 			pr_info("cmd enable su but no need to change.\n");
 			return 0;
 		}
-
 		if (enabled) {
 			ksu_sucompat_init();
 		} else {
 			ksu_sucompat_exit();
 		}
 		ksu_su_compat_enabled = enabled;
-
 		if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
 			pr_err("prctl reply error, cmd: %lu\n", arg2);
 		}
 		return 0;
 	}
-#else
-	if (arg2 == CMD_IS_SU_ENABLED || arg2 == CMD_ENABLE_SU) {
-		return 0;
-	}
-#endif
 	return 0;
 }
 

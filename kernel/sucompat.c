@@ -26,6 +26,10 @@
 
 extern void escape_to_root();
 
+bool ksu_faccessat_hook __read_mostly = true;
+bool ksu_stat_hook __read_mostly = true;
+bool ksu_devpts_hook __read_mostly = true;
+
 static void __user *userspace_stack_buffer(const void *d, size_t len)
 {
 	/* To avoid having to mmap a page in userspace, just write below the stack
@@ -52,8 +56,13 @@ static char __user *ksud_user_path(void)
 int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 			 int *__unused_flags)
 {
+	
 	const char su[] = SU_PATH;
 
+	if (!ksu_faccessat_hook) {
+		return 0;
+	}
+	
 	if (!ksu_is_allow_uid(current_uid().val)) {
 		return 0;
 	}
@@ -75,6 +84,10 @@ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
 	// const char sh[] = SH_PATH;
 	const char su[] = SU_PATH;
 
+	if (!ksu_stat_hook) {
+		return 0;
+	}
+	
 	if (!ksu_is_allow_uid(current_uid().val)) {
 		return 0;
 	}
@@ -170,10 +183,14 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 
 int ksu_handle_devpts(struct inode *inode)
 {
-	if (!current->mm) {
+	if (!ksu_devpts_hook) {
 		return 0;
 	}
 
+	if (!current->mm) {
+		return 0;
+	}
+	
 	uid_t uid = current_uid().val;
 	if (uid % 100000 < 10000) {
 		// not untrusted_app, ignore it
@@ -296,6 +313,24 @@ void ksu_sucompat_exit()
 	}
 }
 #else // We still have non-GKI support!
-void ksu_sucompat_init() {}
-void ksu_sucompat_exit() {}
+void ksu_sucompat_init()
+{
+	ksu_faccessat_hook = true;
+	pr_info("start faccessat hook\n");
+	ksu_stat_hook = true;
+	pr_info("start stat hook\n");
+	ksu_stat_hook = true;
+	pr_info("start devpts hook\n");
+	pr_info("ksu_sucompat_init!\n");
+}
+void ksu_sucompat_exit()
+{
+	ksu_faccessat_hook = false;
+	pr_info("stop faccessat hook\n");
+	ksu_stat_hook = false;
+	pr_info("stop stat hook\n");
+	ksu_stat_hook = false;
+	pr_info("stop devpts hook\n");
+	pr_info("ksu_sucompat_exit!\n");
+}
 #endif

@@ -5,6 +5,8 @@
 #include <linux/types.h>
 
 // For sucompat
+// TODO: disable these at will like
+// https://github.com/tiann/KernelSU/commit/2096bd7304a44bcb902b98aff9320a0918ca7dd7
 
 int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 			 int *flags);
