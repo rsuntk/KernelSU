@@ -275,7 +275,7 @@ void ksu_sucompat_init()
 	su_kps[2] = init_kprobe(SYS_NEWFSTATAT_SYMBOL, newfstatat_handler_pre);
 	su_kps[3] = init_kprobe("pts_unix98_lookup", pts_unix98_lookup_pre);
 #ifdef CONFIG_KSU_COMPAT_SYSCALL
-	su_kps[4] = init_kprobe(SYS_FSTATAT64_SYMBOL, faccessat_handler_pre);
+	su_kps[4] = init_kprobe(SYS_FSTATAT64_SYMBOL, newfstatat_handler_pre);
 	su_kps[5] = init_kprobe(SYS_EXECVE_COMPAT_SYMBOL, execve_handler_pre);
 #endif
 }
