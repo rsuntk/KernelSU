@@ -467,7 +467,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 		return 0;
 	}
 
-	// non-GKI Kernel shouldn't access this interface !!
+	// non-GKI Kernel or manual hook shouldn't access this interface !!
 #ifdef KSU_HOOK_WITH_KPROBES
 	if (arg2 == CMD_IS_SU_ENABLED) {
 		if (copy_to_user(arg3, &ksu_su_compat_enabled,
