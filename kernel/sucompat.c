@@ -261,7 +261,11 @@ static void destroy_kprobe(struct kprobe **kp_ptr)
 	*kp_ptr = NULL;
 }
 
+#ifdef CONFIG_KSU_COMPAT_SYSCALL
+static struct kprobe *su_kps[6];
+#else
 static struct kprobe *su_kps[4];
+#endif
 
 // sucompat: permited process can execute 'su' to gain root access.
 void ksu_sucompat_init()
@@ -270,6 +274,10 @@ void ksu_sucompat_init()
 	su_kps[1] = init_kprobe(SYS_FACCESSAT_SYMBOL, faccessat_handler_pre);
 	su_kps[2] = init_kprobe(SYS_NEWFSTATAT_SYMBOL, newfstatat_handler_pre);
 	su_kps[3] = init_kprobe("pts_unix98_lookup", pts_unix98_lookup_pre);
+#ifdef CONFIG_KSU_COMPAT_SYSCALL
+	su_kps[4] = init_kprobe(SYS_FSTATAT64_SYMBOL, faccessat_handler_pre);
+	su_kps[5] = init_kprobe(SYS_EXECVE_COMPAT_SYMBOL, execve_handler_pre);
+#endif
 }
 
 void ksu_sucompat_exit()
@@ -278,4 +286,7 @@ void ksu_sucompat_exit()
 		destroy_kprobe(&su_kps[i]);
 	}
 }
-#els
+#else // We still have non-GKI support!
+void ksu_sucompat_init() {}
+void ksu_sucompat_exit() {}
+#endif
