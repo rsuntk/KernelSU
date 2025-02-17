@@ -26,8 +26,9 @@ ifeq ($(CONFIG_KSU),m)
 $(error CONFIG_KSU_MANUAL_HOOK cannot be enabled when compiling KernelSU as LKM!)
 endif
 else
+# This is useless for non-GKI, only used for checks
 ifeq ($(CONFIG_KPROBES),y)
-ccflags-y += -DKSU_HOOK_WITH_KPROBES
+ccflags-y += -DKSU_COMPAT_KPROBES
 endif
 endif
 
