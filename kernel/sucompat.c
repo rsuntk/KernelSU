@@ -27,11 +27,16 @@
 #define SU_PATH "/system/bin/su"
 #define SH_PATH "/system/bin/sh"
 
-extern void escape_to_root();
+extern void ksu_escape_to_root();
 
 bool ksu_faccessat_hook __read_mostly = true;
 bool ksu_stat_hook __read_mostly = true;
+
+#ifdef CONFIG_KSU_SUSFS_SUS_SU
+bool ksu_devpts_hook = false;
+#else
 bool ksu_devpts_hook __read_mostly = true;
+#endif
 
 static void __user *userspace_stack_buffer(const void *d, size_t len)
 {
@@ -83,6 +88,31 @@ int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 
 	return 0;
 }
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0) && defined(CONFIG_KSU_SUSFS_SUS_SU)
+struct filename* susfs_ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags) {
+	// const char sh[] = SH_PATH;
+	const char su[] = SU_PATH;
+	struct filename *name = getname_flags(*filename_user, getname_statx_lookup_flags(*flags), NULL);
+
+	if (unlikely(IS_ERR(name) || name->name == NULL)) {
+		return name;
+	}
+
+	if (!ksu_is_allow_uid(current_uid().val)) {
+		return name;
+	}
+
+	if (likely(memcmp(name->name, su, sizeof(su)))) {
+		return name;
+	}
+
+	const char sh[] = SH_PATH;
+	pr_info("vfs_fstatat su->sh!\n");
+	memcpy((void *)name->name, sh, sizeof(sh));
+	return name;
+}
+#endif
 
 int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
 {
@@ -156,7 +186,7 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 	pr_info("do_execveat_common su found\n");
 	memcpy((void *)filename->name, sh, sizeof(sh));
 
-	escape_to_root();
+	ksu_escape_to_root();
 
 	return 0;
 }
@@ -183,7 +213,7 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 	pr_info("sys_execve su found\n");
 	*filename_user = ksud_user_path();
 
-	escape_to_root();
+	ksu_escape_to_root();
 
 	return 0;
 }
@@ -321,6 +351,18 @@ void ksu_sucompat_exit()
 		destroy_kprobe(&su_kps[i]);
 	}
 }
+
+#ifdef CONFIG_KSU_SUSFS_SUS_SU
+void ksu_susfs_disable_sus_su(void) {
+	ksu_sucompat_init();
+	ksu_devpts_hook = false;
+}
+void ksu_susfs_enable_sus_su(void) {
+	ksu_sucompat_exit();
+	ksu_devpts_hook = true;
+}
+#endif // #ifdef CONFIG_KSU_SUSFS_SUS_SU
+
 #else // We still have non-GKI support!
 void ksu_sucompat_init()
 {
