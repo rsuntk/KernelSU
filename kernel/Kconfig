@@ -42,16 +42,4 @@ config KSU_MANUAL_HOOK
 	  This function only available on GKI kernels, non-GKI are not
 	  affected.
 
-config KSU_COMPAT_SYSCALL
-	bool "Enable compat syscall hook for KPROBES"
-	depends on KSU && KPROBES && !KSU_MANUAL_HOOK
-	default n
-	help
-	  KernelSU v0.9.3-v0.9.4 use more stable
-	  syscall hook for KPROBES. But this also bring some problems
-	  like su command didn't work for 32bit based app.
-
-	  If you encountered an issue with su command, try
-	  enable this option.
-
 endmenu
