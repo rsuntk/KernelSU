@@ -302,7 +302,7 @@ static struct kprobe *su_kps[6];
 void ksu_sucompat_init()
 {
 	su_kps[0] = init_kprobe(SYS_EXECVE_SYMBOL, execve_handler_pre);
-	su_kps[1] = init_kprobe(SYS_COMPAT_EXECVE_SYMBOL);
+	su_kps[1] = init_kprobe(SYS_EXECVE_COMPAT_SYMBOL);
 	su_kps[2] = init_kprobe(SYS_FACCESSAT_SYMBOL, faccessat_handler_pre);
 	su_kps[3] = init_kprobe(SYS_NEWFSTATAT_SYMBOL, newfstatat_handler_pre);
 	su_kps[4] = init_kprobe(SYS_FSTATAT64_SYMBOL, newfstatat_handler_pre);
