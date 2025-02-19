@@ -29,9 +29,7 @@
 
 extern void escape_to_root();
 
-bool ksu_faccessat_hook __read_mostly = true;
-bool ksu_stat_hook __read_mostly = true;
-bool ksu_devpts_hook __read_mostly = true;
+bool ksu_sucompat_hook_state __read_mostly = true;
 
 static void __user *userspace_stack_buffer(const void *d, size_t len)
 {
@@ -63,7 +61,7 @@ int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 	const char su[] = SU_PATH;
 
 #ifndef KSU_HOOK_WITH_KPROBES
-	if (!ksu_faccessat_hook) {
+	if (!ksu_sucompat_hook_state) {
 		return 0;
 	}
 #endif
@@ -90,7 +88,7 @@ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
 	const char su[] = SU_PATH;
 
 #ifndef KSU_HOOK_WITH_KPROBES
-	if (!ksu_stat_hook) {
+	if (!ksu_sucompat_hook_state) {
 		return 0;
 	}
 #endif
@@ -191,7 +189,7 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 int ksu_handle_devpts(struct inode *inode)
 {
 #ifndef KSU_HOOK_WITH_KPROBES
-	if (!ksu_devpts_hook) {
+	if (!ksu_sucompat_hook_state) {
 		return 0;
 	}
 #endif
@@ -318,23 +316,13 @@ void ksu_sucompat_exit()
 #else // We still have non-GKI support!
 void ksu_sucompat_init()
 {
-	ksu_faccessat_hook = true;
-	pr_info("start faccessat hook\n");
-	ksu_stat_hook = true;
-	pr_info("start stat hook\n");
-	ksu_devpts_hook = true;
-	pr_info("start devpts hook\n");
-	pr_info("ksu_sucompat_init!\n");
+	ksu_sucompat_hook_state = true;
+	pr_info("ksu_sucompat_hook_state = true!\n");
 }
 
 void ksu_sucompat_exit()
 {
-	ksu_faccessat_hook = false;
-	pr_info("stop faccessat hook\n");
-	ksu_stat_hook = false;
-	pr_info("stop stat hook\n");
-	ksu_devpts_hook = false;
-	pr_info("stop devpts hook\n");
-	pr_info("ksu_sucompat_exit!\n");
+	ksu_sucompat_hook_state = false;
+	pr_info("ksu_sucompat_hook_state = false!\n");
 }
 #endif
