@@ -620,15 +620,16 @@ static void stop_execve_hook()
 
 static void stop_input_hook()
 {
+#ifdef KSU_HOOK_WITH_KPROBES
 	static bool input_hook_stopped = false;
 	if (input_hook_stopped) {
 		return;
 	}
 	input_hook_stopped = true;
-#ifdef KSU_HOOK_WITH_KPROBES
 	bool ret = schedule_work(&stop_input_hook_work);
 	pr_info("unregister input kprobe: %d!\n", ret);
 #else
+	if (!ksu_input_hook) { return; }
 	ksu_input_hook = false;
 	pr_info("stop input_hook\n");
 #endif
