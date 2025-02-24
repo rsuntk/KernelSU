@@ -20,12 +20,6 @@
 #endif
 #endif
 
-// KPROBE checks (hopefully it didn't break gki/lkm)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) &&	\
-	defined(KSU_COMPAT_KPROBES)
-#define KSU_HOOK_WITH_KPROBES
-#endif
-
 // Checks for UH, KDP and RKP
 #ifdef SAMSUNG_UH_DRIVER_EXIST
 #if defined(CONFIG_UH) || defined(CONFIG_KDP) || defined(CONFIG_RKP)
