@@ -60,7 +60,7 @@ bool susfs_is_allow_su(void)
 }
 
 extern u32 susfs_zygote_sid;
-+extern bool susfs_is_mnt_devname_ksu(struct path *path);
+extern bool susfs_is_mnt_devname_ksu(struct path *path);
 #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 extern bool susfs_is_log_enabled __read_mostly;
 #endif
