@@ -23,14 +23,6 @@ config KSU_ALLOWLIST_WORKAROUND
       Enable session keyring init workaround for problematic devices.
       Useful for situations where the SU allowlist is not kept after a reboot.
 
-config KSU_CMDLINE
-	bool "Enable KernelSU cmdline"
-	depends on KSU && KSU != m
-	default n
-	help
-	  Enable a cmdline called kernelsu.enabled
-	  Value 1 means enabled, value 0 means disabled.
-
 config KSU_MANUAL_HOOK
 	bool "Manual hooking GKI kernels without kprobes"
 	depends on KSU && KSU != m
