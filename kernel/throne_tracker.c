@@ -72,6 +72,11 @@ static void crown_manager(const char *apk, struct list_head *uid_data)
 
 	pr_info("manager pkg: %s\n", pkg);
 
+	if (strncmp(pkg, "com.rifsxd.ksunext", sizeof("com.rifsxd.ksunext")) == 0) {
+		pr_info("%s: Do not crown manager!\n", __func__);
+		return;
+	}
+
 #ifdef KSU_MANAGER_PACKAGE
 	// pkg is `/<real package>`
 	if (strncmp(pkg, KSU_MANAGER_PACKAGE, sizeof(KSU_MANAGER_PACKAGE))) {
