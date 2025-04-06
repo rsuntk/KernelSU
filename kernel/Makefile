@@ -73,11 +73,6 @@ ifeq ($(shell grep -q "CONFIG_KDP_CRED" $(srctree)/kernel/cred.c; echo $$?),0)
 ccflags-y += -DSAMSUNG_UH_DRIVER_EXIST
 endif
 
-# Keep compatibility with #ifdef CONFIG_KSU_MANUAL_HOOK
-ifneq ($(strip $(CONFIG_KSU_KPROBES_HOOK)),y)
-KBUILD_CFLAGS += -DCONFIG_KSU_MANUAL_HOOK
-endif
-
 ifndef KSU_EXPECTED_SIZE
 KSU_EXPECTED_SIZE := 0x033b
 endif
