@@ -39,7 +39,7 @@ config KSU_KPROBES_HOOK
 	  Enable KernelSU Kernel Probes or KPROBES syscalls hook.
 	  To disable, change value to n.
 
-if KSU_KPROBES_HOOK != n
+if KSU_KPROBES_HOOK = n
 
 config KSU_MANUAL_HOOK
 	bool
