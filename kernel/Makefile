@@ -14,29 +14,6 @@ kernelsu-objs += selinux/rules.o
 ccflags-y += -I$(srctree)/security/selinux -I$(srctree)/security/selinux/include
 ccflags-y += -I$(objtree)/security/selinux -include $(srctree)/include/uapi/asm-generic/errno.h
 
-# https://github.com/tiann/KernelSU/pull/2102/files#diff-3a325663233178293ee38b8161f3be511a466af7e0156b9d03d5aed0497564bfR19
-IS_GKI := $(strip $(shell \
-    if [ "$(VERSION)" -ge "5" -a "$(PATCHLEVEL)" -ge "10" ]; then \
-      echo TRUE; \
-    else \
-      echo FALSE; \
-    fi \
-  ))
-
-ifeq ($(IS_GKI),TRUE)
-$(info -- KernelSU: Kernel version is GKI.)
-# GKI manual hook checks
-# https://github.com/Pzqqt/android_kernel_xiaomi_marble/commit/5b8596b5604bcd0e6e12697a01136a0bb9eb0257
-ifeq ($(strip $(CONFIG_KSU_MANUAL_HOOK)),y)
-$(info -- KernelSU: Hooks with Manual hook!)
-ifeq ($(strip $(CONFIG_KSU)),m)
-$(error CONFIG_KSU_MANUAL_HOOK cannot be enabled when compiling KernelSU as LKM!)
-endif
-else
-ccflags-y += -DKSU_HOOK_WITH_KPROBES
-endif
-endif
-
 obj-$(CONFIG_KSU) += kernelsu.o
 
 # .git is a text file while the module is imported by 'git submodule add'.
@@ -94,6 +71,11 @@ endif
 # Checks Samsung UH drivers
 ifeq ($(shell grep -q "CONFIG_KDP_CRED" $(srctree)/kernel/cred.c; echo $$?),0)
 ccflags-y += -DSAMSUNG_UH_DRIVER_EXIST
+endif
+
+# Keep compatibility with #ifdef CONFIG_KSU_MANUAL_HOOK
+ifneq ($(strip $(CONFIG_KSU_KPROBES_HOOK)),y)
+KBUILD_CFLAGS += -DCONFIG_KSU_MANUAL_HOOK
 endif
 
 ifndef KSU_EXPECTED_SIZE

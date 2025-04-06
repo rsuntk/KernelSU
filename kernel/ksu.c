@@ -86,7 +86,7 @@ int __init kernelsu_init(void)
 
 	ksu_sucompat_init();
 
-#ifdef KSU_HOOK_WITH_KPROBES
+#ifdef CONFIG_KSU_KPROBES_HOOK
 	ksu_ksud_init();
 #else
 	pr_debug("init ksu driver\n");
@@ -113,7 +113,7 @@ void kernelsu_exit(void)
 
 	destroy_workqueue(ksu_workqueue);
 
-#ifdef KSU_HOOK_WITH_KPROBES
+#ifdef CONFIG_KSU_KPROBES_HOOK
 	ksu_ksud_exit();
 #endif
 	ksu_sucompat_exit();
