@@ -249,8 +249,12 @@ static int execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 static int pts_unix98_lookup_pre(struct kprobe *p, struct pt_regs *regs)
 {
 	struct inode *inode;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
 	struct file *file = (struct file *)PT_REGS_PARM2(regs);
 	inode = file->f_path.dentry->d_inode;
+#else
+	inode = (struct inode *)PT_REGS_PARM2(regs);
+#endif
 
 	return ksu_handle_devpts(inode);
 }
