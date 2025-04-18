@@ -91,6 +91,14 @@ object Natives {
     fun requireNewKernel(): Boolean {
         return version < MINIMAL_SUPPORTED_KERNEL
     }
+    
+    fun isKsuValid(pkgName: String?): Boolean {
+    	if (becomeManager(pkgName)) {
+    		return version != null
+    	} else {
+    		return false
+    	}
+    }
 
     @Immutable
     @Parcelize
