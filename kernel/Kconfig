@@ -46,8 +46,9 @@ config KSU_MANUAL_HOOK
 
 config KSU_KPROBES_HOOK
 	bool "Hook required syscalls with KPROBES"
-	depends on KSU && KPROBES && !KSU_MANUAL_HOOK
+	depends on KSU && KPROBES
 	default y if KSU_COMPAT_GKI || KSU = m
+	default n if KSU_MANUAL_HOOK
 	default n
 	help
 	  Hook required KernelSU syscalls with Kernel Probes.

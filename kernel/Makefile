@@ -43,6 +43,11 @@ $(info -- KernelSU: Kernel Probes hook.)
 else
 $(info -- KernelSU: Manually-patched hook.)
 endif
+ifeq ($(strip $(CONFIG_KSU_KPROBES_HOOK)),y)
+ifeq ($(strip $(CONFIG_KSU_MANUAL_HOOK)),y)
+$(error -- KernelSU: Duplicated hook method! Please choose one hook method!)
+endif
+endif
 
 # SELinux drivers check
 ifeq ($(shell grep -q "current_sid(void)" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
