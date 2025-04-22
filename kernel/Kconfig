@@ -39,14 +39,14 @@ config KSU_COMPAT_GKI
 config KSU_MANUAL_HOOK
 	bool "Manual hooking GKI kernels without kprobes"
 	depends on KSU && KSU != m
-	default y if !KSU_COMPAT_GKI
+	default y if !KSU_COMPAT_GKI || !KPROBES
 	default n
 	help
 	  Hook required KernelSU syscalls with manually-patched function.
 
 config KSU_KPROBES_HOOK
 	bool "Hook required syscalls with KPROBES"
-	depends on KSU && KPROBES
+	depends on KSU && KPROBES && !KSU_MANUAL_HOOK
 	default y if KSU_COMPAT_GKI || KSU = m
 	default n
 	help
