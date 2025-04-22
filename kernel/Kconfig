@@ -31,15 +31,25 @@ config KSU_CMDLINE
 	  Enable a cmdline called kernelsu.enabled
 	  Value 1 means enabled, value 0 means disabled.
 
+config KSU_COMPAT_GKI
+	bool "KernelSU Compat for GKI kernels"
+	default y if $(VERSION) >= 5 && $(PATCHLEVEL) >= 1
+	default n
+
 config KSU_MANUAL_HOOK
 	bool "Manual hooking GKI kernels without kprobes"
 	depends on KSU && KSU != m
-	depends on KPROBES
+	default y if !KSU_COMPAT_GKI
 	default n
 	help
-	  Keep KPROBES enabled but do not use KPROBES to implement
-	  the hooks required by KernelSU, but instead hook them manually.
-	  This function only available on GKI kernels, non-GKI are not
-	  affected.
+	  Hook required KernelSU syscalls with manually-patched function.
+
+config KSU_KPROBES_HOOK
+	bool "Hook required syscalls with KPROBES"
+	depends on KSU && KPROBES
+	default y if KSU_COMPAT_GKI || KSU = m
+	default n
+	help
+	  Hook required KernelSU syscalls with Kernel Probes.
 
 endmenu

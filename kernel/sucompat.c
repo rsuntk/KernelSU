@@ -60,7 +60,7 @@ int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 
 	const char su[] = SU_PATH;
 
-#ifndef KSU_HOOK_WITH_KPROBES
+#ifndef CONFIG_KSU_KPROBES_HOOK
 	if (!ksu_sucompat_hook_state) {
 		return 0;
 	}
@@ -87,7 +87,7 @@ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
 	// const char sh[] = SH_PATH;
 	const char su[] = SU_PATH;
 
-#ifndef KSU_HOOK_WITH_KPROBES
+#ifndef CONFIG_KSU_KPROBES_HOOK
 	if (!ksu_sucompat_hook_state) {
 		return 0;
 	}
@@ -123,7 +123,7 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 	const char sh[] = KSUD_PATH;
 	const char su[] = SU_PATH;
 
-#ifndef KSU_HOOK_WITH_KPROBES
+#ifndef CONFIG_KSU_KPROBES_HOOK
 	if (!ksu_sucompat_hook_state) {
 		return 0;
 	}
@@ -180,7 +180,7 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 
 int ksu_handle_devpts(struct inode *inode)
 {
-#ifndef KSU_HOOK_WITH_KPROBES
+#ifndef CONFIG_KSU_KPROBES_HOOK
 	if (!ksu_sucompat_hook_state) {
 		return 0;
 	}
@@ -214,7 +214,7 @@ int ksu_handle_devpts(struct inode *inode)
 	return 0;
 }
 
-#ifdef KSU_HOOK_WITH_KPROBES
+#ifdef CONFIG_KSU_KPROBES_HOOK
 
 static int faccessat_handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
@@ -251,8 +251,12 @@ static int execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 static int pts_unix98_lookup_pre(struct kprobe *p, struct pt_regs *regs)
 {
 	struct inode *inode;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
 	struct file *file = (struct file *)PT_REGS_PARM2(regs);
 	inode = file->f_path.dentry->d_inode;
+#else
+	inode = (struct inode *)PT_REGS_PARM2(regs);
+#endif
 
 	return ksu_handle_devpts(inode);
 }
