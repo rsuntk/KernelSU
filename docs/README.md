@@ -7,7 +7,7 @@
 > [!NOTE]
 > Official KernelSU support for Non-GKI kernels has been ended.
 > 
-> This is unofficial forks, all rights reserved to [@tiann](https://github.com/tiann)
+> This is unofficial fork, all rights reserved to [@tiann](https://github.com/tiann)
 
 [![Latest release](https://img.shields.io/github/v/release/rsuntk/KernelSU?label=Release&logo=github)](https://github.com/rsuntk/KernelSU/releases/latest)
 [![Latest LKM release](https://img.shields.io/github/v/release/rsuntk/ksu-lkm?label=Release&logo=github)](https://github.com/rsuntk/ksu-lkm/releases/latest)
@@ -22,15 +22,24 @@ curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.s
 
 ## Hook method
 
+Hook method now determined by Linux version
+
+- GKI/LKM by default will use KPROBES hook
+- Non-GKI by default will use MANUAL hook
+
+You can change it on your kernel defconfig.
+
+**More explanations:**
+
 1. **KPROBES hook:**
-    - Only support GKI (5.4 - 6.x) Kernels in this fork. All non-GKI kernels must use manual hook.
-    - Used for Loadable Kernel Module (LKM)
+    - Also used for Loadable Kernel Module (LKM)
     - Default hook method on GKI kernels.
-    - Need `CONFIG_KPROBES=y`
+    - Need `CONFIG_KPROBES=y` and `CONFIG_KSU_KPROBES_HOOK=y`
 2. **Manual hook:**
-    - For GKI (5.4 - 6.x) Kernels, add `CONFIG_KSU_MANUAL_HOOK=y` to kernel defconfig make sure to use `#ifdef CONFIG_KSU_MANUAL_HOOK` instead of `#ifdef CONFIG_KSU` to guard KernelSU hook.
     - Standard KernelSU hook: https://kernelsu.org/guide/how-to-integrate-for-non-gki.html#manually-modify-the-kernel-source
     - backslashxx's syscall manual hook: https://github.com/backslashxx/KernelSU/issues/5
+    - Default hook method on Non-GKI kernels.
+    - Need `CONFIG_KSU_MANUAL_HOOK=y` and `CONFIG_KPROBES=n`
 
 ## Features
 
