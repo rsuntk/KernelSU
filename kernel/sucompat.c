@@ -295,7 +295,7 @@ static struct kprobe *su_kps[6];
 #endif
 
 // sucompat: permited process can execute 'su' to gain root access.
-void ksu_sucompat_kprobe_init()
+void ksu_sucompat_init()
 {
 #ifdef CONFIG_KSU_KPROBES_HOOK
 	su_kps[0] = init_kprobe(SYS_EXECVE_SYMBOL, execve_handler_pre);
@@ -304,35 +304,21 @@ void ksu_sucompat_kprobe_init()
 	su_kps[3] = init_kprobe(SYS_NEWFSTATAT_SYMBOL, newfstatat_handler_pre);
 	su_kps[4] = init_kprobe(SYS_FSTATAT64_SYMBOL, newfstatat_handler_pre);
 	su_kps[5] = init_kprobe("pts_unix98_lookup", pts_unix98_lookup_pre);
+#else
+	ksu_sucompat_hook_state = true;
+	pr_info("ksu_sucompat init\n");
 #endif
 }
 
-void ksu_sucompat_kprobe_exit()
+void ksu_sucompat_exit()
 {
 #ifdef CONFIG_KSU_KPROBES_HOOK
 	int i;
 	for (i = 0; i < ARRAY_SIZE(su_kps); i++) {
 		destroy_kprobe(&su_kps[i]);
 	}
-#endif
-}
-
-void ksu_sucompat_init()
-{
-#ifdef CONFIG_KSU_MANUAL_HOOK
-	ksu_sucompat_hook_state = true;
-	pr_info("ksu_sucompat init\n");
 #else
-	ksu_sucompat_kprobe_init();
-#endif
-}
-
-void ksu_sucompat_exit()
-{
-#ifdef CONFIG_KSU_MANUAL_HOOK
 	ksu_sucompat_hook_state = false;
 	pr_info("ksu_sucompat exit\n");
-#else
-	ksu_sucompat_kprobe_exit();
 #endif
 }
