@@ -38,15 +38,19 @@ $(error -- Backporting path_umount is mandatory !! Read: https://kernelsu.org/gu
 endif
 
 # Checks hooks state
-ifeq ($(strip $(CONFIG_KSU_KPROBES_HOOK)),y)
-$(info -- KernelSU: Kernel Probes hook.)
-else
-$(info -- KernelSU: Manually-patched hook.)
-endif
-ifeq ($(strip $(CONFIG_KSU_KPROBES_HOOK)),y)
 ifeq ($(strip $(CONFIG_KSU_MANUAL_HOOK)),y)
-$(error -- KernelSU: Duplicated hook method! Please choose one hook method!)
+$(info -- KernelSU: Manually-patched hook.)
+else
+USE_KPROBE := true
 endif
+
+ifeq ($(strip $(CONFIG_KSU)),m)
+USE_KPROBE := true
+endif
+
+ifeq ($(USE_KPROBE),true)
+$(info -- KernelSU: Kernel-probe hook.)
+ccflags-y += -DCONFIG_KSU_KPROBES_HOOK
 endif
 
 # SELinux drivers check
