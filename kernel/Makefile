@@ -41,14 +41,6 @@ endif
 ifeq ($(strip $(CONFIG_KSU_MANUAL_HOOK)),y)
 $(info -- KernelSU: Manually-patched hook.)
 else
-USE_KPROBE := true
-endif
-
-ifeq ($(strip $(CONFIG_KSU)),m)
-USE_KPROBE := true
-endif
-
-ifeq ($(USE_KPROBE),true)
 $(info -- KernelSU: Kernel-probe hook.)
 ccflags-y += -DCONFIG_KSU_KPROBES_HOOK
 endif
