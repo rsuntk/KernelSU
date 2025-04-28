@@ -86,6 +86,7 @@ import me.weishu.kernelsu.ui.component.AboutDialog
 import me.weishu.kernelsu.ui.component.ConfirmResult
 import me.weishu.kernelsu.ui.component.DialogHandle
 import me.weishu.kernelsu.ui.component.SwitchItem
+import me.weishu.kernelsu.ui.component.KsuIsValid
 import me.weishu.kernelsu.ui.component.rememberConfirmDialog
 import me.weishu.kernelsu.ui.component.rememberCustomDialog
 import me.weishu.kernelsu.ui.component.rememberLoadingDialog
@@ -104,7 +105,6 @@ import java.time.format.DateTimeFormatter
 fun SettingScreen(navigator: DestinationsNavigator) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val snackBarHost = LocalSnackbarHost.current
-    val ksuIsValid = Natives.isKsuValid(ksuApp.packageName)
 
     Scaffold(
         topBar = {
@@ -151,51 +151,51 @@ fun SettingScreen(navigator: DestinationsNavigator) {
             }
 
             val profileTemplate = stringResource(id = R.string.settings_profile_template)
-            if (ksuIsValid) {
-		    ListItem(
-		        leadingContent = { Icon(Icons.Filled.Fence, profileTemplate) },
-		        headlineContent = { Text(profileTemplate) },
-		        supportingContent = { Text(stringResource(id = R.string.settings_profile_template_summary)) },
-		        modifier = Modifier.clickable {
-		            navigator.navigate(AppProfileTemplateScreenDestination)
-		        }
-		    )
+            KsuIsValid() {
+                ListItem(
+                    leadingContent = { Icon(Icons.Filled.Fence, profileTemplate) },
+                    headlineContent = { Text(profileTemplate) },
+                    supportingContent = { Text(stringResource(id = R.string.settings_profile_template_summary)) },
+                    modifier = Modifier.clickable {
+                        navigator.navigate(AppProfileTemplateScreenDestination)
+                    }
+                )
             }
 
             var umountChecked by rememberSaveable {
                 mutableStateOf(Natives.isDefaultUmountModules())
             }
             
-            if (ksuIsValid) {
-		    SwitchItem(
-		        icon = Icons.Filled.FolderDelete,
-		        title = stringResource(id = R.string.settings_umount_modules_default),
-		        summary = stringResource(id = R.string.settings_umount_modules_default_summary),
-		        checked = umountChecked
-		    ) {
-		        if (Natives.setDefaultUmountModules(it)) {
-		            umountChecked = it
-		        }
-		    }
+            KsuIsValid() {
+                SwitchItem(
+                    icon = Icons.Filled.FolderDelete,
+                    title = stringResource(id = R.string.settings_umount_modules_default),
+                    summary = stringResource(id = R.string.settings_umount_modules_default_summary),
+                    checked = umountChecked
+                ) {
+                    if (Natives.setDefaultUmountModules(it)) {
+                        umountChecked = it
+                    }
+                }
             }
             
-            if (ksuIsValid) {
-		    if (Natives.version >= Natives.MINIMAL_SUPPORTED_SU_COMPAT) {
-		        var isSuDisabled by rememberSaveable {
-		            mutableStateOf(!Natives.isSuEnabled())
-		        }
-		        SwitchItem(
-		            icon = Icons.Filled.RemoveModerator,
-		            title = stringResource(id = R.string.settings_disable_su),
-		            summary = stringResource(id = R.string.settings_disable_su_summary),
-		            checked = isSuDisabled,
-		        ) { checked ->
-		            val shouldEnable = !checked
-		            if (Natives.setSuEnabled(shouldEnable)) {
-		                isSuDisabled = !shouldEnable
-		            }
-		        }
-		    }
+            KsuIsValid() {
+                if (Natives.version >= Natives.MINIMAL_SUPPORTED_SU_COMPAT) {
+                    var isSuDisabled by rememberSaveable {
+                        mutableStateOf(!Natives.isSuEnabled())
+                    }
+                    SwitchItem(
+                        icon = Icons.Filled.RemoveModerator,
+                        title = stringResource(id = R.string.settings_disable_su),
+                        summary = stringResource(id = R.string.settings_disable_su_summary),
+                        checked = isSuDisabled,
+                    ) { checked ->
+                        val shouldEnable = !checked
+                        if (Natives.setSuEnabled(shouldEnable)) {
+                            isSuDisabled = !shouldEnable
+                        }
+                    }
+                }
             }
 
             val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -220,16 +220,16 @@ fun SettingScreen(navigator: DestinationsNavigator) {
                 )
             }
             
-            if (ksuIsValid) {
-		    SwitchItem(
-		        icon = Icons.Filled.DeveloperMode,
-		        title = stringResource(id = R.string.enable_web_debugging),
-		        summary = stringResource(id = R.string.enable_web_debugging_summary),
-		        checked = enableWebDebugging
-		    ) {
-		        prefs.edit().putBoolean("enable_web_debugging", it).apply()
-		        enableWebDebugging = it
-		    }
+            KsuIsValid() {
+                SwitchItem(
+                    icon = Icons.Filled.DeveloperMode,
+                    title = stringResource(id = R.string.enable_web_debugging),
+                    summary = stringResource(id = R.string.enable_web_debugging_summary),
+                    checked = enableWebDebugging
+                ) {
+                    prefs.edit().putBoolean("enable_web_debugging", it).apply()
+                    enableWebDebugging = it
+                }
             }
             
             var showBottomsheet by remember { mutableStateOf(false) }
