@@ -8,7 +8,7 @@ import me.weishu.kernelsu.ksuApp
 fun KsuIsValid(
     content: @Composable () -> Unit
 ) {
-    if (val ksuIsValid = Natives.isKsuValid(ksuApp.packageName)) {
+    if (Natives.isKsuValid(ksuApp.packageName)) {
         content()
     }
 }
