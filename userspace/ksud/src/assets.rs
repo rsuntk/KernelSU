@@ -45,6 +45,11 @@ struct Asset;
 #[folder = "bin/aarch64"]
 struct Asset;
 
+#[cfg(all(target_arch = "arm", target_os = "android"))]
+#[derive(RustEmbed)]
+#[folder = "bin/arm"]
+struct Asset;
+
 #[cfg(all(target_arch = "riscv64", target_os = "android"))]
 #[derive(RustEmbed)]
 #[folder = "bin/riscv64"]

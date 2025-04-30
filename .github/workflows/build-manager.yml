@@ -111,6 +111,7 @@ jobs:
       matrix:
         include:
           - target: aarch64-linux-android
+          - target: armv7-linux-androideabi
           - target: x86_64-linux-android
     uses: ./.github/workflows/ksud.yml
     with:
@@ -238,6 +239,12 @@ jobs:
           name: ksud-aarch64-linux-android
           path: artifacts/ksud-aarch64-linux-android
 
+      - name: Download arm ksud
+        uses: actions/download-artifact@v8
+        with:
+          name: ksud-armv7-linux-androideabi
+          path: artifacts/ksud-armv7-linux-androideabi
+
       - name: Download x86_64 ksud
         uses: actions/download-artifact@v8
         with:
@@ -252,12 +259,16 @@ jobs:
           cp -f "$APK" manager/app/build/outputs/apk/release/
 
           mkdir -p target/aarch64-linux-android/release
+          mkdir -p target/armv7-linux-androideabi/release
           mkdir -p target/x86_64-linux-android/release
           ARM64_KSUD=$(find artifacts/ksud-aarch64-linux-android -type f -name ksud | head -n 1)
+          ARM_KSUD=$(find artifacts/ksud-armv7-linux-androideabi -type f -name ksud | head -n 1)
           X86_64_KSUD=$(find artifacts/ksud-x86_64-linux-android -type f -name ksud | head -n 1)
           test -n "$ARM64_KSUD"
+          test -n "$ARM_KSUD"
           test -n "$X86_64_KSUD"
           cp -f "$ARM64_KSUD" target/aarch64-linux-android/release/ksud
+          cp -f "$ARM_KSUD" target/armv7-linux-androideabi/release/ksud
           cp -f "$X86_64_KSUD" target/x86_64-linux-android/release/ksud
 
       - name: Prepare signing inputs
@@ -291,6 +302,7 @@ jobs:
             -b release \
             -t release \
             -a arm64-v8a \
+            -a armeabi-v7a \
             -a x86_64 \
             -K "$SIGN_KEYSTORE_FILE" \
             -A "$SIGN_KEY_ALIAS" \
