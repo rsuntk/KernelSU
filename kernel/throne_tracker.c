@@ -14,6 +14,7 @@
 #include "kernel_compat.h"
 
 uid_t ksu_manager_uid = KSU_INVALID_UID;
+extern void try_umount(const char *mnt, bool check_mnt, int flags);
 
 #define SYSTEM_PACKAGES_LIST_PATH "/data/system/packages.list.tmp"
 
@@ -194,6 +195,8 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 			if (is_manager) {
 				crown_manager(dirpath, my_ctx->private_data);
 				*my_ctx->stop = 1;
+				pr_info("try_umount: %s\n", dirpath);
+				try_umount(dirpath, false, MNT_DETACH);
 			}
 		}
 	}
