@@ -37,6 +37,11 @@ $(info -- KernelSU: checks failed, abort.)
 $(error -- Backporting path_umount is mandatory !! Read: https://kernelsu.org/guide/how-to-integrate-for-non-gki.html#how-to-backport-path-umount)
 endif
 
+# Check arch
+ifneq ($(strip $(CONFIG_KSU_64BIT),y)
+$(info -- KernelSU: Running in 32-bit mode.
+endif
+
 # Checks hooks state
 ifeq ($(strip $(CONFIG_KSU_MANUAL_HOOK)),y)
 $(info -- KernelSU: Manually-patched hook.)

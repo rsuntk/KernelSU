@@ -58,7 +58,11 @@ extern void ksu_ksud_exit();
 int __init kernelsu_init(void)
 {
 	pr_info("kernelsu.enabled=%d\n",
-		get_ksu_state());
+		(int)get_ksu_state());
+
+#ifndef CONFIG_KSU_64BIT
+	pr_info_once("Running in 32bit mode!\n");
+#endif
 
 #ifdef CONFIG_KSU_CMDLINE
 	if (!get_ksu_state()) {
@@ -66,6 +70,7 @@ int __init kernelsu_init(void)
 		return 0;
 	}
 #endif
+
 #ifdef CONFIG_KSU_DEBUG
 	pr_alert("*************************************************************");
 	pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");

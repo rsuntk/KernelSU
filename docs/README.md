@@ -32,20 +32,31 @@ curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.s
     - Default hook method on Non-GKI kernels.
     - Need `CONFIG_KSU_MANUAL_HOOK=y`
 
+## ARM32 Use-case
+
+This fork have 32-bit support. Disable `CONFIG_KSU_64BIT`, `CONFIG_KPROBES` and Enable `CONFIG_KSU_MANUAL_HOOK=y` (Manual hook recommened!).
+
+You should not disable KSU_64BIT option on 64-bit kernel and userspace! Otherwise unwanted things may happens!
+
+Use case: 32-bit userspace & kernel, 64-bit kernel & 32-bit userspace (armv8l).
+
 ## Features
 
 1. Kernel-based `su` and root access management.
 2. Module system based on [5ec1cff's Magic Mount API on KernelSU](https://github.com/5ec1cff/KernelSU)
 3. [App Profile](https://kernelsu.org/guide/app-profile.html): Lock up the root power in a cage.
 4. Bringing back non-GKI/GKI 1.0 support
+5. Added bare armeabi-v7a/arm32 support.
 
 ## Compatibility State
 
-KernelSU (before v1.0.0) officially supports Android GKI 2.0 devices (kernel 5.10+). Older kernels (4.14+) are also compatible, but the kernel will have to be built manually.
+KernelSU (before v1.0.0) officially supports Android GKI 2.0 devices (kernel 5.10+).
 
-With this, WSA, ChromeOS, and container-based Android are all supported.
+Older kernels (4.4+) are also compatible, but the kernel will have to be built manually.
 
-Currently, only `arm64-v8a` are supported.
+With more backports, KernelSU can supports 3.x kernel (3.4-3.18).
+
+Currently, only `arm64-v8a` and `armeabi-v7a (bare)` are supported.
 
 ## Usage
 
@@ -56,6 +67,7 @@ Currently, only `arm64-v8a` are supported.
 ## Discussion
 
 - Official KernelSU Telegram: [@KernelSU](https://t.me/KernelSU)
+- Unofficial RKSU Telegram: [@rsukrnlsu_grp](https://t.me/rsukrnlsu_grp)
 
 ## Security
 
