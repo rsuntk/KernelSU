@@ -32,14 +32,6 @@ curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.s
     - Default hook method on Non-GKI kernels.
     - Need `CONFIG_KSU_MANUAL_HOOK=y`
 
-## ARM32 Use-case
-
-This fork have 32-bit support. Disable `CONFIG_KSU_64BIT`, `CONFIG_KPROBES` and Enable `CONFIG_KSU_MANUAL_HOOK=y` (Manual hook recommened!).
-
-You should not disable KSU_64BIT option on 64-bit kernel and userspace! Otherwise unwanted things may happens!
-
-Use case: 64-bit kernel & 32-bit userspace (armv8l) only.
-
 ## Features
 
 1. Kernel-based `su` and root access management.
