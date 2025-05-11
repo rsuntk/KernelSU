@@ -50,6 +50,7 @@ extern int handle_sepolicy(unsigned long arg3, void __user *arg4);
 
 #ifdef CONFIG_COMPAT
 bool ksu_is_compat __read_mostly = false;
+#include <linux/compat.h>
 #endif
 
 static bool ksu_su_compat_enabled = true;
