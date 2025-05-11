@@ -238,6 +238,7 @@ int handle_sepolicy(unsigned long arg3, void __user *arg4)
 		ptr7 = compat_ptr(data_compat.sepol7);
 		cmd = data_compat.cmd;
 		subcmd = data_compat.subcmd;
+		pr_info("sepol: running in compat mode!\n");
 	} else {
 		struct sepol_data data;
 		if (copy_from_user(&data, arg4, sizeof(struct sepol_data))) {
