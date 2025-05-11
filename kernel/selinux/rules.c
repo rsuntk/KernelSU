@@ -154,25 +154,29 @@ void apply_kernelsu_rules()
 #define CMD_TYPE_CHANGE 8
 #define CMD_GENFSCON 9
 
-#define STRUCT_SEPOL_DATA(struct_name, type) \
-	struct struct_name {	\
-		u32 cmd;	\
-		u32 subcmd;	\
-		type sepol1;	\
-		type sepol2;	\
-		type sepol3;	\
-		type sepol4;	\
-		type sepol5;	\
-		type sepol6;	\
-		type sepol7;	\
-	}	\
+struct sepol_data {
+	u32 cmd;
+	u32 subcmd;
+	u64 sepol1;
+	u64 sepol2;
+	u64 sepol3;
+	u64 sepol4;
+	u64 sepol5;
+	u64 sepol6;
+	u64 sepol7;
+}
 
-#ifdef CONFIG_64BIT
-STRUCT_SEPOL_DATA(sepol_data, u64)
-STRUCT_SEPOL_DATA(sepol_data_compat, u32)
-#else
-STRUCT_SEPOL_DATA(sepol_data, u64)
-#endif
+struct __maybe_unused sepol_data_compat {
+	u32 cmd;
+	u32 subcmd;
+	u32 sepol1;
+	u32 sepol2;
+	u32 sepol3;
+	u32 sepol4;
+	u32 sepol5;
+	u32 sepol6;
+	u32 sepol7;
+}
 
 static int get_object(char *buf, char __user *user_object, size_t buf_sz,
 		      char **object)
@@ -221,7 +225,6 @@ int handle_sepolicy(unsigned long arg3, void __user *arg4)
 	u32 cmd, subcmd;
 	char __user *ptr1, *ptr2, *ptr3, *ptr4, *ptr5, *ptr6, *ptr7;
 
-#if defined(CONFIG_64BIT) && defined(CONFIG_COMPAT)
 	if (unlikely(ksu_is_compat)) {
 		struct sepol_data_compat data_compat;
 		if (copy_from_user(&data_compat, arg4, sizeof(struct sepol_data_compat))) {
@@ -253,23 +256,6 @@ int handle_sepolicy(unsigned long arg3, void __user *arg4)
 		cmd = data.cmd;
 		subcmd = data.subcmd;
 	}
-#else
-	struct sepol_data data;
-	if (copy_from_user(&data, arg4, sizeof(struct sepol_data))) {
-		pr_err("sepol: copy sepol_data failed.\n");
-		return -1;
-	}
-
-	ptr1 = data.sepol1;
-	ptr2 = data.sepol2;
-	ptr3 = data.sepol3;
-	ptr4 = data.sepol4;
-	ptr5 = data.sepol5;
-	ptr6 = data.sepol6;
-	ptr7 = data.sepol7;
-	cmd = data.cmd;
-	subcmd = data.subcmd;
-#endif
 
 	rcu_read_lock();
 
