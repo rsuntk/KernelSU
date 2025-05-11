@@ -18,7 +18,9 @@
 #define KERNEL_EXEC_TYPE "ksu_exec"
 #define ALL NULL
 
+#ifdef CONFIG_COMPAT
 extern bool ksu_is_compat __read_mostly;
+#endif
 
 static struct policydb *get_policydb(void)
 {
