@@ -18,6 +18,8 @@
 #define KERNEL_EXEC_TYPE "ksu_exec"
 #define ALL NULL
 
+extern bool ksu_is_compat;
+
 static struct policydb *get_policydb(void)
 {
 	struct policydb *db;
@@ -150,30 +152,25 @@ void apply_kernelsu_rules()
 #define CMD_TYPE_CHANGE 8
 #define CMD_GENFSCON 9
 
-// maximal is 7!!
-#if defined(CONFIG_KSU_64BIT) && defined(CONFIG_64BIT)
-#define usize_val u64
-#else
-#define usize_val u32
-#endif
+#define STRUCT_SEPOL_DATA(struct_name, type) \
+	struct struct_name {	\
+		u32 cmd;	\
+		u32 subcmd;	\
+		type sepol1;	\
+		type sepol2;	\
+		type sepol3;	\
+		type sepol4;	\
+		type sepol5;	\
+		type sepol6;	\
+		type sepol7;	\
+	}	\
 
-#if !defined(CONFIG_KSU_64BIT) && defined(CONFIG_64BIT)
-#define declare_char(a, x) char __user a = compat_ptr(x)
+#ifdef CONFIG_64BIT
+STRUCT_SEPOL_DATA(sepol_data, u64)
+STRUCT_SEPOL_DATA(sepol_data_compat, u32)
 #else
-#define declare_char(a, x) char __user a = x
+STRUCT_SEPOL_DATA(sepol_data, u64)
 #endif
-
-struct sepol_data {
-	u32 cmd;
-	u32 subcmd;
-	usize_val sepol1;
-	usize_val sepol2;
-	usize_val sepol3;
-	usize_val sepol4;
-	usize_val sepol5;
-	usize_val sepol6;
-	usize_val sepol7;
-};
 
 static int get_object(char *buf, char __user *user_object, size_t buf_sz,
 		      char **object)
@@ -219,22 +216,58 @@ int handle_sepolicy(unsigned long arg3, void __user *arg4)
 		pr_info("SELinux permissive or disabled when handle policy!\n");
 	}
 
+	u32 cmd, subcmd;
+	char __user *ptr1, *ptr2, *ptr3, *ptr4, *ptr5, *ptr6, *ptr7;
+
+#if defined(CONFIG_64BIT) && defined(CONFIG_COMPAT)
+	if (unlikely(ksu_is_compat)) {
+		struct sepol_data_compat data_compat;
+		if (copy_from_user(&data_compat, arg4, sizeof(struct sepol_data_compat))) {
+			pr_err("sepol: copy sepol_data failed.\n");
+			return -1;
+		}
+		ptr1 = compat_ptr(data_compat.sepol1);
+		ptr2 = compat_ptr(data_compat.sepol2);
+		ptr3 = compat_ptr(data_compat.sepol3);
+		ptr4 = compat_ptr(data_compat.sepol4);
+		ptr5 = compat_ptr(data_compat.sepol5);
+		ptr6 = compat_ptr(data_compat.sepol6);
+		ptr7 = compat_ptr(data_compat.sepol7);
+		cmd = data_compat.cmd;
+		subcmd = data_compat.subcmd;
+	} else {
+		struct sepol_data data;
+		if (copy_from_user(&data, arg4, sizeof(struct sepol_data))) {
+			pr_err("sepol: copy sepol_data failed.\n");
+			return -1;
+		}
+		ptr1 = data.sepol1;
+		ptr2 = data.sepol2;
+		ptr3 = data.sepol3;
+		ptr4 = data.sepol4;
+		ptr5 = data.sepol5;
+		ptr6 = data.sepol6;
+		ptr7 = data.sepol7;
+		cmd = data.cmd;
+		subcmd = data.subcmd;
+	}
+#else
 	struct sepol_data data;
 	if (copy_from_user(&data, arg4, sizeof(struct sepol_data))) {
 		pr_err("sepol: copy sepol_data failed.\n");
 		return -1;
 	}
 
-	declare_char(*ptr1, data.sepol1);
-	declare_char(*ptr2, data.sepol2);
-	declare_char(*ptr3, data.sepol3);
-	declare_char(*ptr4, data.sepol4);
-	declare_char(*ptr5, data.sepol5);
-	declare_char(*ptr6, data.sepol6);
-	declare_char(*ptr7, data.sepol7);
-
-	u32 cmd = data.cmd;
-	u32 subcmd = data.subcmd;
+	ptr1 = data.sepol1;
+	ptr2 = data.sepol2;
+	ptr3 = data.sepol3;
+	ptr4 = data.sepol4;
+	ptr5 = data.sepol5;
+	ptr6 = data.sepol6;
+	ptr7 = data.sepol7;
+	cmd = data.cmd;
+	subcmd = data.subcmd;
+#endif
 
 	rcu_read_lock();
 

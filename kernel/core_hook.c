@@ -48,6 +48,10 @@ static bool ksu_module_mounted = false;
 
 extern int handle_sepolicy(unsigned long arg3, void __user *arg4);
 
+#ifdef CONFIG_COMPAT
+bool ksu_is_compat __read_mostly = false;
+#endif
+
 static bool ksu_su_compat_enabled = true;
 extern void ksu_sucompat_init();
 extern void ksu_sucompat_exit();
@@ -147,6 +151,14 @@ void escape_to_root(void)
 		rcu_read_unlock();
 		return;
 	}
+
+#ifdef CONFIG_COMPAT
+	if ((strcmp(current->comm, "ksud") == 0)
+		&& is_compat_task() && !ksu_is_compat) { // prevent being called multiple times
+		pr_info("ksud is 32bit! Running in compat mode!\n");
+		ksu_is_compat = true;
+	}
+#endif
 
 	struct root_profile *profile = ksu_get_root_profile(cred->uid.val);
 
