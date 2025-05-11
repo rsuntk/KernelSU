@@ -60,10 +60,6 @@ int __init kernelsu_init(void)
 	pr_info("kernelsu.enabled=%d\n",
 		(int)get_ksu_state());
 
-#ifndef CONFIG_KSU_64BIT
-	pr_info_once("Running in 32bit mode!\n");
-#endif
-
 #ifdef CONFIG_KSU_CMDLINE
 	if (!get_ksu_state()) {
 		pr_info_once("drivers is disabled.");

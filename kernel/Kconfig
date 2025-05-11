@@ -15,13 +15,6 @@ config KSU_DEBUG
 	help
 	  Enable KernelSU debug mode.
 
-config KSU_64BIT
-	bool "KernelSU 64bit compat"
-        depends on KSU && 64BIT
-        default y
-	help
-	  Enable this if you have a 32-bit userspace or armv8l.
-
 config KSU_ALLOWLIST_WORKAROUND
 	bool "KernelSU Session init keyring workaround"
 	depends on KSU
