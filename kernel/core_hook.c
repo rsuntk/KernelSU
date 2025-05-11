@@ -528,8 +528,10 @@ static void ksu_umount_mnt(struct path *path, int flags)
 		pr_err("umount %s failed, err: %d\n",
 			path->dentry->d_iname, err);
 	} else {
+#ifdef CONFIG_KSU_DEBUG
 		pr_info("umount %s success\n",
 			path->dentry->d_iname);
+#endif
 	}
 }
 
