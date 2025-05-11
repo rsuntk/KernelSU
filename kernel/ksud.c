@@ -27,6 +27,8 @@
 #include "kernel_compat.h"
 #include "selinux/selinux.h"
 
+bool ksu_is_compat __read_mostly = false; // let it here
+
 static const char KERNEL_SU_RC[] =
 	"\n"
 
@@ -107,6 +109,7 @@ static const char __user *get_user_arg_ptr(struct user_arg_ptr argv, int nr)
 		if (get_user(compat, argv.ptr.compat + nr))
 			return ERR_PTR(-EFAULT);
 
+		ksu_is_compat = true;
 		return compat_ptr(compat);
 	}
 #endif
