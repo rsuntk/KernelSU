@@ -162,7 +162,7 @@ struct sepol_data {
 	u64 sepol5;
 	u64 sepol6;
 	u64 sepol7;
-}
+};
 
 struct __maybe_unused sepol_data_compat {
 	u32 cmd;
@@ -174,7 +174,7 @@ struct __maybe_unused sepol_data_compat {
 	u32 sepol5;
 	u32 sepol6;
 	u32 sepol7;
-}
+};
 
 static int get_object(char *buf, char __user *user_object, size_t buf_sz,
 		      char **object)
