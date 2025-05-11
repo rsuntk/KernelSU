@@ -20,6 +20,9 @@
 #include <linux/uidgid.h>
 #include <linux/version.h>
 #include <linux/mount.h>
+#ifdef CONFIG_COMPAT
+#include <linux/compat.h>
+#endif
 
 #include <linux/fs.h>
 #include <linux/namei.h>
@@ -48,10 +51,7 @@ static bool ksu_module_mounted = false;
 
 extern int handle_sepolicy(unsigned long arg3, void __user *arg4);
 
-#ifdef CONFIG_COMPAT
-bool ksu_is_compat __read_mostly = false;
-#include <linux/compat.h>
-#endif
+bool ksu_is_compat __read_mostly = false; // let it here
 
 static bool ksu_su_compat_enabled = true;
 extern void ksu_sucompat_init();
