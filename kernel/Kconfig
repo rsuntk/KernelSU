@@ -17,6 +17,16 @@ config KSU_LSM_SECURITY_HOOKS
 	  Disabling this is mostly useful for non-ARM64 with kernel > 6.8.
 	  Make sure to implement manual hooks on security/security.c.
 
+config KSU_THRONE_TRACKER_ALWAYS_THREADED
+	bool "Always run throne tracker in a kthread"
+	depends on KSU
+	default n
+	help
+	  Enable this option to run throne tracker in a kthread for the first
+	  run, which happens at boot time / decryption stage. This can decrease
+	  boot time, but can cause crowning failure on some FDE/FBEv1 setups.
+	  If unsure, say n.
+
 config KSU_NOPRINTK
 	bool "disable ALL dmesg logging"
 	depends on KSU

@@ -117,7 +117,7 @@ static FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name, i
 	return FILLDIR_ACTOR_CONTINUE;
 }
 
-static void search_manager(const char *path, int depth, struct list_head *uid_data)
+static noinline void search_manager(const char *path, int depth, struct list_head *uid_data)
 {
 	int i, stop = 0;
 	struct list_head data_path_list;
@@ -210,14 +210,12 @@ static bool is_uid_exist(uid_t uid, char *package, void *data)
 	return exist;
 }
 
-void track_throne(bool prune_only)
+static void throne_tracker_fn(bool prune_only)
 {
-	mutex_lock(&throne_tracker_mutex);
-	const struct cred *old_cred = override_creds(ksu_cred);
 	struct file *fp = filp_open(SYSTEM_PACKAGES_LIST_PATH, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
 		pr_err("%s: open " SYSTEM_PACKAGES_LIST_PATH " failed: %ld\n", __func__, PTR_ERR(fp));
-		goto out_revert_cred;
+		return;
 	}
 
 	struct list_head uid_list;
@@ -336,10 +334,67 @@ out:
 	list_for_each_entry_safe (np, n, &uid_list, list) {
 		list_del(&np->list);
 		kfree(np);
-	}
-out_revert_cred:
-	revert_creds(old_cred);
+	}	
+}
+
+static int throne_tracker_thread(void *data)
+{
+	// now de-void it here
+	bool prune_only = (bool)data;
+
+	pr_info("throne_tracker: pid: %d started\n", current->pid);
+
+	guarded_mutex_lock(&throne_tracker_mutex);
+
+test_tmp:
+	if (!is_file_existing("/data/system/packages.list.tmp"))
+		goto test_list;
+
+	if (IS_ENABLED(CONFIG_KSU_DEBUG))
+		pr_info("throne_tracker: rename not finished! retry!\n");
+
+	msleep(20); // yield
+	goto test_tmp;
+
+test_list:
+	if (is_file_stable(SYSTEM_PACKAGES_LIST_PATH))
+		goto start_tt;
+
+	if (IS_ENABLED(CONFIG_KSU_DEBUG))
+		pr_info("throne_tracker: rename not finished! retry!\n");
+
+	msleep(20); // yield
+	goto test_list;	
+
+start_tt:
+	// lessen that window where user opens manager right away, yet its not crowned
+	set_user_nice(current, -10);
+
+	// this in exchange of override creds, we escape this whole thread.
+	escape_to_root_forced();
+	throne_tracker_fn(prune_only);
+
+	pr_info("throne_tracker: pid: %d exit!\n", current->pid);
+	return 0;
+}
+
+void track_throne(bool prune_only)
+{
+#ifndef CONFIG_KSU_THRONE_TRACKER_ALWAYS_THREADED
+	static void *label = &&first_run;
+	goto *label;
+
+first_run:
+	mutex_lock(&throne_tracker_mutex);
+	throne_tracker_fn(prune_only);
 	mutex_unlock(&throne_tracker_mutex);
+
+	label = &&threaded;
+	return;
+threaded:
+#endif
+	// HACK: force cast prune_only to be a void *
+	kthread_run(throne_tracker_thread, (void *)prune_only, "kthread");
 }
 
 void __init ksu_throne_tracker_init()
