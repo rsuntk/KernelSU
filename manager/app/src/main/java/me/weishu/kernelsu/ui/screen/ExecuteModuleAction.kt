@@ -63,7 +63,6 @@ fun ExecuteModuleActionScreen(navigator: DestinationsNavigator, moduleId: String
     val snackBarHost = LocalSnackbarHost.current
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
-    var actionResult: Boolean
     var isActionRunning by rememberSaveable { mutableStateOf(true) }
 
     BackHandler(enabled = isActionRunning) {
@@ -89,9 +88,7 @@ fun ExecuteModuleActionScreen(navigator: DestinationsNavigator, moduleId: String
                 onStderr = {
                     logContent.append(it).append("\n")
                 }
-            ).let {
-                actionResult = it
-            }
+            )
         }
         isActionRunning = false
     }
@@ -100,9 +97,6 @@ fun ExecuteModuleActionScreen(navigator: DestinationsNavigator, moduleId: String
         topBar = {
             TopBar(
                 isActionRunning = isActionRunning,
-                onBack = dropUnlessResumed {
-                    navigator.popBackStack()
-                },
                 onSave = {
                     if (!isActionRunning) {
                         scope.launch {
@@ -158,15 +152,9 @@ fun ExecuteModuleActionScreen(navigator: DestinationsNavigator, moduleId: String
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TopBar(isActionRunning: Boolean, onBack: () -> Unit = {}, onSave: () -> Unit = {}) {
+private fun TopBar(isActionRunning: Boolean, onSave: () -> Unit = {}) {
     TopAppBar(
         title = { Text(stringResource(R.string.action)) },
-        navigationIcon = {
-            IconButton(
-                onClick = onBack,
-                enabled = !isActionRunning
-            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
-        },
         actions = {
             IconButton(
                 onClick = onSave,
