@@ -70,7 +70,10 @@ fun Uri.getFileName(context: Context): String? {
 
 fun createRootShell(globalMnt: Boolean = false): Shell {
     Shell.enableVerboseLogging = BuildConfig.DEBUG
-    val builder = Shell.Builder.create()
+    val builder = Shell.Builder.create().apply {
+        setFlags(Shell.FLAG_MOUNT_MASTER)
+    }
+
     return try {
         if (globalMnt) {
             builder.build(getKsuDaemonPath(), "debug", "su", "-g")
@@ -358,6 +361,22 @@ fun hasMagisk(): Boolean {
     val result = shell.newJob().add("which magisk").exec()
     Log.i(TAG, "has magisk: ${result.isSuccess}")
     return result.isSuccess
+}
+
+fun isGlobalNamespaceEnabled(): Boolean {
+    val shell = getRootShell()
+    val result =
+        ShellUtils.fastCmd(shell, "nsenter --mount=/proc/1/ns/mnt cat ${Natives.GLOBAL_NAMESPACE_FILE}")
+    Log.i(TAG, "is global namespace enabled: $result")
+    return result == "1"
+}
+
+fun setGlobalNamespaceEnabled(value: String) {
+    getRootShell().newJob()
+        .add("nsenter --mount=/proc/1/ns/mnt echo $value > ${Natives.GLOBAL_NAMESPACE_FILE}")
+        .submit { result ->
+            Log.i(TAG, "setGlobalNamespaceEnabled result: ${result.isSuccess} [${result.out}]")
+        }
 }
 
 fun isSepolicyValid(rules: String?): Boolean {

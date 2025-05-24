@@ -92,6 +92,9 @@ object Natives {
         return version < MINIMAL_SUPPORTED_KERNEL
     }
 
+    val KSU_WORK_DIR = "/data/adb/ksu/"
+    val GLOBAL_NAMESPACE_FILE = KSU_WORK_DIR + ".global_mnt"
+
     @Immutable
     @Parcelize
     @Keep

@@ -120,6 +120,8 @@
     <string name="close">Tutup</string>
     <string name="settings_check_update">Cek terbaru</string>
     <string name="settings_check_update_summary">Cek terbaru setiap membuka aplikasi</string>
+    <string name="settings_global_namespace_mode">Mode Namespace Global</string>
+    <string name="settings_global_namespace_mode_summary">Semua sesi root berjalan menggunakan global namespace.</string>
     <string name="shrink_sparse_image">Meminimalkan sparse image</string>
     <string name="shrink_sparse_image_message">Mengembalikan sparse image, lokasi modul disimpan, ke ukuran sebenarnya. Dapat menyebabkan modul bekerja abnormal, maka gunakan saat dibutuhkan saja (mis. untuk pencadangan).</string>
     <string name="settings_uninstall_permanent_message">Hapus permanen KernelSU (root dan modul).</string>
