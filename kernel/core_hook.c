@@ -539,14 +539,14 @@ static void ksu_sys_umount(const char *mnt, int flags)
 {
 	char __user *usermnt = (char __user *)mnt;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 17, 0)
 	mm_segment_t old_fs = get_fs();
 	set_fs(KERNEL_DS);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
-	int ret = ksys_umount(usermnt, flags);
-#else
 	long ret = sys_umount(usermnt, flags); // cuz asmlinkage long sys##name
-#endif
 	set_fs(old_fs);
+#else
+	int ret = ksys_umount(usermnt, flags);
+#endif
 	pr_info("%s: path: %s ret: %d \n", __func__, usermnt, ret);
 }
 #endif
