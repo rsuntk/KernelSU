@@ -177,10 +177,65 @@
 #include "hook/branch_link_hook_arm64.c"
 #endif
 
+// track backports and other quirks here
+// ref: kernel_compat.c, Makefile
+// yes looks nasty
+#if defined(CONFIG_KSU_DEBUG)
+	#define FEAT_1 " +debug"
+#else
+	#define FEAT_1 ""
+#endif
+#if defined(CONFIG_KSU_EXTRAS)
+	#define FEAT_2 " +extras"
+#else
+	#define FEAT_2 ""
+#endif
+#if defined(CONFIG_KSU_TAMPER_SYSCALL_TABLE)
+	#define FEAT_3 " +syscall_table_hook"
+#else
+	#define FEAT_3 ""
+#endif
+#if !defined(CONFIG_KSU_LSM_SECURITY_HOOKS)
+	#define FEAT_4 " -lsm_hooks"
+#else
+	#define FEAT_4 ""
+#endif
+#if defined(CONFIG_KSU_HACK_ARM64_BRANCH_LINK)
+	#define FEAT_5 " +arm64_branch_link"
+#else
+	#define FEAT_5 ""
+#endif
+#if defined(KSU_COMPAT_HAS_EXPORTED_POLICY_RWLOCK)
+	#define FEAT_6 " +policy_rwlock"
+#else
+	#define FEAT_6 ""
+#endif
+#if defined(MODULE)
+	#define FEAT_7 " +lkm"
+#else
+	#define FEAT_7 ""
+#endif
+
+#define EXTRA_FEATURES FEAT_1 FEAT_2 FEAT_3 FEAT_4 FEAT_5 FEAT_6 FEAT_7
+
+static inline void ksu_print_build_info(void)
+{
+	pr_info("Initialized on: %s (%s)%s\n", UTS_RELEASE, UTS_MACHINE, EXTRA_FEATURES);
+
+#if defined(__VERSION__) && defined(__STDC_VERSION__)
+#if defined(__clang_version__)
+	pr_info("Built with: Clang %d.%d.%d w/ stdc: %ld\n", __clang_major__, __clang_minor__, __clang_patchlevel__, __STDC_VERSION__);
+#else
+	pr_info("Built with: GCC %s w/ stdc: %ld\n", __VERSION__, __STDC_VERSION__);
+#endif
+#endif
+
+}
+
 static int __init kernelsu_init(void)
 {
-
 	pr_info("welcome to KernelSU version " __stringify(KERNEL_SU_VERSION) ", package name " KSU_PACKAGE_NAME "\n");
+	ksu_print_build_info();
 
 #ifdef CONFIG_KSU_DEBUG
 	pr_alert("*************************************************************");
