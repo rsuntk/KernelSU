@@ -598,18 +598,12 @@ static void do_stop_input_hook(struct work_struct *work)
 	unregister_kprobe(&input_event_kp);
 }
 #else
-/* 
- * ksu_handle_execve_ksud, execve_ksud handler for non kprobe
- * adapted from sys_execve_handler_pre 
- * https://github.com/tiann/KernelSU/commit/2027ac3
- */
-__maybe_unused int ksu_handle_execve_ksud(const char __user *filename_user,
-			const char __user *const __user *__argv)
+static int ksu_common_execve_ksud(const char __user *filename_user,
+			struct user_arg_ptr *argv)
 {
-	struct user_arg_ptr argv = { .ptr.native = __argv };
 	struct filename filename_in, *filename_p;
 	char path[32];
-
+	
 	// return early if disabled.
 	if (!ksu_execveat_hook) {
 		return 0;
@@ -624,9 +618,26 @@ __maybe_unused int ksu_handle_execve_ksud(const char __user *filename_user,
 	// this is because ksu_handle_execveat_ksud calls it filename->name
 	filename_in.name = path;
 	filename_p = &filename_in;
-    
-	return ksu_handle_execveat_ksud(AT_FDCWD, &filename_p, &argv, NULL, NULL);
+
+	return ksu_handle_execveat_ksud(AT_FDCWD, &filename_p, argv, NULL, NULL);
 }
+
+int __maybe_unused ksu_handle_execve_ksud(const char __user *filename_user,
+			const char __user *const __user *__argv)
+{
+	struct user_arg_ptr argv = { .ptr.native = __argv };
+	return ksu_common_execve_ksud(filename_user, &argv);
+}
+
+#if defined(CONFIG_COMPAT) && defined(CONFIG_64BIT)
+int __maybe_unused ksu_handle_compat_execve_ksud(const char __user *filename_user,
+			const compat_uptr_t __user *__argv)
+{
+	struct user_arg_ptr argv = { .ptr.compat = __argv };
+	return ksu_common_execve_ksud(filename_user, &argv);
+}
+#endif /* COMPAT & 64BIT */
+
 #endif
 
 static void stop_vfs_read_hook()
