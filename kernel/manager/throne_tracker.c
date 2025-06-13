@@ -117,6 +117,13 @@ static FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name, i
 	return FILLDIR_ACTOR_CONTINUE;
 }
 
+// compat: https://elixir.bootlin.com/linux/v3.9/source/include/linux/fs.h#L771
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,9,0)
+#define ksu_get_magic(x) ((x)->f_inode->i_sb->s_magic)
+#else
+#define ksu_get_magic(x) ((x)->f_path.dentry->d_inode->i_sb->s_magic)
+#endif
+
 static noinline void search_manager(const char *path, int depth, struct list_head *uid_data)
 {
 	int i, stop = 0;
@@ -153,18 +160,17 @@ static noinline void search_manager(const char *path, int depth, struct list_hea
 
 			// grab magic on first folder, which is /data/app
 			if (!data_app_magic) {
-				if (file->f_inode->i_sb->s_magic) {
-					data_app_magic = file->f_inode->i_sb->s_magic;
+				if (ksu_get_magic(file)) {
+					data_app_magic = ksu_get_magic(file);
 					pr_info("%s: dir: %s got magic! 0x%lx\n", __func__, pos->dirpath, data_app_magic);
 				} else {
 					filp_close(file, NULL);
 					goto skip_iterate;
 				}
 			}
-
-			if (file->f_inode->i_sb->s_magic != data_app_magic) {
-				pr_info("%s: skip: %s magic: 0x%lx expected: 0x%lx\n", __func__, pos->dirpath,
-						file->f_inode->i_sb->s_magic, data_app_magic);
+				
+			if (ksu_get_magic(file) != data_app_magic) {
+				pr_info("%s: skip: %s magic: 0x%lx expected: 0x%lx\n", __func__, pos->dirpath, ksu_get_magic(file), data_app_magic);
 				filp_close(file, NULL);
 				goto skip_iterate;
 			}
