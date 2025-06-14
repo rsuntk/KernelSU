@@ -154,7 +154,7 @@ static __always_inline bool check_v2_signature(char *path, unsigned expected_siz
 		return false;
 	}
 
-	file_size = generic_file_llseek(fp, 0, SEEK_END);
+	file_size = vfs_llseek(fp, 0, SEEK_END);
 	if (file_size < 0)
 		goto clean;
 
