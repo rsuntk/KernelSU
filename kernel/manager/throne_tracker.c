@@ -66,9 +66,18 @@ static bool maybe_manager_apk_dir(const char *path)
 	return strncmp(pkg, KSU_PACKAGE_NAME, sizeof(KSU_PACKAGE_NAME)) == 0;
 }
 
-static FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name, int namelen, loff_t off, u64 ino,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
+#define MY_ACTOR_CTX_ARG struct dir_context *ctx
+#else
+#define MY_ACTOR_CTX_ARG void *ctx_void
+#endif
+
+static FILLDIR_RETURN_TYPE my_actor(MY_ACTOR_CTX_ARG, const char *name, int namelen, loff_t off, u64 ino,
 									unsigned int d_type)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+	struct dir_context *ctx = (struct dir_context *)ctx_void;
+#endif
 	struct my_dir_context *my_ctx = container_of(ctx, struct my_dir_context, ctx);
 
 	// we put the apk path we collected here
