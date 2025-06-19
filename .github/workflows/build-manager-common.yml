@@ -1,6 +1,7 @@
 name: Build Manager Common
 
 on:
+  workflow_dispatch:
   workflow_call:
     inputs:
       spoofed:
