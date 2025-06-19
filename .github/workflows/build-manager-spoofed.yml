@@ -12,10 +12,9 @@ on:
     branches: [ "main" ]
     paths:
       - 'manager/**'
-  workflow_call:
 
 jobs:
   build-manager:
     uses: ./.github/workflows/build-manager-common.yml
     with:
-      spoofed: false
+      spoofed: true

@@ -9,9 +9,9 @@ word3=$(tr -dc 'a-z' </dev/urandom | head -c6)
 export word1 word2 word3
 
 # Rename directories
-find . -depth -type d -name 'com' -execdir mv {} "$word1" \;
-find . -depth -type d -name 'rifsxd' -execdir mv {} "$word2" \;
-find . -depth -type d -name 'ksunext' -execdir mv {} "$word3" \;
+find . -depth -type d -name 'me' -execdir mv {} "$word1" \;
+find . -depth -type d -name 'weishu' -execdir mv {} "$word2" \;
+find . -depth -type d -name 'kernelsu' -execdir mv {} "$word3" \;
 
 # Replace inside files
 find . -type f -exec sed -i \
