@@ -40,7 +40,6 @@ static int transive_to_domain(const char *domain)
 	return error;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 bool __maybe_unused is_ksu_transition(const struct task_security_struct *old_tsec,
 			const struct task_security_struct *new_tsec)
 {
@@ -59,7 +58,6 @@ bool __maybe_unused is_ksu_transition(const struct task_security_struct *old_tse
 	security_release_secctx(secdata, seclen);
 	return allowed;
 }
-#endif
 
 void setup_selinux(const char *domain)
 {
