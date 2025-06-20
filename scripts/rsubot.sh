@@ -1,14 +1,5 @@
 #!/bin/env bash
 
-if [ "$SPOOFED" = "true" ]; then
-
-msg="\\#ci\\_$VERSION
-
-Synced up with $COMMIT_URL
-
-*This manager package id has been spoofed*
-"
-else
 msg="*$TITLE*
 \\#ci\\_$VERSION
 \`\`\`
@@ -17,7 +8,6 @@ $COMMIT_MESSAGE
 [Commit]($COMMIT_URL)
 [Workflow run]($RUN_URL)
 "
-fi
 
 file="$1"
 
