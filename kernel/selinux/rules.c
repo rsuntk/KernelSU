@@ -38,6 +38,17 @@ static struct policydb *get_policydb(void)
 	return db;
 }
 
+// TODO: put this in kernel_compat.h!
+#ifndef READ_ONCE
+#define READ_ONCE(x) \
+	({ union { typeof(x) __val; char __c[1]; } __u; __read_once_size(&(x), __u.__c, sizeof(x)); __u.__val; })
+#endif
+
+#ifndef WRITE_ONCE
+#define WRITE_ONCE(x, val) \
+	({ typeof(x) __val = (val); __write_once_size(&(x), &__val, sizeof(__val)); __val; })
+#endif
+
 void apply_kernelsu_rules()
 {
 	if (!getenforce()) {
