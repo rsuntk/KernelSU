@@ -3,6 +3,7 @@
 #include <linux/kobject.h>
 #include <linux/module.h>
 #include <linux/workqueue.h>
+#include <linux/version.h>
 
 #include "allowlist.h"
 #include "arch.h"
@@ -36,18 +37,26 @@ bool ksu_queue_work(struct work_struct *work)
 	return queue_work(ksu_workqueue, work);
 }
 
-extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
+// Kernel 3.4 compatibility: struct filename does not exist, use char * for paths
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 6, 0)
+typedef char ksu_filename;
+#define KSU_FILENAME_ARG(x)   char **x
+#else
+typedef struct filename ksu_filename;
+#define KSU_FILENAME_ARG(x)   struct filename **x
+#endif
+
+extern int ksu_handle_execveat_sucompat(int *fd, KSU_FILENAME_ARG(filename_ptr),
 					void *argv, void *envp, int *flags);
 
-extern int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+extern int ksu_handle_execveat_ksud(int *fd, KSU_FILENAME_ARG(filename_ptr),
 				    void *argv, void *envp, int *flags);
 
-int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
+int ksu_handle_execveat(int *fd, KSU_FILENAME_ARG(filename_ptr), void *argv,
 			void *envp, int *flags)
 {
 	ksu_handle_execveat_ksud(fd, filename_ptr, argv, envp, flags);
-	return ksu_handle_execveat_sucompat(fd, filename_ptr, argv, envp,
-					    flags);
+	return ksu_handle_execveat_sucompat(fd, filename_ptr, argv, envp, flags);
 }
 
 extern void ksu_sucompat_init();
@@ -129,7 +138,6 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("weishu");
 MODULE_DESCRIPTION("Android KernelSU");
 
-#include <linux/version.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
 MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
 #endif

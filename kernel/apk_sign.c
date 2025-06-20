@@ -19,6 +19,19 @@
 #include "kernel_compat.h"
 #include "manager_sign.h"
 
+// BEGIN: Kernel 3.4 compat bin2hex
+static void bin2hex(char *dst, const void *src, int len)
+{
+	static const char hex[] = "0123456789abcdef";
+	const unsigned char *s = src;
+	while (len--) {
+		*dst++ = hex[(*s >> 4) & 0xf];
+		*dst++ = hex[*s++ & 0xf];
+	}
+	*dst = '\0';
+}
+// END: Kernel 3.4 compat bin2hex
+
 struct sdesc {
 	struct shash_desc shash;
 	char ctx[];
@@ -116,7 +129,7 @@ static bool check_block(struct file *fp, u32 *size4, loff_t *pos, u32 *offset)
 		ksu_kernel_read_compat(fp, cert, *size4, pos);
 		unsigned char digest[SHA256_DIGEST_SIZE];
 		int ret = ksu_sha256(cert, *size4, digest);
-		if (IS_ERR(ret)) {
+		if (IS_ERR_VALUE(ret)) { // PATCH: Use IS_ERR_VALUE for int return
 			pr_info("sha256 error\n");
 			return false;
 		}

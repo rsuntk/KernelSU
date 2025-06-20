@@ -1,6 +1,12 @@
 #include <linux/uaccess.h>
 #include <linux/types.h>
 #include <linux/version.h>
+#include <linux/errno.h>
+#include <linux/kernel.h>
+#include <linux/string.h>
+#include <linux/slab.h>
+#include <linux/compat.h>
+#include <linux/fs.h>
 
 #include "../klog.h" // IWYU pragma: keep
 #include "selinux.h"
@@ -8,6 +14,36 @@
 #include "ss/services.h"
 #include "linux/lsm_audit.h"
 #include "xfrm.h"
+
+// Kernel 3.4 compat: groups_sort stub if missing
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0)
+struct group_info;
+static inline void groups_sort(struct group_info *group_info) { }
+#endif
+
+// Kernel 3.4 compat: ext4_unregister_sysfs stub if missing
+#if !defined(CONFIG_EXT4_FS) || LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
+static inline void ext4_unregister_sysfs(void) { }
+#endif
+
+// Kernel 3.4 compat: compat_ptr stub if missing
+#ifndef compat_ptr
+#define compat_ptr(x) ((void __user *)(uintptr_t)(x))
+#endif
+
+// Kernel 3.4 compat: kernel_write stub (use vfs_write)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
+#include <linux/uio.h>
+static inline ssize_t kernel_write(struct file *file, const void *buf, size_t count, loff_t *pos)
+{
+	return vfs_write(file, buf, count, pos);
+}
+#endif
+
+// Kernel 3.4 compat: escape_to_root stub if missing
+#ifndef HAVE_ESCAPE_TO_ROOT
+static inline void escape_to_root(void) { }
+#endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 #define SELINUX_POLICY_INSTEAD_SELINUX_SS
