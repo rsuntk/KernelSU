@@ -1,6 +1,8 @@
 #include <linux/uaccess.h>
 #include <linux/types.h>
 #include <linux/version.h>
+#include <linux/compiler.h>
+#include <linux/preempt.h>
 
 #include "../klog.h" // IWYU pragma: keep
 #include "selinux.h"
@@ -42,7 +44,16 @@ void apply_kernelsu_rules()
 		pr_info("SELinux permissive or disabled, apply rules!\n");
 	}
 
-	rcu_read_lock();
+	static bool use_rcu = false;
+	if (preemptible()) {
+		pr_info("%s: already preemptible! use_rcu -> true!\n", __func__);
+		rcu_read_lock();
+		WRITE_ONCE(use_rcu, true);
+	} else {
+		pr_info("%s: not preemptible, use smp_mb!\n", __func__);
+		smp_mb();
+	}
+
 	struct policydb *db = get_policydb();
 
 	ksu_permissive(db, KERNEL_SU_DOMAIN);
@@ -135,7 +146,10 @@ void apply_kernelsu_rules()
 	ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "getpgid");
 	ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
 
-	rcu_read_unlock();
+	if (READ_ONCE(use_rcu))
+		rcu_read_unlock();
+	else
+		smp_mb();
 }
 
 #define MAX_SEPOL_LEN 128
