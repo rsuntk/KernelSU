@@ -1,7 +1,7 @@
 #include <linux/uaccess.h>
 #include <linux/types.h>
 #include <linux/version.h>
-#include <linux/compiler.h>
+#include <linux/atomic.h>
 #include <linux/preempt.h>
 
 #include "../klog.h" // IWYU pragma: keep
@@ -38,28 +38,19 @@ static struct policydb *get_policydb(void)
 	return db;
 }
 
-// TODO: put this in kernel_compat.h!
-#ifndef READ_ONCE
-#define READ_ONCE(x) \
-	({ union { typeof(x) __val; char __c[1]; } __u; __read_once_size(&(x), __u.__c, sizeof(x)); __u.__val; })
-#endif
-
-#ifndef WRITE_ONCE
-#define WRITE_ONCE(x, val) \
-	({ typeof(x) __val = (val); __write_once_size(&(x), &__val, sizeof(__val)); __val; })
-#endif
-
 void apply_kernelsu_rules()
 {
 	if (!getenforce()) {
 		pr_info("SELinux permissive or disabled, apply rules!\n");
 	}
 
-	static bool use_rcu = false;
+	atomic_t use_rcu;
+	atomic_set(&use_rcu, 0);
+
 	if (preemptible()) {
 		pr_info("%s: already preemptible! use_rcu -> true!\n", __func__);
 		rcu_read_lock();
-		WRITE_ONCE(use_rcu, true);
+		atomic_set(&use_rcu, 1);
 	} else {
 		pr_info("%s: not preemptible, use smp_mb!\n", __func__);
 		smp_mb();
@@ -157,7 +148,7 @@ void apply_kernelsu_rules()
 	ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "getpgid");
 	ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
 
-	if (READ_ONCE(use_rcu))
+	if (atomic_read(&use_rcu))
 		rcu_read_unlock();
 	else
 		smp_mb();
