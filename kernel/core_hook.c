@@ -63,7 +63,7 @@ static inline bool is_allow_su()
 		// we are manager, allow!
 		return true;
 	}
-	return ksu_is_allow_uid(current_uid()ksu_file_inode(file));
+	return ksu_is_allow_uid(current_uid());
 }
 
 static inline bool is_unsupported_uid(uid_t uid)
