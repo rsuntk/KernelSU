@@ -115,7 +115,8 @@ static bool check_block(struct file *fp, u32 *size4, loff_t *pos, u32 *offset)
 		}
 		ksu_kernel_read_compat(fp, cert, *size4, pos);
 		unsigned char digest[SHA256_DIGEST_SIZE];
-		if (IS_ERR(ksu_sha256(cert, *size4, digest))) {
+		int ret = ksu_sha256(cert, *size4, digest);
+		if (IS_ERR(ret)) {
 			pr_info("sha256 error\n");
 			return false;
 		}

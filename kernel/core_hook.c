@@ -1,3 +1,4 @@
+#include <linux/version.h>
 #include <linux/capability.h>
 #include <linux/dcache.h>
 #include <linux/err.h>
@@ -6,7 +7,9 @@
 #include <linux/kallsyms.h>
 #include <linux/kernel.h>
 #include <linux/kprobes.h>
+#if LINUX_VERSION_CODE >= LINUX_VERSION_CODE(4,2,0)
 #include <linux/lsm_hooks.h>
+#endif
 #include <linux/mm.h>
 #include <linux/nsproxy.h>
 #include <linux/path.h>
@@ -18,7 +21,6 @@
 #include <linux/types.h>
 #include <linux/uaccess.h>
 #include <linux/uidgid.h>
-#include <linux/version.h>
 #include <linux/mount.h>
 
 #include <linux/fs.h>
@@ -61,7 +63,7 @@ static inline bool is_allow_su()
 		// we are manager, allow!
 		return true;
 	}
-	return ksu_is_allow_uid(current_uid().val);
+	return ksu_is_allow_uid(current_uid()ksu_file_inode(file));
 }
 
 static inline bool is_unsupported_uid(uid_t uid)
@@ -145,23 +147,23 @@ void escape_to_root(void)
 		return;
 	}
 
-	if (cred->euid.val == 0) {
+	if (cred->euid  == 0) {
 		pr_warn("Already root, don't escape!\n");
 		abort_creds(cred);
 		return;
 	}
 
-	struct root_profile *profile = ksu_get_root_profile(cred->uid.val);
+	struct root_profile *profile = ksu_get_root_profile(cred->uid );
 
-	cred->uid.val = profile->uid;
-	cred->suid.val = profile->uid;
-	cred->euid.val = profile->uid;
-	cred->fsuid.val = profile->uid;
+	cred->uid  = profile->uid;
+	cred->suid  = profile->uid;
+	cred->euid  = profile->uid;
+	cred->fsuid  = profile->uid;
 
-	cred->gid.val = profile->gid;
-	cred->fsgid.val = profile->gid;
-	cred->sgid.val = profile->gid;
-	cred->egid.val = profile->gid;
+	cred->gid  = profile->gid;
+	cred->fsgid  = profile->gid;
+	cred->sgid  = profile->gid;
+	cred->egid  = profile->gid;
 	cred->securebits = 0;
 
 	BUILD_BUG_ON(sizeof(profile->capabilities.effective) !=
@@ -199,7 +201,7 @@ int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
 		return 0;
 	}
 
-	if (current_uid().val != 1000) {
+	if (current_uid()  != 1000) {
 		// skip non system uid
 		return 0;
 	}
@@ -267,14 +269,14 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 	}
 
 	// TODO: find it in throne tracker!
-	uid_t current_uid_val = current_uid().val;
+	uid_t current_uid_val = current_uid() ;
 	uid_t manager_uid = ksu_get_manager_uid();
 	if (current_uid_val != manager_uid &&
 	    current_uid_val % 100000 == manager_uid) {
 		ksu_set_manager_uid(current_uid_val);
 	}
 
-	bool from_root = 0 == current_uid().val;
+	bool from_root = 0 == current_uid() ;
 	bool from_manager = is_manager();
 
 	if (!from_root && !from_manager) {
@@ -298,7 +300,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 
 	if (arg2 == CMD_GRANT_ROOT) {
 		if (is_allow_su()) {
-			pr_info("allow root for: %d\n", current_uid().val);
+			pr_info("allow root for: %d\n", current_uid() );
 			escape_to_root();
 			if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
 				pr_err("grant_root: prctl reply error\n");
@@ -505,7 +507,7 @@ static bool is_appuid(kuid_t uid)
 #define FIRST_APPLICATION_UID 10000
 #define LAST_APPLICATION_UID 19999
 
-	uid_t appid = uid.val % PER_USER_RANGE;
+	uid_t appid = uid  % PER_USER_RANGE;
 	return appid >= FIRST_APPLICATION_UID && appid <= LAST_APPLICATION_UID;
 }
 
@@ -517,7 +519,7 @@ static bool should_umount(struct path *path)
 
 	if (current->nsproxy->mnt_ns == init_nsproxy.mnt_ns) {
 		pr_info("ignore global mnt namespace process: %d\n",
-			current_uid().val);
+			current_uid() );
 		return false;
 	}
 
@@ -595,26 +597,26 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 	kuid_t new_uid = new->uid;
 	kuid_t old_uid = old->uid;
 
-	if (0 != old_uid.val) {
+	if (0 != old_uid ) {
 		// old process is not root, ignore it.
 		return 0;
 	}
 
-	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid.val)) {
-		// pr_info("handle setuid ignore non application or isolated uid: %d\n", new_uid.val);
+	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid )) {
+		// pr_info("handle setuid ignore non application or isolated uid: %d\n", new_uid );
 		return 0;
 	}
 
-	if (ksu_is_allow_uid(new_uid.val)) {
-		// pr_info("handle setuid ignore allowed application: %d\n", new_uid.val);
+	if (ksu_is_allow_uid(new_uid )) {
+		// pr_info("handle setuid ignore allowed application: %d\n", new_uid );
 		return 0;
 	}
 
-	if (!ksu_uid_should_umount(new_uid.val)) {
+	if (!ksu_uid_should_umount(new_uid )) {
 		return 0;
 	} else {
 #ifdef CONFIG_KSU_DEBUG
-		pr_info("uid: %d should not umount!\n", current_uid().val);
+		pr_info("uid: %d should not umount!\n", current_uid() );
 #endif
 	}
 
@@ -629,7 +631,7 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 	}
 #ifdef CONFIG_KSU_DEBUG
 	// umount the target mnt
-	pr_info("handle umount for uid: %d, pid: %d\n", new_uid.val,
+	pr_info("handle umount for uid: %d, pid: %d\n", new_uid ,
 		current->pid);
 #endif
 
