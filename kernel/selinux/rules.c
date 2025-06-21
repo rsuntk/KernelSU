@@ -14,6 +14,7 @@
 #include "ss/services.h"
 #include "linux/lsm_audit.h"
 #include "xfrm.h"
+#include "../kernel_compat.h"
 
 // Kernel 3.4 compat: groups_sort stub if missing
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0)
