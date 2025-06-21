@@ -17,7 +17,15 @@
 #include <linux/errno.h>
 #include <linux/cred.h>
 struct key *init_session_keyring = NULL;
-
+// Kernel 3.4 compatibility: 'struct cred' does not have 'session_keyring'
+static inline int has_session_keyring(const struct cred *cred)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)
+	return !!cred->session_keyring;
+#else
+	return 0;
+#endif
+}
 static inline int install_session_keyring(struct key *keyring)
 {
 	struct cred *new;
@@ -84,13 +92,12 @@ struct file *ksu_filp_open_compat(const char *filename, int flags, umode_t mode)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0) ||	\
 	defined(CONFIG_IS_HW_HISI) ||	\
 	defined(CONFIG_KSU_ALLOWLIST_WORKAROUND)
-	if (init_session_keyring != NULL && !current_cred()->session_keyring &&
+	if (init_session_keyring != NULL && !has_session_keyring(current_cred()) &&
 	    (current->flags & PF_WQ_WORKER)) {
 		pr_info("installing init session keyring for older kernel\n");
 		install_session_keyring(init_session_keyring);
 	}
 #endif
-	// switch mnt_ns even if current is not wq_worker, to ensure what we open is the correct file in android mnt_ns, rather than user created mnt_ns
 	struct ksu_ns_fs_saved saved;
 	if (android_context_saved_enabled) {
 		pr_info("start switch current nsproxy and fs to android context\n");
@@ -152,7 +159,6 @@ long ksu_strncpy_from_user_nofault(char *dst, const void __user *unsafe_addr,
 	return strncpy_from_unsafe_user(dst, unsafe_addr, count);
 }
 #else
-// Copied from: https://elixir.bootlin.com/linux/v4.9.337/source/mm/maccess.c#L201
 long ksu_strncpy_from_user_nofault(char *dst, const void __user *unsafe_addr,
 				   long count)
 {
