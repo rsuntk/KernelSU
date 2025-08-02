@@ -94,7 +94,7 @@ static int ksu_sucompat_user_common(const char __user **filename_user,
 	if (escalate) {
 		pr_info("%s su found\n", syscall_name);
 		*filename_user = ksud_user_path();
-		escape_to_root(); // escalate !!
+		ksu_escape_to_root(); // escalate !!
 	} else {
 		pr_info("%s su->sh!\n", syscall_name);
 		*filename_user = sh_user_path();
