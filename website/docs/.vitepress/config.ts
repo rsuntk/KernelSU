@@ -5,9 +5,10 @@ import { resolve } from 'path'
 
 export default defineConfig( {
     title: 'KernelSU',
+    base: '/KernelSU/',
     locales: locales.locales,
     sitemap: {
-        hostname: 'https://kernelsu.org'
+        hostname: 'https://rsuntk.github.io/KernelSU/'
     },
     buildEnd: async (config: SiteConfig) => {
         const templateDir = resolve(config.outDir, 'templates');
