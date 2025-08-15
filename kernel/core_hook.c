@@ -876,6 +876,17 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 			return 0;
 		}
 #endif // #ifdef CONFIG_KSU_SUSFS_SUS_SU
+		if (arg2 == CMD_SUSFS_ENABLE_AVC_LOG_SPOOFING) {
+			int error = 0;
+			if (arg3 != 0 && arg3 != 1) {
+				pr_err("susfs: CMD_SUSFS_ENABLE_AVC_LOG_SPOOFING -> arg3 can only be 0 or 1\n");
+				return 0;
+			}
+			susfs_set_avc_log_spoofing(arg3);
+			if (copy_to_user((void __user*)arg5, &error, sizeof(error)))
+				pr_info("susfs: copy_to_user() failed\n");
+			return 0;
+		}
 	}
 #endif //#ifdef CONFIG_KSU_SUSFS
 

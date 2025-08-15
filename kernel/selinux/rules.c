@@ -142,6 +142,7 @@ void ksu_apply_kernelsu_rules()
 #ifdef CONFIG_KSU_SUSFS
 	// Allow umount in zygote process without installing zygisk
 	ksu_allow(db, "zygote", "labeledfs", "filesystem", "unmount");
+	susfs_set_kernel_sid();
 	susfs_set_init_sid();
 	susfs_set_ksu_sid();
 	susfs_set_zygote_sid();

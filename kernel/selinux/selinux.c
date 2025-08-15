@@ -14,9 +14,11 @@
 #ifdef CONFIG_KSU_SUSFS
 #define KERNEL_INIT_DOMAIN "u:r:init:s0"
 #define KERNEL_ZYGOTE_DOMAIN "u:r:zygote:s0"
+#define KERNEL_KERNEL_DOMAIN "u:r:kernel:s0"
 u32 susfs_ksu_sid = 0;
 u32 susfs_init_sid = 0;
 u32 susfs_zygote_sid = 0;
+u32 susfs_kernel_sid = 0;
 #endif
 
 static int transive_to_domain(const char *domain)
@@ -234,6 +236,11 @@ void susfs_set_init_sid(void)
 
 bool susfs_is_current_init_domain(void) {
 	return unlikely(current_sid() == susfs_init_sid);
+}
+
+void susfs_set_kernel_sid(void)
+{
+	susfs_set_sid(KERNEL_KERNEL_DOMAIN, &susfs_kernel_sid);
 }
 #endif
 
