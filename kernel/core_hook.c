@@ -131,7 +131,14 @@ static void disable_seccomp(void)
 
 #ifdef CONFIG_SECCOMP
 	current->seccomp.mode = 0;
+	// 5.9+ have filter_count and use seccomp_filter_release
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
+	seccomp_filter_release(current->seccomp.filter);
+	atomic_set(&current->seccomp.filter_count, 0);
+#else
 	current->seccomp.filter = NULL;
+	put_seccomp_filter(current->seccomp.filter);
+#endif
 #else
 #endif
 }
