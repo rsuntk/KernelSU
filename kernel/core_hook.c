@@ -62,7 +62,7 @@ static inline bool is_allow_su()
 		// we are manager, allow!
 		return true;
 	}
-	return ksu_is_allow_uid(current_uid().val);
+	return ksu_is_allow_uid(ksu_current_uid());
 }
 
 static inline bool is_unsupported_app_uid(uid_t uid)
@@ -141,28 +141,31 @@ void escape_to_root(void)
 	struct cred *cred;
 
 	cred = prepare_creds();
-	if (!cred) {
+	if (cred == NULL) {
 		pr_err("%s: failed to allocate new cred.\n", __func__);
 		return;
 	}
 
-	if (cred->euid.val == 0) {
+	if (ksu_cred_euid(cred) == 0) {
 		pr_warn("Already root, don't escape!\n");
 		abort_creds(cred);
 		return;
 	}
 
-	struct root_profile *profile = ksu_get_root_profile(cred->uid.val);
+	struct root_profile *profile =
+		ksu_get_root_profile(ksu_cred_uid(cred));
 
-	cred->uid.val = profile->uid;
-	cred->suid.val = profile->uid;
-	cred->euid.val = profile->uid;
-	cred->fsuid.val = profile->uid;
+	ksu_cred_uid(cred) = profile->uid;
+	ksu_cred_suid(cred) = profile->uid;
+	ksu_cred_euid(cred) = profile->uid;
+	ksu_cred_fsuid(cred) = profile->uid;
 
-	cred->gid.val = profile->gid;
-	cred->fsgid.val = profile->gid;
-	cred->sgid.val = profile->gid;
-	cred->egid.val = profile->gid;
+	ksu_cred_gid(cred) = profile->gid;
+	ksu_cred_fsgid(cred) = profile->gid;
+	ksu_cred_sgid(cred) = profile->gid;
+	ksu_cred_egid(cred) = profile->gid;
+
+	// no wrapper, ignore it.
 	cred->securebits = 0;
 
 	BUILD_BUG_ON(sizeof(profile->capabilities.effective) !=
@@ -200,7 +203,7 @@ int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
 		return 0;
 	}
 
-	if (current_uid().val != 1000) {
+	if (ksu_current_uid() != 1000) {
 		// skip non system uid
 		return 0;
 	}
@@ -268,14 +271,14 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 	}
 
 	// TODO: find it in throne tracker!
-	uid_t current_uid_val = current_uid().val;
+	uid_t current_uid_val = ksu_current_uid();
 	uid_t manager_uid = ksu_get_manager_uid();
 	if (current_uid_val != manager_uid &&
 	    current_uid_val % 100000 == manager_uid) {
 		ksu_set_manager_uid(current_uid_val);
 	}
 
-	bool from_root = 0 == current_uid().val;
+	bool from_root = 0 == ksu_current_uid();
 	bool from_manager = is_manager();
 
 	if (!from_root && !from_manager) {
@@ -299,7 +302,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 
 	if (arg2 == CMD_GRANT_ROOT) {
 		if (is_allow_su()) {
-			pr_info("allow root for: %d\n", current_uid().val);
+			pr_info("allow root for: %d\n", ksu_current_uid());
 			escape_to_root();
 			if (copy_to_user(result, &reply_ok, sizeof(reply_ok))) {
 				pr_err("grant_root: prctl reply error\n");
@@ -528,7 +531,7 @@ static bool should_umount(struct path *path)
 
 	if (current->nsproxy->mnt_ns == init_nsproxy.mnt_ns) {
 		pr_info("ignore global mnt namespace process: %d\n",
-			current_uid().val);
+			ksu_current_uid());
 		return false;
 	}
 

@@ -58,7 +58,7 @@ static inline bool __is_su_allowed(const void *ptr_to_check)
 	if (!ksu_sucompat_hook_state)
 		return false;
 #endif
-	if (likely(!ksu_is_allow_uid(current_uid().val)))
+	if (likely(!ksu_is_allow_uid(ksu_current_uid())))
 		return false;
 
 	if (unlikely(!ptr_to_check))
@@ -149,7 +149,7 @@ static int ksu_inline_handle_devpts(struct inode *inode)
 		return 0;
 	}
 
-	uid_t uid = current_uid().val;
+	uid_t uid = ksu_current_uid();
 	if (uid % 100000 < 10000) {
 		// not untrusted_app, ignore it
 		return 0;

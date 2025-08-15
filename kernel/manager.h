@@ -15,7 +15,7 @@ static inline bool ksu_is_manager_uid_valid()
 
 static inline bool is_manager()
 {
-	return unlikely(ksu_manager_uid == current_uid().val);
+	return unlikely(ksu_manager_uid == ksu_current_uid());
 }
 
 static inline uid_t ksu_get_manager_uid()
