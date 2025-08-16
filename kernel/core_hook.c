@@ -120,7 +120,12 @@ static void setup_groups(struct root_profile *profile, struct cred *cred)
 
 static void disable_seccomp(void)
 {
-	assert_spin_locked(&current->sighand->siglock);
+	struct task_struct *tsk = get_current();
+
+	pr_info("%s++\n", __func__);
+	spin_lock_irq(&tsk->sighand->siglock);
+	assert_spin_locked(&tsk->sighand->siglock);
+
 	// disable seccomp
 #if defined(CONFIG_GENERIC_ENTRY) &&                                           \
 	LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
@@ -130,50 +135,56 @@ static void disable_seccomp(void)
 #endif
 
 #ifdef CONFIG_SECCOMP
-	struct task_struct *tsk = get_current();
 	tsk->seccomp.mode = 0;
+	if (tsk->seccomp.filter == NULL) {
+		pr_warn("tsk->seccomp.filter is NULL already!\n");
+		goto out;
+	}
+
 	// 5.9+ have filter_count and use seccomp_filter_release
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
 	seccomp_filter_release(tsk);
 	atomic_set(&tsk->seccomp.filter_count, 0);
 #else
-	tsk->seccomp.filter = NULL;
 	put_seccomp_filter(tsk);
+	tsk->seccomp.filter = NULL;
 #endif
 #endif
+
+out:
+	spin_unlock_irq(&tsk->sighand->siglock);
+	pr_info("%s--\n", __func__);
 }
 
 void escape_to_root(void)
 {
-	struct cred *cred;
-
-	cred = prepare_creds();
-	if (cred == NULL) {
+	struct cred *newcreds = prepare_creds();
+	if (newcreds == NULL) {
 		pr_err("%s: failed to allocate new cred.\n", __func__);
 		return;
 	}
 
-	if (ksu_cred_euid(cred) == 0) {
+	if (ksu_cred_euid(newcreds) == 0) {
 		pr_warn("Already root, don't escape!\n");
-		abort_creds(cred);
+		abort_creds(newcreds);
 		return;
 	}
 
 	struct root_profile *profile =
-		ksu_get_root_profile(ksu_cred_uid(cred));
+		ksu_get_root_profile(ksu_cred_uid(newcreds));
 
-	ksu_cred_uid(cred) = profile->uid;
-	ksu_cred_suid(cred) = profile->uid;
-	ksu_cred_euid(cred) = profile->uid;
-	ksu_cred_fsuid(cred) = profile->uid;
+	ksu_cred_uid(newcreds) = profile->uid;
+	ksu_cred_suid(newcreds) = profile->uid;
+	ksu_cred_euid(newcreds) = profile->uid;
+	ksu_cred_fsuid(newcreds) = profile->uid;
 
-	ksu_cred_gid(cred) = profile->gid;
-	ksu_cred_fsgid(cred) = profile->gid;
-	ksu_cred_sgid(cred) = profile->gid;
-	ksu_cred_egid(cred) = profile->gid;
+	ksu_cred_gid(newcreds) = profile->gid;
+	ksu_cred_fsgid(newcreds) = profile->gid;
+	ksu_cred_sgid(newcreds) = profile->gid;
+	ksu_cred_egid(newcreds) = profile->gid;
 
 	// no wrapper, ignore it.
-	cred->securebits = 0;
+	newcreds->securebits = 0;
 
 	BUILD_BUG_ON(sizeof(profile->capabilities.effective) !=
 		     sizeof(kernel_cap_t));
@@ -183,23 +194,17 @@ void escape_to_root(void)
 	// we add it here but don't add it to cap_inhertiable, it would be dropped automaticly after exec!
 	u64 cap_for_ksud =
 		profile->capabilities.effective | CAP_DAC_READ_SEARCH;
-	memcpy(&cred->cap_effective, &cap_for_ksud,
-	       sizeof(cred->cap_effective));
-	memcpy(&cred->cap_permitted, &profile->capabilities.effective,
-	       sizeof(cred->cap_permitted));
-	memcpy(&cred->cap_bset, &profile->capabilities.effective,
-	       sizeof(cred->cap_bset));
+	memcpy(&newcreds->cap_effective, &cap_for_ksud,
+	       sizeof(newcreds->cap_effective));
+	memcpy(&newcreds->cap_permitted, &profile->capabilities.effective,
+	       sizeof(newcreds->cap_permitted));
+	memcpy(&newcreds->cap_bset, &profile->capabilities.effective,
+	       sizeof(newcreds->cap_bset));
 
-	setup_groups(profile, cred);
-
-	commit_creds(cred);
-
-	// Refer to kernel/seccomp.c: seccomp_set_mode_strict
-	// When disabling Seccomp, ensure that current->sighand->siglock is held during the operation.
-	spin_lock_irq(&current->sighand->siglock);
+	setup_groups(profile, newcreds);
+	commit_creds(newcreds);
+	
 	disable_seccomp();
-	spin_unlock_irq(&current->sighand->siglock);
-
 	setup_selinux(profile->selinux_domain);
 }
 
