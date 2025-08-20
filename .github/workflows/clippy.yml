@@ -21,7 +21,7 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: rustup update --force-non-host stable-x86_64-unknown-linux-gnu
       - uses: Swatinem/rust-cache@v2
         with:
