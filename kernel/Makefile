@@ -32,7 +32,7 @@ ccflags-y += -DKSU_VERSION=16
 endif
 
 # Checks hooks state
-ifeq ($(strip $(CONFIG_KSU_MANUAL_HOOK)),y)
+ifeq ($(CONFIG_KSU_MANUAL_HOOK), y)
 $(info -- KernelSU: CONFIG_KSU_MANUAL_HOOK)
 else
 $(info -- KernelSU: CONFIG_KSU_KPROBES_HOOK)
