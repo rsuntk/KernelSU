@@ -2,10 +2,12 @@ package me.weishu.kernelsu
 
 import android.app.Application
 import android.system.Os
+import com.topjohnwu.superuser.Shell
 import coil.Coil
 import coil.ImageLoader
 import me.zhanghai.android.appiconloader.coil.AppIconFetcher
 import me.zhanghai.android.appiconloader.coil.AppIconKeyer
+import me.weishu.kernelsu.ui.util.createRootShellBuilder
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import java.io.File
@@ -20,6 +22,8 @@ class KernelSUApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         ksuApp = this
+        Shell.setDefaultBuilder(createRootShellBuilder(true))
+        Shell.enableVerboseLogging = BuildConfig.DEBUG
 
         val context = this
         val iconSize = resources.getDimensionPixelSize(android.R.dimen.app_icon_size)
