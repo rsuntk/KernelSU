@@ -29,6 +29,10 @@ bool get_ksu_state(void) { return enable_kernelsu >= 1; }
 bool get_ksu_state(void) { return true; }
 #endif /* CONFIG_KSU_CMDLINE */
 
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs.h>
+#endif
+
 static struct workqueue_struct *ksu_workqueue;
 
 bool ksu_queue_work(struct work_struct *work)
@@ -75,6 +79,10 @@ int __init kernelsu_init(void)
 	pr_alert("**                                                         **");
 	pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
 	pr_alert("*************************************************************");
+#endif
+
+#ifdef CONFIG_KSU_SUSFS
+	susfs_init();
 #endif
 
 	ksu_core_init();
