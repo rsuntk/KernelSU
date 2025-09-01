@@ -339,7 +339,7 @@ fun hasMagisk(): Boolean {
 }
 
 fun isGlobalNamespaceEnabled(): Boolean {
-    val result = ShellUtils.fastCmdResult("cat ${Natives.GLOBAL_NAMESPACE_FILE}")
+    val result = ShellUtils.fastCmd("cat ${Natives.GLOBAL_NAMESPACE_FILE}")
     Log.i(TAG, "is global namespace enabled: $result")
     return result == "1"
 }

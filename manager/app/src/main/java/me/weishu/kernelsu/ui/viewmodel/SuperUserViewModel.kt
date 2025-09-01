@@ -24,7 +24,6 @@ import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.ui.KsuService
 import me.weishu.kernelsu.ui.util.HanziToPinyin
-import me.weishu.kernelsu.ui.util.KsuCli
 import java.text.Collator
 import java.util.*
 import kotlin.coroutines.resume
@@ -124,8 +123,7 @@ class SuperUserViewModel : ViewModel() {
             Shell.EXECUTOR,
             connection,
         )
-        val shell = KsuCli.SHELL
-        task?.let { it1 -> shell.execTask(it1) }
+        task?.let { it1 -> Shell.getShell().execTask(it1) }
     }
 
     private fun stopKsuService() {
