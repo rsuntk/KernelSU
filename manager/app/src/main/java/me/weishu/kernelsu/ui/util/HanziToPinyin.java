@@ -44,7 +44,7 @@ public record HanziToPinyin(boolean mHasChinaCollator) {
      * <p>
      * Each unihans is the first one within same pinyin when collator is zh_CN.
      */
-    public static final char[] UNIHANS = {            
+    public static final char[] UNIHANS = {
             '阿', '哎', '安', '肮', '凹', '八',
             '挀', '扳', '邦', '勹', '陂', '奔',
             '伻', '屄', '边', '灬', '憋', '汃',
