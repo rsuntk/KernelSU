@@ -254,10 +254,11 @@ private fun AppProfileInner(
     }
 }
 
-private enum class Mode() {
-    Default(),
-    Template(),
-    Custom();
+private enum class Mode(@StringRes private val res: Int) {
+    Default(R.string.profile_default), Template(R.string.profile_template), Custom(R.string.profile_custom);
+
+    val text: String
+        @Composable get() = stringResource(res)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
