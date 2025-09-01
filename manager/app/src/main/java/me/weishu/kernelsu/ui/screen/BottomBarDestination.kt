@@ -13,7 +13,7 @@ import me.weishu.kernelsu.R
 
 enum class BottomBarDestination(
     val direction: DirectionDestinationSpec,
-    @StringRes val label: Int,
+    @get:StringRes val label: Int,
     val iconSelected: ImageVector,
     val iconNotSelected: ImageVector,
     val rootRequired: Boolean,

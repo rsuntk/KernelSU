@@ -182,7 +182,7 @@ fun InstallScreen(navigator: DestinationsNavigator) {
 sealed class InstallMethod {
     data class SelectFile(
         val uri: Uri? = null,
-        @StringRes override val label: Int = R.string.select_file,
+        @get:StringRes override val label: Int = R.string.select_file,
         override val summary: String?
     ) : InstallMethod()
 
