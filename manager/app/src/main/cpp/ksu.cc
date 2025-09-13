@@ -30,10 +30,10 @@
 #define CMD_IS_SU_ENABLED 14
 #define CMD_ENABLE_SU 15
 
-#define KSU_FLAG_MODE_LKM	0x00000002
-#define KSU_FLAG_HOOK_KP	0x00000004
-#define KSU_FLAG_HOOK_MANUAL	0x00000006
-#define KSU_FLAG_GKI		0x00000008
+#define KSU_FLAG_MODE_LKM	(1 << 0)
+#define KSU_FLAG_HOOK_KP	(1 << 1)
+#define KSU_FLAG_HOOK_MANUAL	(1 << 2)
+#define KSU_FLAG_GKI		(1 << 3)
 
 static bool ksuctl(int cmd, void* arg1, void* arg2) {
     int32_t result = 0;
@@ -65,7 +65,7 @@ int get_version(void) {
     // grep from kernel
     ksuctl(CMD_GET_VERSION, &version, nullptr);
     if ((version > 0) || (version != -1)) {
-        if (version > 12271) {
+        if (version >= 12276) {
             unsigned int flags = 0;
             ksuctl(CMD_GET_VERSION, nullptr, &flags);
             if (!is_lkm && (flags & KSU_FLAG_MODE_LKM))
