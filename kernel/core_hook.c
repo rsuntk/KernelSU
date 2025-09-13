@@ -325,7 +325,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 		    copy_to_user(arg3, &version, sizeof(version))) {
 			pr_err("prctl reply error, cmd: %lu\n", arg2);
 		}
-		unsigned int flags = 0;
+		u32 flags = 0;
 		// this is unnecessary since all of this can be detected in userspace.
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 		flags |= KSU_FLAG_GKI;

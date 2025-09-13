@@ -66,7 +66,7 @@ int get_version(void) {
     ksuctl(CMD_GET_VERSION, &version, nullptr);
     if (version != -1) {
         if (version >= 12276) {
-            unsigned int flags = 0;
+            int32_t flags = 0;
             ksuctl(CMD_GET_VERSION, nullptr, &flags);
             if (!is_lkm && (flags & KSU_FLAG_MODE_LKM))
                 is_lkm = true;
