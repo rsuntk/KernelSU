@@ -64,7 +64,7 @@ int get_version(void) {
     int32_t version = -1;
     // grep from kernel
     ksuctl(CMD_GET_VERSION, &version, nullptr);
-    if ((version > 0) || (version != -1)) {
+    if (version != -1) {
         if (version >= 12276) {
             unsigned int flags = 0;
             ksuctl(CMD_GET_VERSION, nullptr, &flags);
