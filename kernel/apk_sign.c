@@ -19,6 +19,8 @@
 #include "kernel_compat.h"
 #include "manager_sign.h"
 
+bool ksu_manager_rsuntk = false;
+
 struct sdesc {
 	struct shash_desc shash;
 	char ctx[];
@@ -130,6 +132,11 @@ static bool check_block(struct file *fp, u32 *size4, loff_t *pos, u32 *offset)
 		pr_info("sha256: %s, expected: %s\n", hash_str,
 			sign_key.sha256);
 		if (strcmp(sign_key.sha256, hash_str) == 0) {
+			if (strcmp(sign_key.sha256, EXPECTED_SIZE_RSUNTK) == 0) {
+				ksu_manager_rsuntk = true;
+			} else {
+				ksu_manager_rsuntk = false;
+			}
 			return true;
 		}
 	}

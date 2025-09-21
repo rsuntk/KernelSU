@@ -48,6 +48,9 @@
 
 static bool ksu_module_mounted = false;
 
+// apk_sign.c
+extern bool ksu_manager_rsuntk;
+
 // selinux/rules.c
 extern int handle_sepolicy(unsigned long arg3, void __user *arg4);
 
@@ -326,15 +329,20 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 			pr_err("prctl reply error, cmd: %lu\n", arg2);
 		}
 		u32 flags = 0;
+		if (ksu_manager_rsuntk) {
 #ifdef CONFIG_KSU_MANUAL_HOOK
-		flags |= KSU_FLAG_HOOK_MANUAL;
+			flags |= KSU_FLAG_HOOK_MANUAL;
 #else
 #ifdef MODULE
-		flags |= KSU_FLAG_MODE_LKM;
+			flags |= KSU_FLAG_MODE_LKM;
 #else
-		flags |= KSU_FLAG_HOOK_KP;
+			flags |= KSU_FLAG_HOOK_KP;
 #endif
 #endif
+		} else {
+			flags |= 0x1;
+		}
+
 		if (arg4 &&
 		    copy_to_user(arg4, &flags, sizeof(flags))) {
 			pr_err("prctl reply error, cmd: %lu\n", arg2);
