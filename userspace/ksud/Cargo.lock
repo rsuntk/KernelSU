@@ -55,9 +55,9 @@ checksum = "84521a3cf562bc62942e294181d9eef17eb38ceb8c68677bc49f144e4c3d4f8d"
 
 [[package]]
 name = "android_logger"
-version = "0.14.1"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05b07e8e73d720a1f2e4b6014766e6039fd2e96a4fa44e2a78d0e1fa2ff49826"
+checksum = "dbb4e440d04be07da1f1bf44fb4495ebd58669372fe0cffa6e48595ac5bd88a3"
 dependencies = [
  "android_log-sys",
  "env_filter",
@@ -832,7 +832,7 @@ dependencies = [
  "sha256",
  "tempfile",
  "which",
- "zip",
+ "zip 5.1.1",
  "zip-extensions",
 ]
 
@@ -913,6 +913,16 @@ checksum = "297e814c836ae64db86b36cf2a557ba54368d03f6afcd7d947c266692f71115e"
 dependencies = [
  "byteorder",
  "crc",
+]
+
+[[package]]
+name = "lzma-rust2"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c60a23ffb90d527e23192f1246b14746e2f7f071cb84476dd879071696c18a4a"
+dependencies = [
+ "crc",
+ "sha2",
 ]
 
 [[package]]
@@ -1050,23 +1060,22 @@ dependencies = [
 
 [[package]]
 name = "procfs"
-version = "0.17.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc5b72d8145275d844d4b5f6d4e1eef00c8cd889edb6035c21675d1bb1f45c9f"
+checksum = "25485360a54d6861439d60facef26de713b1e126bf015ec8f98239467a2b82f7"
 dependencies = [
  "bitflags 2.9.4",
  "chrono",
  "flate2",
- "hex",
  "procfs-core",
- "rustix 0.38.44",
+ "rustix 1.1.2",
 ]
 
 [[package]]
 name = "procfs-core"
-version = "0.17.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "239df02d8349b06fc07398a3a1697b06418223b1c7725085e801e7c0fc6a12ec"
+checksum = "e6401bf7b6af22f78b563665d15a22e9aef27775b79b149a66ca022468a4e405"
 dependencies = [
  "bitflags 2.9.4",
  "chrono",
@@ -1173,19 +1182,6 @@ dependencies = [
  "linux-raw-sys 0.4.15",
  "once_cell",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "rustix"
-version = "0.38.44"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdb5bc1ae2baa591800df16c9ca78619bf65c0488b41b96ccec5d11220d8c154"
-dependencies = [
- "bitflags 2.9.4",
- "errno 0.3.14",
- "libc",
- "linux-raw-sys 0.4.15",
- "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1522,11 +1518,10 @@ dependencies = [
 
 [[package]]
 name = "which"
-version = "7.0.3"
+version = "8.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24d643ce3fd3e5b54854602a080f34fb10ab75e0b813ee32d00ca2b44fa74762"
+checksum = "d3fabb953106c3c8eea8306e4393700d7657561cb43122571b172bbfb7c7ba1d"
 dependencies = [
- "either",
  "env_home",
  "rustix 1.1.2",
  "winsafe",
@@ -1842,13 +1837,28 @@ checksum = "12598812502ed0105f607f941c386f43d441e00148fce9dec3ca5ffb0bde9308"
 dependencies = [
  "arbitrary",
  "crc32fast",
- "deflate64",
  "flate2",
  "indexmap",
  "lzma-rs",
  "memchr",
- "time",
  "xz2",
+ "zopfli",
+]
+
+[[package]]
+name = "zip"
+version = "5.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f852905151ac8d4d06fdca66520a661c09730a74c6d4e2b0f27b436b382e532"
+dependencies = [
+ "arbitrary",
+ "crc32fast",
+ "deflate64",
+ "flate2",
+ "indexmap",
+ "lzma-rust2",
+ "memchr",
+ "time",
  "zopfli",
 ]
 
@@ -1858,7 +1868,7 @@ version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f105becb0a5da773e655775dd05fee454ca1475bcc980ec9d940a02f42cee40"
 dependencies = [
- "zip",
+ "zip 3.0.0",
 ]
 
 [[package]]
