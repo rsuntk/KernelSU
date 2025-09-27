@@ -53,9 +53,9 @@ bool become_manager(const char* pkg) {
 static bool is_lkm;
 int get_version() {
     int32_t version = -1;
-    int32_t lkm = 0;
-    ksuctl(CMD_GET_VERSION, &version, &lkm);
-    if (!is_lkm && lkm != 0) {
+    int32_t flags = 0;
+    ksuctl(CMD_GET_VERSION, &version, &flags);
+    if (!is_lkm && (flags & 0x01)) {
         is_lkm = true;
     }
     return version;
