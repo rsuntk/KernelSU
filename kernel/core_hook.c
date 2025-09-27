@@ -328,7 +328,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 		unsigned int flags = 0;
 		// this is unnecessary since all of this can be detected in userspace.
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
-		flags |= KSU_FLAG_GKI;
+		flags |= KSU_FLAG_GKI
 #endif
 #ifdef CONFIG_KSU_MANUAL_HOOK
 		flags |= KSU_FLAG_HOOK_MANUAL;
