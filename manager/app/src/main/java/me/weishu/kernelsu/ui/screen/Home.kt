@@ -414,8 +414,7 @@ private fun InfoCard() {
             }
 
             val ksuVersion: Int? = KsuGetVersion()
-            val isLKM: Boolean = getKernelVersion().isGKI() && Natives.isLkmMode
-            val useKprobe: Boolean? = if (ksuVersion != null && ksuVersion >= Natives.MINIMAL_SUPPORTED_KERNEL_GETFLAG && !isLKM) Natives.isKprobeMode else null
+            val useKprobe: Boolean? = if (ksuVersion != null && ksuVersion >= 12272 && !Natives.isLkmMode) Natives.isKprobeMode else null
             val hookMode = when (useKprobe) {
                 null -> ""
                 true -> " (Kprobe)"

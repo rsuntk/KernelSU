@@ -17,7 +17,7 @@ data class KernelVersion(val major: Int, val patchLevel: Int, val subLevel: Int)
     fun isGKI(): Boolean {
         // kernel driver-based detection
         val ksuVersion: Int? = KsuGetVersion()
-        if (ksuVersion ?: 0 >= Natives.MINIMAL_SUPPORTED_KERNEL_GETFLAG) {
+        if (ksuVersion ?: 0 >= 12272) {
             return Natives.isRealGKI
         }
 
