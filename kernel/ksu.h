@@ -35,12 +35,6 @@
 #define KSU_MAX_GROUPS 32
 #define KSU_SELINUX_DOMAIN 64
 
-// flags for working mode
-#define KSU_FLAG_MODE_LKM	0x00000002
-#define KSU_FLAG_HOOK_KP	0x00000004
-#define KSU_FLAG_HOOK_MANUAL	0x00000006
-#define KSU_FLAG_GKI		0x00000008
-
 struct root_profile {
 	int32_t uid;
 	int32_t gid;

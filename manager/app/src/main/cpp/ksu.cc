@@ -30,11 +30,6 @@
 #define CMD_IS_SU_ENABLED 14
 #define CMD_ENABLE_SU 15
 
-#define KSU_FLAG_MODE_LKM	0x00000002
-#define KSU_FLAG_HOOK_KP	0x00000004
-#define KSU_FLAG_HOOK_MANUAL	0x00000006
-#define KSU_FLAG_GKI		0x00000008
-
 static bool ksuctl(int cmd, void* arg1, void* arg2) {
     int32_t result = 0;
     prctl(KERNEL_SU_OPTION, cmd, arg1, arg2, &result);
@@ -55,34 +50,13 @@ bool become_manager(const char* pkg) {
 }
 
 // cache the result to avoid unnecessary syscall
-static bool is_lkm = false;
-static bool is_kp_hook = false;
-static bool is_manual_hook = false;
-static bool __is_gki_kernel = false;
-
-int get_version(void) {
+static bool is_lkm;
+int get_version() {
     int32_t version = -1;
-    // grep from kernel
-    ksuctl(CMD_GET_VERSION, &version, nullptr);
-    if ((version > 0) || (version != -1)) {
-        if (version > 12271) {
-            unsigned int flags = 0;
-            ksuctl(CMD_GET_VERSION, nullptr, &flags);
-            if (!is_lkm && (flags & KSU_FLAG_MODE_LKM))
-                is_lkm = true;
-            if (!is_kp_hook && (flags & KSU_FLAG_HOOK_KP))
-    	        is_kp_hook = true;
-            if (!is_manual_hook && (flags & KSU_FLAG_HOOK_MANUAL))
-    	        is_manual_hook = true;
-            if (!__is_gki_kernel && (flags & KSU_FLAG_GKI))
-    	        __is_gki_kernel = true;
-        } else {
-    	    // old detection method
-    	    int32_t lkm = 0;
-    	    ksuctl(CMD_GET_VERSION, nullptr, &lkm);
-    	    if (!is_lkm && lkm != 0)
-    	       is_lkm = true;
-        }
+    int32_t lkm = 0;
+    ksuctl(CMD_GET_VERSION, &version, &lkm);
+    if (!is_lkm && lkm != 0) {
+        is_lkm = true;
     }
     return version;
 }
@@ -95,17 +69,10 @@ bool is_safe_mode() {
     return ksuctl(CMD_CHECK_SAFEMODE, nullptr, nullptr);
 }
 
-// start: you should call get_version first!
 bool is_lkm_mode() {
+    // you should call get_version first!
     return is_lkm;
 }
-bool is_kp_mode() {
-    return is_kp_hook && !is_manual_hook;
-}
-bool is_gki_kernel() {
-    return __is_gki_kernel;
-}
-// end: you should call get_version first!
 
 bool uid_should_umount(int uid) {
     bool should;

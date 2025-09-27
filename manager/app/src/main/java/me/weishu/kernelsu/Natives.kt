@@ -49,12 +49,6 @@ object Natives {
     val isLkmMode: Boolean
         external get
 
-    val isKprobeMode: Boolean
-        external get
-
-    val isRealGKI: Boolean
-        external get
-
     external fun uidShouldUmount(uid: Int): Boolean
 
     /**
