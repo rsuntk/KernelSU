@@ -485,11 +485,7 @@ void track_throne(void)
 	ret = scan_user_data_for_uids(&uid_list);
 	if (ret < 0 && !scan_lock) {
 		pr_warn("Failed to scan %s directory, falling back to packages.list.tmp\n", USER_DATA_PATH);
-		ret = read_package_list_for_uids(&uid_list);
-		if (ret < 0) {
-			pr_err("Failed to read %s, Bailing out..\n", SYSTEM_PACKAGES_LIST_PATH);
-			goto out;
-		}
+		read_package_list_for_uids(&uid_list);
 	} else {
 		scan_lock = true;
 		pr_info("Scanned %zu package(s) from user data directory.\n", list_count_nodes(&uid_list));
