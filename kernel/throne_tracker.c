@@ -421,9 +421,20 @@ void track_throne(void)
 {
 	struct list_head uid_list;
 	struct file *fp;
-	static bool scan_lock = false;
 	int ret = 0;
 	INIT_LIST_HEAD(&uid_list);
+
+	/* 
+	 * TODO: This lock may need refinement.
+	 *
+	 * Logic:
+	 * 1. Scan /data/user_de/0 first. if success, then we set scan_lock to true.
+	 * 2. if /data/user_de/0 scan failed, fallback to read packages.list.tmp.
+	 *
+	 * The point is; Interlocked lock to prevent unwanted things. But likely a deadlock happens.
+	 */
+	static bool scan_lock = false;
+	static bool pkg_lock = false;
 
 	pr_info("Scanning %s directory..\n", USER_DATA_PATH);
 	ret = scan_user_data_for_uids(&uid_list);
@@ -433,6 +444,11 @@ void track_throne(void)
 		if (IS_ERR(fp)) {
 			pr_err("%s: open " SYSTEM_PACKAGES_LIST_PATH " failed: %ld\n", __func__, PTR_ERR(fp));
 			return;
+		}
+		
+		if (!pkg_lock) {
+			pr_info("%s: locking to only read packages.list.tmp\n", __func__);
+			pkg_lock = true;
 		}
 
 		char chr = 0;
@@ -478,7 +494,7 @@ void track_throne(void)
 			line_start = pos;
 		}
 		filp_close(fp, 0);
-	} else {
+	} else if (!pkg_lock) {
 		pr_info("Scanned %zu package(s) from user data directory.\n", list_count_nodes(&uid_list));
 		if (!scan_lock) {
 			pr_info("%s: locking to only read %s directory.\n", __func__, USER_DATA_PATH); 
