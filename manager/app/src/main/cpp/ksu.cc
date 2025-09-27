@@ -50,7 +50,7 @@ bool become_manager(const char* pkg) {
 }
 
 // cache the result to avoid unnecessary syscall
-static bool is_lkm;
+static bool is_lkm = false;
 int get_version() {
     int32_t version = -1;
     int32_t flags = 0;
