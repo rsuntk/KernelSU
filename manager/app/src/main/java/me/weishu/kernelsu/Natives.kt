@@ -25,9 +25,6 @@ object Natives {
     // 12040: Support disable sucompat mode
     // + 31: Rissu's fork.
     const val MINIMAL_SUPPORTED_SU_COMPAT = 12071
-
-    // 12276: Support get flags
-    const val MINIMAL_SUPPORTED_KERNEL_GETFLAG = 12276
     const val KERNEL_SU_DOMAIN = "u:r:su:s0"
 
     const val ROOT_UID = 0
@@ -50,9 +47,6 @@ object Natives {
         external get
 
     val isLkmMode: Boolean
-        external get
-
-    val isKprobeMode: Boolean
         external get
 
     external fun uidShouldUmount(uid: Int): Boolean

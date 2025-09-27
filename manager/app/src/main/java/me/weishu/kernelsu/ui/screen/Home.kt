@@ -40,7 +40,6 @@ import me.weishu.kernelsu.*
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.rememberConfirmDialog
 import me.weishu.kernelsu.ui.component.KsuIsValid
-import me.weishu.kernelsu.ui.component.KsuGetVersion
 import me.weishu.kernelsu.ui.util.*
 import me.weishu.kernelsu.ui.util.module.LatestVersionInfo
 
@@ -74,7 +73,8 @@ fun HomeScreen(navigator: DestinationsNavigator) {
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val ksuVersion: Int? = KsuGetVersion()
+            val isManager = Natives.becomeManager(ksuApp.packageName)
+            val ksuVersion = if (isManager) Natives.version else null
             val lkmMode = ksuVersion?.let {
                 if (it >= Natives.MINIMAL_SUPPORTED_KERNEL_LKM && kernelVersion.isGKI()) Natives.isLkmMode else null
             }
@@ -82,7 +82,7 @@ fun HomeScreen(navigator: DestinationsNavigator) {
             StatusCard(kernelVersion, ksuVersion, lkmMode) {
                 navigator.navigate(InstallScreenDestination)
             }
-            if (ksuVersion != null && Natives.requireNewKernel()) {
+            if (isManager && Natives.requireNewKernel()) {
                 WarningCard(
                     stringResource(id = R.string.require_kernel_version).format(
                         ksuVersion, Natives.MINIMAL_SUPPORTED_KERNEL
@@ -413,18 +413,8 @@ private fun InfoCard() {
                 Text(text = content, style = MaterialTheme.typography.bodyMedium)
             }
 
-            val ksuVersion: Int? = KsuGetVersion()
-            val isLKM: Boolean = getKernelVersion().isGKI() && Natives.isLkmMode
-            val useKprobe: Boolean? = if (ksuVersion != null && ksuVersion >= Natives.MINIMAL_SUPPORTED_KERNEL_GETFLAG && !isLKM) Natives.isKprobeMode else null
-            val hookMode = when (useKprobe) {
-                null -> ""
-                true -> " (Kprobe)"
-                else -> " (Manual)"
-            }
-
-            val kernelTitle = "${stringResource(R.string.home_kernel)}$hookMode"
             InfoCardItem(
-                "$kernelTitle",
+                stringResource(R.string.home_kernel),
                 "${uname.release} (${uname.machine})"
             )
 
