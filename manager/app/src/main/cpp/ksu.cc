@@ -33,6 +33,7 @@
 #define KSU_FLAG_MODE_LKM	(1 << 0)
 #define KSU_FLAG_HOOK_KP	(1 << 1)
 #define KSU_FLAG_HOOK_MANUAL	(1 << 2)
+#define KSU_FLAG_GKI		(1 << 3)
 
 static bool ksuctl(int cmd, void* arg1, void* arg2) {
     int32_t result = 0;
@@ -57,6 +58,7 @@ bool become_manager(const char* pkg) {
 static bool is_lkm = false;
 static bool is_kp_hook = false;
 static bool is_manual_hook = false;
+static bool __is_gki_kernel = false;
 
 int get_version(void) {
     int32_t version = -1;
@@ -72,6 +74,8 @@ int get_version(void) {
     	        is_kp_hook = true;
             if (!is_manual_hook && (flags & KSU_FLAG_HOOK_MANUAL))
     	        is_manual_hook = true;
+            if (!__is_gki_kernel && (flags & KSU_FLAG_GKI))
+    	        __is_gki_kernel = true;
         } else {
     	    // old detection method
     	    int32_t lkm = 0;
@@ -97,6 +101,9 @@ bool is_lkm_mode() {
 }
 bool is_kp_mode() {
     return is_kp_hook && !is_manual_hook;
+}
+bool is_gki_kernel() {
+    return __is_gki_kernel;
 }
 // end: you should call get_version first!
 

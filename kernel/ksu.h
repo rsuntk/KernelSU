@@ -39,6 +39,7 @@
 #define KSU_FLAG_MODE_LKM	(1 << 0)
 #define KSU_FLAG_HOOK_KP	(1 << 1)
 #define KSU_FLAG_HOOK_MANUAL	(1 << 2)
+#define KSU_FLAG_GKI		(1 << 3)
 
 struct root_profile {
 	int32_t uid;
