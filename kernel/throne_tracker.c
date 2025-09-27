@@ -7,6 +7,7 @@
 #include <linux/version.h>
 #include <linux/stat.h>
 #include <linux/namei.h>
+#include <asm/atomic.h>
 
 #include "allowlist.h"
 #include "klog.h" // IWYU pragma: keep
@@ -16,6 +17,9 @@
 #include "kernel_compat.h"
 
 uid_t ksu_manager_uid = KSU_INVALID_UID;
+
+static atomic_t pkg_lock = ATOMIC_INIT(0);
+static atomic_t scan_lock = ATOMIC_INIT(0);
 
 #define SYSTEM_PACKAGES_LIST_PATH "/data/system/packages.list.tmp"
 #define USER_DATA_PATH "/data/user_de/0"
@@ -424,21 +428,9 @@ void track_throne(void)
 	int ret = 0;
 	INIT_LIST_HEAD(&uid_list);
 
-	/* 
-	 * TODO: This lock may need refinement.
-	 *
-	 * Logic:
-	 * 1. Scan /data/user_de/0 first. if success, then we set scan_lock to true.
-	 * 2. if /data/user_de/0 scan failed, fallback to read packages.list.tmp.
-	 *
-	 * The point is; Interlocked lock to prevent unwanted things. But likely a deadlock happens.
-	 */
-	static bool scan_lock = false;
-	static bool pkg_lock = false;
-
 	pr_info("Scanning %s directory..\n", USER_DATA_PATH);
 	ret = scan_user_data_for_uids(&uid_list);
-	if (ret < 0 && !scan_lock) {
+	if (ret < 0 && atomic_read(&scan_lock) != 1) {
 		pr_warn("Failed to scan %s directory, falling back to packages.list.tmp\n", USER_DATA_PATH);
 		fp = ksu_filp_open_compat(SYSTEM_PACKAGES_LIST_PATH, O_RDONLY, 0);
 		if (IS_ERR(fp)) {
@@ -446,9 +438,9 @@ void track_throne(void)
 			return;
 		}
 		
-		if (!pkg_lock) {
+		if (atomic_read(&pkg_lock) != 1) {
 			pr_info("%s: locking to only read packages.list.tmp\n", __func__);
-			pkg_lock = true;
+			atomic_set(&pkg_lock, 1);
 		}
 
 		char chr = 0;
@@ -494,11 +486,11 @@ void track_throne(void)
 			line_start = pos;
 		}
 		filp_close(fp, 0);
-	} else if (!pkg_lock) {
+	} else if (atomic_read(&pkg_lock) != 1) {
 		pr_info("Scanned %zu package(s) from user data directory.\n", list_count_nodes(&uid_list));
-		if (!scan_lock) {
+		if (atomic_read(&scan_lock) != 1) {
 			pr_info("%s: locking to only read %s directory.\n", __func__, USER_DATA_PATH); 
-			scan_lock = true;
+			atomic_set(&scan_lock, 1);
 		}
 	}
 
