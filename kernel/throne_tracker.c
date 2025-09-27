@@ -17,6 +17,7 @@
 
 uid_t ksu_manager_uid = KSU_INVALID_UID;
 
+#define SYSTEM_PACKAGES_LIST_PATH "/data/system/packages.list.tmp"
 #define USER_DATA_PATH "/data/user_de/0"
 #define USER_DATA_PATH_LEN 288
 
@@ -252,6 +253,61 @@ static int scan_user_data_for_uids(struct list_head *uid_list)
 	return ret;
 }
 
+static void read_package_list_for_uids(struct list_head *uid_list)
+{
+	struct file *fp = ksu_filp_open_compat(SYSTEM_PACKAGES_LIST_PATH, O_RDONLY, 0);
+	if (IS_ERR(fp)) {
+		pr_err("Failed to open %s, err: (%ld)\n", SYSTEM_PACKAGES_LIST_PATH, ERR_PTR(fp));
+		return;
+	}
+
+	char chr = 0;
+	loff_t pos = 0;
+	loff_t line_start = 0;
+	char buf[KSU_MAX_PACKAGE_NAME];
+	int ret = 0;
+	for (;;) {
+		ssize_t count =
+			ksu_kernel_read_compat(fp, &chr, sizeof(chr), &pos);
+		if (count != sizeof(chr))
+			break;
+		if (chr != '\n')
+			continue;
+
+		count = ksu_kernel_read_compat(fp, buf, sizeof(buf),
+					       &line_start);
+
+		struct uid_data *data =
+			kzalloc(sizeof(struct uid_data), GFP_ATOMIC);
+		if (!data) {
+			pr_err("Memory allocation failed.\n");
+			goto out;
+		}
+
+		char *tmp = buf;
+		const char *delim = " ";
+		char *package = strsep(&tmp, delim);
+		char *uid = strsep(&tmp, delim);
+		if (!uid || !package) {
+			pr_err("update_uid: package or uid is NULL!\n");
+			goto out;
+		}
+
+		u32 res;
+		if (kstrtou32(uid, 10, &res)) {
+			pr_err("update_uid: uid parse err\n");
+			goto out;
+		}
+		data->uid = res;
+		strncpy(data->package, package, KSU_MAX_PACKAGE_NAME);
+		list_add_tail(&data->list, &uid_list);
+		// reset line start
+		line_start = pos;
+	}
+out:
+	filp_close(fp, 0);
+}
+
 FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 			     int namelen, loff_t off, u64 ino,
 			     unsigned int d_type)
@@ -363,7 +419,7 @@ static void search_manager(const char *path, int depth, struct list_head *uid_da
 					pr_err("Failed to open directory: %s, err: %ld\n", pos->dirpath, PTR_ERR(file));
 					goto skip_iterate;
 				}
-				
+
 				// grab magic on first folder, which is /data/app
 				if (!data_app_magic) {
 					if (file->f_inode->i_sb->s_magic) {
@@ -374,7 +430,7 @@ static void search_manager(const char *path, int depth, struct list_head *uid_da
 						goto skip_iterate;
 					}
 				}
-				
+
 				if (file->f_inode->i_sb->s_magic != data_app_magic) {
 					pr_info("%s: skip: %s magic: 0x%lx expected: 0x%lx\n", __func__, pos->dirpath, 
 						file->f_inode->i_sb->s_magic, data_app_magic);
@@ -419,17 +475,25 @@ static bool is_uid_exist(uid_t uid, char *package, void *data)
 void track_throne(void)
 {
 	struct list_head uid_list;
+	static bool scan_lock = false;
 	int ret;
-	
+
 	// init uid list head
 	INIT_LIST_HEAD(&uid_list);
 
 	pr_info("Scanning %s directory..\n", USER_DATA_PATH);
 	ret = scan_user_data_for_uids(&uid_list);
-	if (ret < 0)
-		goto out;
-	else
-		pr_info("Scanned %zu packages from user data directory.\n", list_count_nodes(&uid_list));
+	if (ret < 0 && !scan_lock) {
+		pr_warn("Failed to scan %s directory, falling back to packages.list.tmp\n", USER_DATA_PATH);
+		ret = read_package_list_for_uids(&uid_list);
+		if (ret < 0) {
+			pr_err("Failed to read %s, Bailing out..\n", SYSTEM_PACKAGES_LIST_PATH);
+			goto out;
+		}
+	} else {
+		scan_lock = true;
+		pr_info("Scanned %zu package(s) from user data directory.\n", list_count_nodes(&uid_list));
+	}
 
 	// now update uid list
 	struct uid_data *np;
