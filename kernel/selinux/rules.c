@@ -223,8 +223,7 @@ int handle_sepolicy(unsigned long arg3, void __user *arg4)
 		pr_err("sepol: copy sepol_data failed.\n");
 		return -1;
 	}
-	
-	// Assign the value
+
 	sepol1 = (char __user *)data.field_sepol1;
 	sepol2 = (char __user *)data.field_sepol2;
 	sepol3 = (char __user *)data.field_sepol3;
