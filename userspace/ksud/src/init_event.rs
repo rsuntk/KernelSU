@@ -7,6 +7,16 @@ use log::{info, warn};
 use rustix::fs::{MountFlags, mount};
 use std::path::Path;
 
+#[cfg(target_os = "android")]
+pub fn mount_modules_systemlessly() -> Result<()> {
+    crate::magic_mount::magic_mount(&find_tmp_path())
+}
+
+#[cfg(not(target_os = "android"))]
+pub fn mount_modules_systemlessly() -> Result<()> {
+    Ok(())
+}
+
 pub fn on_post_data_fs() -> Result<()> {
     ksucalls::report_post_fs_data();
 
@@ -110,16 +120,6 @@ pub fn on_post_data_fs() -> Result<()> {
 
     run_stage("post-mount", true);
 
-    Ok(())
-}
-
-#[cfg(target_os = "android")]
-pub fn mount_modules_systemlessly() -> Result<()> {
-    crate::magic_mount::magic_mount(&find_tmp_path())
-}
-
-#[cfg(not(target_os = "android"))]
-pub fn mount_modules_systemlessly() -> Result<()> {
     Ok(())
 }
 
