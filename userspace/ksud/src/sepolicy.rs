@@ -673,7 +673,7 @@ fn to_u64_addr(pol: &PolicyObject) -> u64 {
         PolicyObject::None | PolicyObject::All => std::ptr::null(),
         PolicyObject::One(s) => s.as_ptr().cast::<ffi::c_char>(),
     };
-    
+
     raw_ptr as usize as u64
 }
 
