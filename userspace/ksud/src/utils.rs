@@ -187,7 +187,7 @@ fn is_ok_empty(dir: &str) -> bool {
 }
 
 pub fn find_tmp_path() -> String {
-    let dirs = [defs::TEMP_DIR, "/patch_hw", "/oem", "/root", defs::TEMP_DIR_LEGACY];
+    let dirs = ["/debug_ramdisk", "/patch_hw", "/oem", "/root", "/sbin"];
 
     // find empty directory
     for dir in dirs {
