@@ -1,20 +1,11 @@
-use crate::defs::NO_MOUNT_PATH;
+use crate::defs::{KSU_MOUNT_SOURCE, NO_MOUNT_PATH, NO_TMPFS_PATH};
 use crate::module::{handle_updated_modules, prune_modules};
 use crate::utils::find_tmp_path;
 use crate::{assets, defs, ksucalls, restorecon, utils};
 use anyhow::{Context, Result};
 use log::{info, warn};
+use rustix::fs::{MountFlags, mount};
 use std::path::Path;
-
-#[cfg(target_os = "android")]
-pub fn mount_modules_systemlessly() -> Result<()> {
-    crate::magic_mount::magic_mount(&find_tmp_path())
-}
-
-#[cfg(not(target_os = "android"))]
-pub fn mount_modules_systemlessly() -> Result<()> {
-    Ok(())
-}
 
 pub fn on_post_data_fs() -> Result<()> {
     ksucalls::report_post_fs_data();
