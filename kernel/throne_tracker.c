@@ -261,6 +261,17 @@ static int scan_user_data_for_uids(struct list_head *uid_list)
 	return ret;
 }
 
+static inline void print_iter(bool is_manager, char *dirpath)
+{
+#ifdef CONFIG_KSU_DEBUG
+	pr_info("Found new base.apk at path: %s, is_manager: %d\n",
+		dirpath, is_manager);
+#else
+	if (is_manager)
+		pr_info("Found KernelSU new base.apk at %s\n", dirpath);
+#endif
+}
+
 FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 			     int namelen, loff_t off, u64 ino,
 			     unsigned int d_type)
@@ -322,8 +333,7 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 			}
 
 			bool is_manager = is_manager_apk(dirpath);
-			pr_info("Found new base.apk at path: %s, is_manager: %d\n",
-				dirpath, is_manager);
+			print_iter(is_manager, dirpath);
 			if (is_manager) {
 				crown_manager(dirpath, my_ctx->private_data);
 				*my_ctx->stop = 1;
