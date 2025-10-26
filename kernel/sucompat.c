@@ -143,35 +143,9 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 	return 0;
 }
 
+// Dead code, we intercept this via userspace now!
 int ksu_handle_devpts(struct inode *inode)
 {
-#ifndef CONFIG_KSU_KPROBES_HOOK
-	if (!ksu_sucompat_hook_state)
-		return 0;
-#endif
-
-	if (!current->mm) {
-		return 0;
-	}
-
-	uid_t uid = current_uid().val;
-	if (uid % 100000 < 10000) {
-		// not untrusted_app, ignore it
-		return 0;
-	}
-
-	if (!ksu_is_allow_uid(uid))
-		return 0;
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0) || defined(KSU_OPTIONAL_SELINUX_INODE)
-	struct inode_security_struct *sec = selinux_inode(inode);
-#else
-	struct inode_security_struct *sec = (struct inode_security_struct *)inode->i_security;
-#endif
-
-	if (ksu_devpts_sid && sec)
-		sec->sid = ksu_devpts_sid;
-
 	return 0;
 }
 
@@ -210,18 +184,6 @@ static int execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 }
 
 static struct kprobe *su_kps[6];
-static int pts_unix98_lookup_pre(struct kprobe *p, struct pt_regs *regs)
-{
-	struct inode *inode;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
-	struct file *file = (struct file *)PT_REGS_PARM2(regs);
-	inode = file->f_path.dentry->d_inode;
-#else
-	inode = (struct inode *)PT_REGS_PARM2(regs);
-#endif
-
-	return ksu_handle_devpts(inode);
-}
 
 static struct kprobe *init_kprobe(const char *name,
 				  kprobe_pre_handler_t handler)
@@ -263,7 +225,6 @@ void ksu_sucompat_init(void)
 	su_kps[2] = init_kprobe(SYS_FACCESSAT_SYMBOL, faccessat_handler_pre);
 	su_kps[3] = init_kprobe(SYS_NEWFSTATAT_SYMBOL, newfstatat_handler_pre);
 	su_kps[4] = init_kprobe(SYS_FSTATAT64_SYMBOL, newfstatat_handler_pre);
-	su_kps[5] = init_kprobe("pts_unix98_lookup", pts_unix98_lookup_pre);
 #else
 	ksu_sucompat_hook_state = true;
 	pr_info("ksu_sucompat init\n");
