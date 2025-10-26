@@ -183,7 +183,7 @@ static int execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 					  NULL);
 }
 
-static struct kprobe *su_kps[6];
+static struct kprobe *su_kps[5];
 
 static struct kprobe *init_kprobe(const char *name,
 				  kprobe_pre_handler_t handler)
