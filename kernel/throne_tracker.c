@@ -227,7 +227,6 @@ FILLDIR_RETURN_TYPE user_data_actor(struct dir_context *ctx, const char *name,
 static int scan_user_data_for_uids(struct list_head *uid_list)
 {
 	struct file *dir_file;
-	int ret = 0;
 
 	if (!uid_list) {
 		return -EINVAL;
@@ -235,7 +234,7 @@ static int scan_user_data_for_uids(struct list_head *uid_list)
 
 	dir_file = ksu_filp_open_compat(USER_DATA_PATH, O_RDONLY, 0);
 	if (IS_ERR(dir_file)) {
-		pr_err("Failed to open %s, err: (%ld)\n", USER_DATA_PATH, PTR_ERR(dir_file));
+		pr_err("Failed to open %s, err: %ld\n", USER_DATA_PATH, PTR_ERR(dir_file));
 		return PTR_ERR(dir_file);
 	}
 
@@ -247,7 +246,7 @@ static int scan_user_data_for_uids(struct list_head *uid_list)
 	iterate_dir(dir_file, &ctx.ctx);
 	filp_close(dir_file, NULL);
 
-	return ret;
+	return 0;
 }
 
 static inline void print_iter(bool is_manager, char *dirpath)
