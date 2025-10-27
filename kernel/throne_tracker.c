@@ -497,7 +497,7 @@ void track_throne(void)
 	}
 	
 	// Precautions, incase both of them failed.
-	if (!is_pkg_lock() || !is_scan_lock()) {
+	if (!is_pkg_lock() && !is_scan_lock()) {
 		pr_err("Failed to read %s or %s\n", SYSTEM_PACKAGES_LIST_PATH, USER_DATA_PATH);
 		return;
 	}
