@@ -1,18 +1,6 @@
-#[allow(clippy::wildcard_imports)]
-use crate::utils::*;
-use crate::{
-    assets, defs, ksucalls,
-    restorecon::{restore_syscon, setsyscon},
-    sepolicy,
-};
-
-use anyhow::{Context, Result, anyhow, bail, ensure};
-use const_format::concatcp;
-use is_executable::is_executable;
-use java_properties::PropertiesIter;
-use log::{info, warn};
-
 use std::fs::{copy, rename};
+#[cfg(unix)]
+use std::os::unix::{prelude::PermissionsExt, process::CommandExt};
 use std::{
     collections::HashMap,
     env::var as env_var,
@@ -22,11 +10,23 @@ use std::{
     process::Command,
     str::FromStr,
 };
+
+use anyhow::{Context, Result, anyhow, bail, ensure};
+use const_format::concatcp;
+use is_executable::is_executable;
+use java_properties::PropertiesIter;
+use log::{info, warn};
 use zip_extensions::zip_extract_file_to_memory;
 
-use crate::defs::{MODULE_DIR, MODULE_UPDATE_DIR, UPDATE_FILE_NAME};
-#[cfg(unix)]
-use std::os::unix::{prelude::PermissionsExt, process::CommandExt};
+#[allow(clippy::wildcard_imports)]
+use crate::{
+    assets,
+    defs::{self, MODULE_DIR, MODULE_UPDATE_DIR, UPDATE_FILE_NAME},
+    ksucalls,
+    restorecon::{restore_syscon, setsyscon},
+    sepolicy,
+    utils::*,
+};
 
 const INSTALLER_CONTENT: &str = include_str!("./installer.sh");
 const INSTALL_MODULE_SCRIPT: &str = concatcp!(
@@ -254,10 +254,10 @@ pub fn prune_modules() -> Result<()> {
             info!("remove module: {}", module.display());
 
             let uninstaller = module.join("uninstall.sh");
-            if uninstaller.exists() {
-                if let Err(e) = exec_script(uninstaller, true) {
-                    warn!("Failed to exec uninstaller: {}", e);
-                }
+            if uninstaller.exists()
+                && let Err(e) = exec_script(uninstaller, true)
+            {
+                warn!("Failed to exec uninstaller: {}", e);
             }
 
             if let Err(e) = remove_dir_all(module) {
@@ -281,10 +281,10 @@ pub fn handle_updated_modules() -> Result<()> {
 
         if let Some(name) = module.file_name() {
             let old_dir = modules_root.join(name);
-            if old_dir.exists() {
-                if let Err(e) = remove_dir_all(&old_dir) {
-                    log::error!("Failed to remove old {}: {}", old_dir.display(), e);
-                }
+            if old_dir.exists()
+                && let Err(e) = remove_dir_all(&old_dir)
+            {
+                log::error!("Failed to remove old {}: {}", old_dir.display(), e);
             }
             if let Err(e) = rename(module, &old_dir) {
                 log::error!("Failed to move new module {}: {}", module.display(), e);

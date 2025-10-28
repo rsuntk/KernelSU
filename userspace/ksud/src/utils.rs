@@ -1,27 +1,24 @@
-use anyhow::{Context, Error, Ok, Result, bail};
+#[cfg(unix)]
+use std::os::unix::prelude::PermissionsExt;
 use std::{
     fs::{self, File, OpenOptions, create_dir_all, remove_file, write},
+    fs::{Permissions, set_permissions},
     io::{
         ErrorKind::{AlreadyExists, NotFound},
         Write,
     },
-    path::Path,
+    path::{Path, PathBuf},
     process::Command,
 };
 
-use crate::{assets, boot_patch, defs, ksucalls, module, restorecon};
-#[allow(unused_imports)]
-use std::fs::{Permissions, set_permissions};
-#[cfg(unix)]
-use std::os::unix::prelude::PermissionsExt;
-
-use std::path::PathBuf;
-
+use anyhow::{Context, Error, Ok, Result, bail};
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use rustix::{
     process,
     thread::{LinkNameSpaceType, move_into_link_name_space},
 };
+
+use crate::{assets, boot_patch, defs, ksucalls, module, restorecon};
 
 pub fn ensure_clean_dir(dir: impl AsRef<Path>) -> Result<()> {
     let path = dir.as_ref();
@@ -74,11 +71,11 @@ pub fn ensure_binary<T: AsRef<Path>>(
         )
     })?)?;
 
-    if let Err(e) = remove_file(path.as_ref()) {
-        if e.kind() != NotFound {
-            return Err(Error::from(e))
-                .with_context(|| format!("failed to unlink {}", path.as_ref().display()));
-        }
+    if let Err(e) = remove_file(path.as_ref())
+        && e.kind() != NotFound
+    {
+        return Err(Error::from(e))
+            .with_context(|| format!("failed to unlink {}", path.as_ref().display()));
     }
 
     write(&path, contents)?;
