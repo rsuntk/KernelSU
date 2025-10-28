@@ -63,7 +63,7 @@ pub fn restore_syscon<P: AsRef<Path>>(dir: P) -> Result<()> {
 }
 
 fn restore_modules_con<P: AsRef<Path>>(dir: P) -> Result<()> {
-for dir_entry in WalkDir::new(dir).parallelism(Serial) {
+    for dir_entry in WalkDir::new(dir).parallelism(Serial) {
         if let Some(path) = dir_entry.ok().map(|dir_entry| dir_entry.path())
             && let Result::Ok(con) = lgetfilecon(&path)
             && (con == ADB_CON || con == UNLABEL_CON || con.is_empty())
