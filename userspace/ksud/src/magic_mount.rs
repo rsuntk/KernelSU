@@ -21,7 +21,7 @@ use crate::{
     defs::{DISABLE_FILE_NAME, KSU_MOUNT_SOURCE, MODULE_DIR, SKIP_MOUNT_FILE_NAME},
     magic_mount::NodeFileType::{Directory, RegularFile, Symlink, Whiteout},
     restorecon::{lgetfilecon, lsetfilecon},
-    utils::get_work_dir,
+    utils::ensure_dir_exists,
 };
 
 const REPLACE_DIR_XATTR: &str = "trusted.overlay.opaque";
