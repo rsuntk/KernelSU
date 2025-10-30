@@ -77,6 +77,42 @@ bool ksu_is_su_session_fd(const struct file *filp)
 	return context && (context->permissions & KSU_DRIVER_PERMISSION_SU_SESSION);
 }
 
+// downstream: make sure to pass arg as reference, this can allow us to extend things.
+int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user **arg)
+{
+	if (magic1 != KSU_INSTALL_MAGIC1)
+		return 0;
+
+	// when ternary on fmt?
+	// cold syscall, we can splurge xD
+	if (magic2 == KSU_INSTALL_MAGIC2)
+		pr_info("sys_reboot: magic: 0x%x id: 0x%x pid: %d comm: %s \n", magic1, magic2, current->pid, current->comm);
+	else
+		pr_info("sys_reboot: magic: 0x%x id: %d pid: %d pid: %s \n", magic1, magic2, current->pid, current->comm);
+
+	// arg4 = (unsigned long)PT_REGS_SYSCALL_PARM4(real_regs);
+	// downstream: dereference arg as arg4 so we can be inline to upstream
+	void __user *arg4 = (void __user *)*arg;
+
+	if (magic2 == KSU_INSTALL_MAGIC2) {
+		int fd = ksu_install_fd();
+
+		pr_info("[%d] install ksu fd: %d\n", current->pid, fd);
+		if (copy_to_user((void __user *)arg4, &fd, sizeof(fd))) {
+			pr_err("install ksu fd reply err\n");
+			ksu_close_fd(fd);
+		}
+
+		return 0;
+	}
+
+	// grab a copy as we write the pointer on the pointer
+	// u64 reply = (u64)*arg;	
+	// extensions
+
+	return 0;
+}
+
 void __init ksu_supercalls_init(void)
 {
 	ksu_supercall_dump_commands();
