@@ -2,7 +2,7 @@
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/namei.h>
-#include <linux/fsnotify_backend.h>
+#include <linux/fsnotify.h>
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/rculist.h>
