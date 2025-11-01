@@ -61,7 +61,7 @@ static int ksu_handle_event(struct fsnotify_group *group,
 		!memcmp(file_name->name, "packages.list", 13)) {
 #else
 	if (strlen(file_name) == 13 &&
-		!memcpy(file_name, "packages.list", 13)) {
+		!memcmp(file_name, "packages.list", 13)) {
 #endif
 			pr_info("packages.list detected: %d\n", mask);
 			track_throne();
