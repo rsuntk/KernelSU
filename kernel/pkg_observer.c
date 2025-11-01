@@ -44,11 +44,25 @@ static int ksu_handle_event(struct fsnotify_group *group,
 	struct inode *inode, u32 mask, const void *data, int data_type,
 	const struct qstr *file_name, u32 cookie,
 	struct fsnotify_iter_info *iter_info)
-#else
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)
 static int ksu_handle_event(struct fsnotify_group *group,
 	struct inode *inode, u32 mask, const void *data, int data_type,
 	const unsigned char *file_name, u32 cookie,
 	struct fsnotify_iter_info *iter_info)
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
+static int ksu_handle_event(struct fsnotify_group *group,
+	struct inode *inode, struct fsnotify_mark *inode_mark,
+	struct fsnotify_mark *vfsmount_mark,
+	u32 mask, const void *data, int data_type,
+	const unsigned char *file_name, u32 cookie,
+	struct fsnotify_iter_info *iter_info)
+#else
+static int ksu_handle_event(struct fsnotify_group *group,
+	struct inode *inode,
+	struct fsnotify_mark *inode_mark,
+	struct fsnotify_mark *vfsmount_mark,
+	u32 mask, void *data, int data_type,
+	const unsigned char *file_name, u32 cookie)
 #endif
 {
 	if (!file_name)
@@ -90,10 +104,21 @@ static int add_mark_on_inode(struct inode *inode, u32 mask,
 	fsnotify_init_mark(m, g);
 	m->mask = mask;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
 	if (fsnotify_add_inode_mark(m, inode, 0)) {
 		fsnotify_put_mark(m);
 		return -EINVAL;
 	}
+#else /* TODO: Need more tests on k4.4 and k4.9! */
+	mutex_lock(&g->mark_mutex);
+	if (fsnotify_add_mark_locked(m, g, inode, NULL, 0)) {
+		fsnotify_put_mark(m);
+		mutex_unlock(&g->mark_mutex);
+		return -EINVAL;
+	}
+	mutex_unlock(&g->mark_mutex);
+#endif
+
 	*out = m;
 	return 0;
 }
