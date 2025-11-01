@@ -1,4 +1,3 @@
-#include "manager.h"
 #include <asm/current.h>
 #include <linux/compat.h>
 #include <linux/cred.h>
