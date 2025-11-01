@@ -115,35 +115,34 @@ static int add_mark_on_inode(struct inode *inode, u32 mask,
 }
 #else
 /* TODO: Need more tests on k4.4 and k4.9! */
-
-static struct kmem_cache *ksu_mark_cache __read_mostly = {0};
-
 static void ksu_free_mark(struct fsnotify_mark *ksu_mark)
 {
-	kmem_cache_free(ksu_mark_cache, ksu_mark);
+	if (ksu_mark)
+		kfree(ksu_mark);
 }
 
 static int add_mark_on_inode(struct inode *inode, u32 mask,
 			     struct fsnotify_mark **out)
 {
-	struct fsnotify_mark *m;
+	struct fsnotify_mark *ksu_mark;
 
-	m = kmem_cache_alloc(ksu_mark_cache, GFP_KERNEL);
-	if (!m)
+	ksu_mark = kzalloc(sizeof(*ksu_mark), GFP_KERNEL);
+	if (!ksu_mark)
 		return -ENOMEM;
 
-	fsnotify_init_mark(m, ksu_free_mark);
+	fsnotify_init_mark(ksu_mark, ksu_free_mark);
+	ksu_mark->mask = mask;
 
-	mutex_lock(&g->mark_mutex);
-	if (fsnotify_add_inode_mark(m, g, inode, 0)) {
-		fsnotify_put_mark(m);
-		mutex_unlock(&g->mark_mutex);
+	if (fsnotify_add_mark(ksu_mark, g, inode, NULL, 0) < 0) {
+		fsnotify_put_mark(ksu_mark);
 		return -EINVAL;
 	}
-	m->mask = mask;
-	mutex_unlock(&g->mark_mutex);
 
-	*out = m;
+	*out = ksu_mark;
+	if (ksu_mark) {
+		ksu_free_mark(ksu_mark);
+		ksu_mark = NULL;
+	}
 	return 0;
 }
 #endif /* LINUX_VERSION_CODE >= 4.12 */
