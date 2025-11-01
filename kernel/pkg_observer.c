@@ -92,6 +92,7 @@ static const struct fsnotify_ops ksu_ops = {
 #endif
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
 static int add_mark_on_inode(struct inode *inode, u32 mask,
 			     struct fsnotify_mark **out)
 {
@@ -104,24 +105,48 @@ static int add_mark_on_inode(struct inode *inode, u32 mask,
 	fsnotify_init_mark(m, g);
 	m->mask = mask;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
 	if (fsnotify_add_inode_mark(m, inode, 0)) {
 		fsnotify_put_mark(m);
 		return -EINVAL;
 	}
-#else /* TODO: Need more tests on k4.4 and k4.9! */
+
+	*out = m;
+	return 0;
+}
+#else
+/* TODO: Need more tests on k4.4 and k4.9! */
+
+static struct kmem_cache *ksu_mark_cache __read_mostly = {0};
+
+static void ksu_free_mark(struct fsnotify_mark *ksu_mark)
+{
+	kmem_cache_free(ksu_mark_cache, ksu_mark);
+}
+
+static int add_mark_on_inode(struct inode *inode, u32 mask,
+			     struct fsnotify_mark **out)
+{
+	struct fsnotify_mark *m;
+
+	m = kmem_cache_alloc(ksu_mark_cache, GFP_KERNEL);
+	if (!m)
+		return -ENOMEM;
+
+	fsnotify_init_mark(m, ksu_free_mark);
+
 	mutex_lock(&g->mark_mutex);
 	if (fsnotify_add_inode_mark(m, g, inode, 0)) {
 		fsnotify_put_mark(m);
 		mutex_unlock(&g->mark_mutex);
 		return -EINVAL;
 	}
+	m->mask = mask;
 	mutex_unlock(&g->mark_mutex);
-#endif
 
 	*out = m;
 	return 0;
 }
+#endif /* LINUX_VERSION_CODE >= 4.12 */
 
 static int watch_one_dir(struct watch_dir *wd)
 {
