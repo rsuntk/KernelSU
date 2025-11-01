@@ -137,15 +137,12 @@ static int add_mark_on_inode(struct inode *inode, u32 mask,
 
 	if (fsnotify_add_mark(ksu_mark, g, inode, NULL, 0) < 0) {
 		fsnotify_put_mark(ksu_mark);
-		ksu_mark = NULL;
 		return -EINVAL;
 	}
 
 	*out = ksu_mark;
 	if (ksu_mark) {
 		ksu_free_mark(ksu_mark);
-		ksu_mark = NULL;
-	}
 	return 0;
 }
 #endif /* LINUX_VERSION_CODE >= 4.12 */
