@@ -114,7 +114,6 @@ static int add_mark_on_inode(struct inode *inode, u32 mask,
 	return 0;
 }
 #else
-/* TODO: Need more tests on k4.4 and k4.9! */
 static void ksu_free_mark(struct fsnotify_mark *ksu_mark)
 {
 	if (ksu_mark)
