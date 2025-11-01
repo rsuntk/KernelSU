@@ -117,16 +117,15 @@ static int add_mark_on_inode(struct inode *inode, u32 mask,
 /* TODO: Need more tests on k4.4 and k4.9! */
 static void ksu_free_mark(struct fsnotify_mark *ksu_mark)
 {
-	if (ksu_mark) {
+	if (ksu_mark)
 		kfree(ksu_mark);
-		ksu_mark = NULL;
-	}
 }
 
 static int add_mark_on_inode(struct inode *inode, u32 mask,
 			     struct fsnotify_mark **out)
 {
 	struct fsnotify_mark *ksu_mark;
+	int ret;
 
 	ksu_mark = kzalloc(sizeof(*ksu_mark), GFP_KERNEL);
 	if (!ksu_mark)
@@ -135,14 +134,13 @@ static int add_mark_on_inode(struct inode *inode, u32 mask,
 	fsnotify_init_mark(ksu_mark, ksu_free_mark);
 	ksu_mark->mask = mask;
 
-	if (fsnotify_add_mark(ksu_mark, g, inode, NULL, 0) < 0) {
+	ret = fsnotify_add_mark(ksu_mark, g, inode, NULL, 0);
+	if (ret < 0) {
 		fsnotify_put_mark(ksu_mark);
-		return -EINVAL;
+		return ret;
 	}
 
 	*out = ksu_mark;
-	if (ksu_mark)
-		ksu_free_mark(ksu_mark);
 	return 0;
 }
 #endif /* LINUX_VERSION_CODE >= 4.12 */
