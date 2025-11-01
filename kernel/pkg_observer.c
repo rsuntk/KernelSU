@@ -141,7 +141,7 @@ static int add_mark_on_inode(struct inode *inode, u32 mask,
 	}
 
 	*out = ksu_mark;
-	if (ksu_mark) {
+	if (ksu_mark)
 		ksu_free_mark(ksu_mark);
 	return 0;
 }
