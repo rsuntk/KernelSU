@@ -43,6 +43,10 @@ static int ksu_inode_rename(struct inode *old_dir, struct dentry *old_dentry, st
 extern int security_task_fix_setuid(struct cred *new, const struct cred *old, int flags);
 static int ksu_task_fix_setuid(struct cred *new, const struct cred *old, int flags)
 {
+	// see sys_setresuid
+	if (flags == LSM_SETID_RES)
+		ksu_handle_setresuid_cred(new, old);
+
 	return security_task_fix_setuid(new, old, flags);
 }
 
@@ -54,6 +58,8 @@ asmlinkage long hook_aarch64_setresuid(const struct pt_regs *regs)
 	const struct cred old = *current_cred();
 
 	long ret = __arm64_sys_setresuid(regs);
+	if (!ret)
+		ksu_handle_setresuid_cred(current_cred(), &old);
 	return ret;
 }
 
@@ -66,6 +72,8 @@ asmlinkage long hook_armeabi_setresuid(const struct pt_regs *regs)
 	const struct cred old = *current_cred();
 
 	long ret = __arm64_sys_setresuid(regs);
+	if (!ret)
+		ksu_handle_setresuid_cred(current_cred(), &old);
 	return ret;
 }
 #endif

@@ -16,6 +16,10 @@ extern struct security_hook_heads security_hook_heads;
 static int (*task_fix_setuid_fn)(struct cred *new, const struct cred *old, int flags) __read_mostly = nullptr;
 static __nocfi int ksu_task_fix_setuid(struct cred *new, const struct cred *old, int flags)
 {
+	// see sys_setresuid
+	if (flags == LSM_SETID_RES)
+		ksu_handle_setresuid_cred(new, old);
+
 	return task_fix_setuid_fn(new, old, flags);
 }
 

@@ -27,6 +27,10 @@ static int ksu_inode_rename(struct inode *old_inode, struct dentry *old_dentry,
 static int (*orig_task_fix_setuid) (struct cred *new, const struct cred *old, int flags) __read_mostly = nullptr;
 static int ksu_task_fix_setuid(struct cred *new, const struct cred *old, int flags)
 {
+	// see sys_setresuid
+	if (flags == LSM_SETID_RES)
+		ksu_handle_setresuid_cred(new, old);
+
 	return orig_task_fix_setuid(new, old, flags);
 }
 
