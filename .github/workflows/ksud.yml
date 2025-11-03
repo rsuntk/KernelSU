@@ -18,7 +18,7 @@ on:
         type: boolean
         default: true
 jobs:
-  build:
+  build-ksud:
     runs-on: ${{ inputs.os }}
     steps:
     - uses: actions/checkout@v5
@@ -27,12 +27,23 @@ jobs:
 
     - name: Download artifacts
       uses: actions/download-artifact@v6
-    
-    - name: Prepare LKM fies
+
+    - name: Prepare LKM files
       if: ${{ inputs.pack_lkm }}
       run: |
         cp android*-lkm/*_kernelsu.ko ./userspace/ksud/bin/aarch64/
-        
+
+    # TODO: Do not hardcode
+    - name: Prepare ksuinit files
+      run: |
+        cp ksuinit-aarch64/ksuinit ./userspace/ksud/bin/aarch64/
+        cp ksuinit-x86_64/ksuinit ./userspace/ksud/bin/x86_64/
+        echo "-- aarch64 --"
+        file ./userspace/ksud/bin/aarch64/*
+        echo ""
+        echo "-- x86_64 --"
+        file ./userspace/ksud/bin/x86_64/*
+
     - name: Setup rustup
       run: |
         rustup update stable

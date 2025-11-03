@@ -7,11 +7,13 @@ on:
       - '.github/workflows/build-manager.yml'
       - '.github/workflows/build-manager-common.yml'
       - '.github/workflows/build-ksud.yml'
+      - '.github/workflows/build-ksuinit.yml'
       - '.github/workflows/build-lkm.yml'
       - '.github/workflows/ddk-lkm.yml'
       - 'manager/**'
       - 'kernel/**'
       - 'userspace/ksud/**'
+      - 'userspace/ksuinit/**'
   pull_request:
     branches: [ "main" ]
     paths:
@@ -19,12 +21,23 @@ on:
   workflow_call:
 
 jobs:
+  build-ksuinit:
+    strategy:
+      matrix:
+        include:
+          - target: aarch64-unknown-linux-musl
+          - target: x86_64-unknown-linux-musl
+    uses: ./.github/workflows/build-ksuinit.yml
+    with:
+      target: ${{ matrix.target }}
+    secrets: inherit
+
   build-lkm:
     uses: ./.github/workflows/build-lkm.yml
     secrets: inherit
 
   build-ksud:
-    needs: build-lkm
+    needs: [build-lkm, build-ksuinit]
     strategy:
       matrix:
         include:

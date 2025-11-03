@@ -1,7 +1,11 @@
 alias bk := build_ksud
 alias bm := build_manager
 
-build_ksud:
+build_ksuinit:
+    cross build --target aarch64-unknown-linux-musl --release --manifest-path ./userspace/ksuinit/Cargo.toml
+
+build_ksud: build_ksuinit
+    cp userspace/ksuinit/target/aarch64-unknown-linux-musl/release/ksuinit ./userspace/ksud/bin/aarch64
     cross build --target aarch64-linux-android --release --manifest-path ./userspace/ksud/Cargo.toml
 
 build_manager: build_ksud

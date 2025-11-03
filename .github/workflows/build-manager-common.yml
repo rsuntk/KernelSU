@@ -5,8 +5,13 @@ on:
     inputs:
       manager_type:
         description: 'Manager type'
+        required: true
         type: string
         default: "normal"
+      need_upload:
+        description: 'Upload to telegram'
+        type: boolean
+        default: true
 
 jobs:
   build-manager-common:
@@ -39,15 +44,6 @@ jobs:
           else
             echo "MGR_ARTIFACT_NAME=manager" >> $GITHUB_OUTPUT
             echo "MPS_ARTIFACT_NAME=mappings" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Setup need_upload
-        id: need_upload
-        run: |
-          if [ ! -z "${{ secrets.BOT_TOKEN }}" ]; then
-            echo "UPLOAD=true" >> $GITHUB_OUTPUT
-          else
-            echo "UPLOAD=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Write key
@@ -127,7 +123,7 @@ jobs:
           path: "manager/app/build/outputs/mapping/release/"
 
       - name: Upload to telegram
-        if: github.event_name != 'pull_request' && steps.need_upload.outputs.UPLOAD == 'true'
+        if: github.event_name != 'pull_request' && inputs.need_upload == 'true'
         env:
           CHAT_ID: ${{ secrets.CHAT_ID }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
