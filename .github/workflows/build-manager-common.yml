@@ -10,8 +10,9 @@ on:
         default: "normal"
       need_upload:
         description: 'Upload to telegram'
-        type: boolean
-        default: true
+        required: false
+        type: string
+        default: "true"
 
 jobs:
   build-manager-common:
@@ -123,7 +124,7 @@ jobs:
           path: "manager/app/build/outputs/mapping/release/"
 
       - name: Upload to telegram
-        if: github.event_name != 'pull_request' && inputs.need_upload == 'true'
+        if: ${{ ( github.event_name != 'pull_request' && inputs.need_upload == 'true' ) }}
         env:
           CHAT_ID: ${{ secrets.CHAT_ID }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}

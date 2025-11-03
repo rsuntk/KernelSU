@@ -26,14 +26,18 @@ jobs:
         include:
           - target: aarch64-linux-android
             os: ubuntu-latest
+            pack_ksuinit: true
           - target: armv7-linux-androideabi
             os: ubuntu-latest
+            pack_ksuinit: false
           - target: x86_64-linux-android
             os: ubuntu-latest
+            pack_ksuinit: true
     uses: ./.github/workflows/ksud.yml
     with:
       target: ${{ matrix.target }}
       os: ${{ matrix.os }}
+      pack_ksuinit: ${{ matrix.pack_ksuinit }}
 
   build-manager:
     needs: build-ksud
@@ -41,9 +45,8 @@ jobs:
       matrix:
         include:
           - manager_type: normal
-            need_upload: false
     uses: ./.github/workflows/build-manager-common.yml
     secrets: inherit
     with:
       manager_type: ${{ matrix.manager_type }}
-      need_upload: ${{ matrix.need_upload }}
+      need_upload: false

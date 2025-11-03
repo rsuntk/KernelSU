@@ -63,3 +63,4 @@ jobs:
     secrets: inherit
     with:
       manager_type: ${{ matrix.manager_type }}
+      need_upload: true
