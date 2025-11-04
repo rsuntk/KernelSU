@@ -54,7 +54,7 @@ static void stop_vfs_read_hook(void);
 static void stop_execve_hook(void);
 static void stop_input_hook(void);
 
-#ifdef CONFIG_KSU_KPROBES_HOOK
+#ifdef KSU_KPROBE_HOOK
 static struct work_struct stop_vfs_read_work;
 static struct work_struct stop_execve_hook_work;
 static struct work_struct stop_input_hook_work;
@@ -158,7 +158,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 			     struct user_arg_ptr *argv,
 			     struct user_arg_ptr *envp, int *flags)
 {
-#ifndef CONFIG_KSU_KPROBES_HOOK
+#ifndef KSU_KPROBE_HOOK
 	if (!ksu_execveat_hook) {
 		return 0;
 	}
@@ -314,7 +314,7 @@ static ssize_t read_iter_proxy(struct kiocb *iocb, struct iov_iter *to)
 int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
 			size_t *count_ptr, loff_t **pos)
 {
-#ifndef CONFIG_KSU_KPROBES_HOOK
+#ifndef KSU_KPROBE_HOOK
 	if (!ksu_vfs_read_hook) {
 		return 0;
 	}
@@ -427,7 +427,7 @@ static bool is_volumedown_enough(unsigned int count)
 int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
 				  int *value)
 {
-#ifndef CONFIG_KSU_KPROBES_HOOK
+#ifndef KSU_KPROBE_HOOK
 	if (!ksu_input_hook) {
 		return 0;
 	}
@@ -469,7 +469,7 @@ bool ksu_is_safe_mode(void)
 	return false;
 }
 
-#ifdef CONFIG_KSU_KPROBES_HOOK
+#ifdef KSU_KPROBE_HOOK
 
 // https://elixir.bootlin.com/linux/v5.10.158/source/fs/exec.c#L1864
 static int execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
@@ -614,7 +614,7 @@ int __maybe_unused ksu_handle_compat_execve_ksud(
 
 static void stop_vfs_read_hook(void)
 {
-#ifdef CONFIG_KSU_KPROBES_HOOK
+#ifdef KSU_KPROBE_HOOK
 	bool ret = schedule_work(&stop_vfs_read_work);
 	pr_info("unregister vfs_read kprobe: %d!\n", ret);
 #else
@@ -625,7 +625,7 @@ static void stop_vfs_read_hook(void)
 
 static void stop_execve_hook(void)
 {
-#ifdef CONFIG_KSU_KPROBES_HOOK
+#ifdef KSU_KPROBE_HOOK
 	bool ret = schedule_work(&stop_execve_hook_work);
 	pr_info("unregister execve kprobe: %d!\n", ret);
 #else
@@ -636,7 +636,7 @@ static void stop_execve_hook(void)
 
 static void stop_input_hook(void)
 {
-#ifdef CONFIG_KSU_KPROBES_HOOK
+#ifdef KSU_KPROBE_HOOK
 	static bool input_hook_stopped = false;
 	if (input_hook_stopped) {
 		return;
@@ -656,7 +656,7 @@ static void stop_input_hook(void)
 // ksud: module support
 void ksu_ksud_init(void)
 {
-#ifdef CONFIG_KSU_KPROBES_HOOK
+#ifdef KSU_KPROBE_HOOK
 	int ret;
 
 	ret = register_kprobe(&execve_kp);
@@ -676,7 +676,7 @@ void ksu_ksud_init(void)
 
 void ksu_ksud_exit(void)
 {
-#ifdef CONFIG_KSU_KPROBES_HOOK
+#ifdef KSU_KPROBE_HOOK
 	unregister_kprobe(&execve_kp);
 	// this should be done before unregister vfs_read_kp
 	// unregister_kprobe(&vfs_read_kp);

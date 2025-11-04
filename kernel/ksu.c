@@ -10,6 +10,7 @@
 #include "allowlist.h"
 #include "arch.h"
 #include "core_hook.h"
+#include "feature.h"
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
 #include "throne_tracker.h"
@@ -39,6 +40,7 @@ extern void ksu_sucompat_init(void);
 extern void ksu_sucompat_exit(void);
 extern void ksu_ksud_init(void);
 extern void ksu_ksud_exit(void);
+extern void ksu_supercalls_init(void);
 
 int __init kernelsu_init(void)
 {
@@ -55,6 +57,10 @@ int __init kernelsu_init(void)
 	pr_alert("*************************************************************");
 #endif
 
+	ksu_feature_init();
+
+	ksu_supercalls_init();
+
 	ksu_core_init();
 
 	ksu_workqueue = alloc_ordered_workqueue("kernelsu_work_queue", 0);
@@ -65,7 +71,7 @@ int __init kernelsu_init(void)
 
 	ksu_sucompat_init();
 
-#ifdef CONFIG_KSU_KPROBES_HOOK
+#ifdef KSU_KPROBE_HOOK
 	ksu_ksud_init();
 #endif
 
@@ -87,12 +93,13 @@ void kernelsu_exit(void)
 
 	destroy_workqueue(ksu_workqueue);
 
-#ifdef CONFIG_KSU_KPROBES_HOOK
+#ifdef KSU_KPROBE_HOOK
 	ksu_ksud_exit();
 #endif
 	ksu_sucompat_exit();
 
 	ksu_core_exit();
+	ksu_feature_exit();
 }
 
 module_init(kernelsu_init);
