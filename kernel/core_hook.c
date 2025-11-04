@@ -6,7 +6,6 @@
 #include <linux/capability.h>
 #include <linux/cred.h>
 #include <linux/dcache.h>
-#include <linux/err.h>
 #include <linux/fs.h>
 #include <linux/init.h>
 #include <linux/init_task.h>
@@ -453,7 +452,11 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
     tw->old_cred = get_current_cred();
     tw->cb.func = umount_tw_func;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 7, 8)
     int err = task_work_add(current, &tw->cb, TWA_RESUME);
+#else
+	int err = task_work_add(current, &tw->cb, true);
+#endif
     if (err) {
         if (tw->old_cred) {
             put_cred(tw->old_cred);
@@ -495,6 +498,7 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user 
 
 // -- For old kernel compat?
 #ifndef MODULE
+#include <linux/lsm_hooks.h>
 static int __maybe_unused ksu_task_fix_setuid(struct cred *new, const struct cred *old,
 			       int flags)
 {
