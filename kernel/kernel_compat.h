@@ -6,16 +6,6 @@
 #include "ss/policydb.h"
 #include "linux/key.h"
 
-#if defined(CONFIG_ARM) || defined(CONFIG_ARM64)
-#define kcompat_barrier()                                                      \
-	do {                                                                   \
-		barrier();                                                     \
-		isb();                                                         \
-	} while (0)
-#else
-#define kcompat_barrier() barrier()
-#endif
-
 /*
  * Adapt to Huawei HISI kernel without affecting other kernels ,
  * Huawei Hisi Kernel EBITMAP Enable or Disable Flag ,

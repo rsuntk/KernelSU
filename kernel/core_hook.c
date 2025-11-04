@@ -1,4 +1,6 @@
-#include "linux/slab.h"
+#include <linux/slab.h>
+#include <linux/task_work.h>
+#include <linux/thread_info.h>
 #include <linux/seccomp.h>
 #include <linux/bpf.h>
 #include <linux/capability.h>
@@ -23,7 +25,6 @@
 #include <linux/uaccess.h>
 #include <linux/uidgid.h>
 #include <linux/version.h>
-#include <linux/workqueue.h>
 #ifndef KSU_HAS_PATH_UMOUNT
 #include <linux/syscalls.h> // sys_umount (<4.17) & ksys_umount (4.17+)
 #endif
@@ -42,13 +43,6 @@
 #include "supercalls.h"
 
 bool ksu_module_mounted = false;
-
-static struct workqueue_struct *ksu_workqueue;
-
-struct ksu_umount_work {
-	struct work_struct work;
-	struct mnt_namespace *mnt_ns;
-};
 
 extern int handle_sepolicy(unsigned long arg3, void __user *arg4);
 
@@ -282,11 +276,7 @@ static bool should_umount(struct path *path)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) ||                           \
 	defined(KSU_HAS_PATH_UMOUNT)
-static int ksu_path_umount(struct path *path, int flags)
-{
-	return path_umount(path, flags);
-}
-#define ksu_umount_mnt(__unused, path, flags) (ksu_path_umount(path, flags))
+#define ksu_umount_mnt(__unused, path, flags) (path_umount(path, flags))
 #else
 static int ksu_sys_umount(const char *mnt, int flags)
 {
@@ -302,7 +292,6 @@ static int ksu_sys_umount(const char *mnt, int flags)
 	ret = sys_umount(usermnt, flags); // cuz asmlinkage long sys##name
 #endif
 	set_fs(old_fs);
-	pr_info("%s was called, ret: %d\n", __func__, ret);
 	return ret;
 }
 
@@ -345,29 +334,43 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
 	}
 }
 
-static void do_umount_work(struct work_struct *work)
+struct umount_tw {
+    struct callback_head cb;
+    const struct cred *old_cred;
+};
+
+static void umount_tw_func(struct callback_head *cb)
 {
-	struct ksu_umount_work *umount_work =
-		container_of(work, struct ksu_umount_work, work);
-	struct mnt_namespace *old_mnt_ns = current->nsproxy->mnt_ns;
+    struct umount_tw *tw = container_of(cb, struct umount_tw, cb);
+    const struct cred *saved = NULL;
+    if (tw->old_cred) {
+        saved = override_creds(tw->old_cred);
+    }
 
-	current->nsproxy->mnt_ns = umount_work->mnt_ns;
+    // fixme: use `collect_mounts` and `iterate_mount` to iterate all mountpoint and
+    // filter the mountpoint whose target is `/data/adb`
+    try_umount("/odm", true, 0);
+    try_umount("/system", true, 0);
+    try_umount("/vendor", true, 0);
+    try_umount("/product", true, 0);
+    try_umount("/system_ext", true, 0);
+    try_umount("/data/adb/modules", false, MNT_DETACH);
 
-	try_umount("/odm", true, 0);
-	try_umount("/system", true, 0);
-	try_umount("/vendor", true, 0);
-	try_umount("/product", true, 0);
-	try_umount("/system_ext", true, 0);
-	try_umount("/data/adb/modules", false, MNT_DETACH);
+	try_umount("/debug_ramdisk", false, MNT_DETACH);
+	try_umount("/sbin", false, MNT_DETACH);
 
-	// fixme: dec refcount
-	current->nsproxy->mnt_ns = old_mnt_ns;
+    if (saved)
+        revert_creds(saved);
 
-	kfree(umount_work);
+    if (tw->old_cred)
+        put_cred(tw->old_cred);
+
+    kfree(tw);
 }
 
 int ksu_handle_setuid(struct cred *new, const struct cred *old)
 {
+    struct umount_tw *tw;
 	if (!new || !old) {
 		return 0;
 	}
@@ -443,21 +446,21 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 		current->pid);
 #endif
 
-	// fixme: use `collect_mounts` and `iterate_mount` to iterate all mountpoint and
-	// filter the mountpoint whose target is `/data/adb`
-	struct ksu_umount_work *umount_work =
-		kmalloc(sizeof(struct ksu_umount_work), GFP_ATOMIC);
-	if (!umount_work) {
-		pr_err("Failed to allocate umount_work\n");
-		return 0;
-	}
+    tw = kmalloc(sizeof(*tw), GFP_ATOMIC);
+    if (!tw)
+        return 0;
 
-	// fixme: inc refcount
-	umount_work->mnt_ns = current->nsproxy->mnt_ns;
+    tw->old_cred = get_current_cred();
+    tw->cb.func = umount_tw_func;
 
-	INIT_WORK(&umount_work->work, do_umount_work);
-
-	queue_work(ksu_workqueue, &umount_work->work);
+    int err = task_work_add(current, &tw->cb, TWA_RESUME);
+    if (err) {
+        if (tw->old_cred) {
+            put_cred(tw->old_cred);
+        }
+        kfree(tw);
+        pr_warn("unmount add task_work failed\n");
+    }
 
 	return 0;
 }
@@ -490,6 +493,62 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user 
     return 0;
 }
 
+// -- For old kernel compat?
+#ifndef MODULE
+static int __maybe_unused ksu_task_fix_setuid(struct cred *new, const struct cred *old,
+			       int flags)
+{
+	return ksu_handle_setuid(new, old);
+}
+
+// kernel 4.4 and 4.9
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0) ||                           \
+	defined(CONFIG_IS_HW_HISI) || defined(CONFIG_KSU_ALLOWLIST_WORKAROUND)
+static int ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
+			      unsigned perm)
+{
+	if (init_session_keyring != NULL) {
+		return 0;
+	}
+	if (strcmp(current->comm, "init")) {
+		// we are only interested in `init` process
+		return 0;
+	}
+	init_session_keyring = cred->session_keyring;
+	pr_info("kernel_compat: got init_session_keyring\n");
+	return 0;
+}
+#endif
+
+#ifndef KSU_KPROBE_HOOK
+static struct security_hook_list ksu_hooks[] = {
+	LSM_HOOK_INIT(task_fix_setuid, ksu_task_fix_setuid),
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0) ||                           \
+	defined(CONFIG_IS_HW_HISI) || defined(CONFIG_KSU_ALLOWLIST_WORKAROUND)
+	LSM_HOOK_INIT(key_permission, ksu_key_permission)
+#endif
+};
+
+static void ksu_lsm_hook_init(void)
+{
+	pr_info("Initializing LSM hooks..\n");
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+	security_add_hooks(ksu_hooks, ARRAY_SIZE(ksu_hooks), "ksu");
+#else
+	// https://elixir.bootlin.com/linux/v4.10.17/source/include/linux/lsm_hooks.h#L1892
+	security_add_hooks(ksu_hooks, ARRAY_SIZE(ksu_hooks));
+#endif
+}
+#else
+static void ksu_lsm_hook_init(void)
+{
+
+}
+#endif
+#endif
+
+// -- For KPROBE and LKM handler
+#if defined(MODULE) || defined(KSU_KPROBE_HOOK)
 static int reboot_handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
     struct pt_regs *real_regs = PT_REAL_REGS(regs);
@@ -523,7 +582,7 @@ static struct kprobe cap_task_fix_setuid_kp = {
 	.pre_handler = cap_task_fix_setuid_handler_pre,
 };
 
-__maybe_unused int ksu_kprobe_init(void)
+static int ksu_kprobe_init(void)
 {
 	int rc = 0;
 
@@ -547,11 +606,10 @@ __maybe_unused int ksu_kprobe_init(void)
 	return 0;
 }
 
-__maybe_unused int ksu_kprobe_exit(void)
+static void ksu_kprobe_exit(void)
 {
 	unregister_kprobe(&cap_task_fix_setuid_kp);
 	unregister_kprobe(&reboot_kp);
-	return 0;
 }
 
 void __init ksu_core_init(void)
@@ -560,26 +618,27 @@ void __init ksu_core_init(void)
 		pr_err("Failed to register kernel_umount feature handler\n");
 	}
 
-	ksu_workqueue = alloc_workqueue("ksu_umount", WQ_UNBOUND, 0);
-	if (!ksu_workqueue) {
-		pr_err("Failed to create ksu workqueue\n");
-	}
-#ifdef KSU_KPROBE_HOOK
 	int rc = ksu_kprobe_init();
 	if (rc) {
 		pr_err("ksu_kprobe_init failed: %d\n", rc);
 	}
-#endif
+
 }
 
 void ksu_core_exit(void)
 {
 	pr_info("ksu_core_exit\n");
-#ifdef KSU_KPROBE_HOOK
 	ksu_kprobe_exit();
-#endif
-	if (ksu_workqueue) {
-		flush_workqueue(ksu_workqueue);
-		destroy_workqueue(ksu_workqueue);
-	}
 }
+#else
+
+void __init ksu_core_init(void)
+{
+	ksu_lsm_hook_init();
+}
+
+void ksu_core_exit(void)
+{
+}
+
+#endif
