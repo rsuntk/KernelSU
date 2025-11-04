@@ -614,14 +614,14 @@ static void ksu_kprobe_exit(void)
 
 void __init ksu_core_init(void)
 {
-	if (ksu_register_feature_handler(&kernel_umount_handler)) {
-		pr_err("Failed to register kernel_umount feature handler\n");
-	}
-
 	int rc = ksu_kprobe_init();
 	if (rc) {
 		pr_err("ksu_kprobe_init failed: %d\n", rc);
 	}
+
+    if (ksu_register_feature_handler(&kernel_umount_handler)) {
+        pr_err("Failed to register umount feature handler\n");
+    }
 
 }
 
@@ -629,16 +629,22 @@ void ksu_core_exit(void)
 {
 	pr_info("ksu_core_exit\n");
 	ksu_kprobe_exit();
+    ksu_unregister_feature_handler(KSU_FEATURE_KERNEL_UMOUNT);
 }
 #else
 
 void __init ksu_core_init(void)
 {
 	ksu_lsm_hook_init();
+
+    if (ksu_register_feature_handler(&kernel_umount_handler)) {
+        pr_err("Failed to register umount feature handler\n");
+    }
 }
 
 void ksu_core_exit(void)
 {
+    ksu_unregister_feature_handler(KSU_FEATURE_KERNEL_UMOUNT);
 }
 
 #endif
