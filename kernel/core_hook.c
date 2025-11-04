@@ -212,7 +212,7 @@ void escape_to_root(void)
 	setup_groups(profile, cred);
 
 	commit_creds(cred);
-	
+
 	spin_lock_irq(&current->sighand->siglock);
 	disable_seccomp(current);
 	spin_unlock_irq(&current->sighand->siglock);
@@ -333,42 +333,42 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
 }
 
 struct umount_tw {
-    struct callback_head cb;
-    const struct cred *old_cred;
+	struct callback_head cb;
+	const struct cred *old_cred;
 };
 
 static void umount_tw_func(struct callback_head *cb)
 {
-    struct umount_tw *tw = container_of(cb, struct umount_tw, cb);
-    const struct cred *saved = NULL;
-    if (tw->old_cred) {
-        saved = override_creds(tw->old_cred);
-    }
+	struct umount_tw *tw = container_of(cb, struct umount_tw, cb);
+	const struct cred *saved = NULL;
+	if (tw->old_cred) {
+		saved = override_creds(tw->old_cred);
+	}
 
-    // fixme: use `collect_mounts` and `iterate_mount` to iterate all mountpoint and
-    // filter the mountpoint whose target is `/data/adb`
-    try_umount("/odm", true, 0);
-    try_umount("/system", true, 0);
-    try_umount("/vendor", true, 0);
-    try_umount("/product", true, 0);
-    try_umount("/system_ext", true, 0);
-    try_umount("/data/adb/modules", false, MNT_DETACH);
+	// fixme: use `collect_mounts` and `iterate_mount` to iterate all mountpoint and
+	// filter the mountpoint whose target is `/data/adb`
+	try_umount("/odm", true, 0);
+	try_umount("/system", true, 0);
+	try_umount("/vendor", true, 0);
+	try_umount("/product", true, 0);
+	try_umount("/system_ext", true, 0);
+	try_umount("/data/adb/modules", false, MNT_DETACH);
 
 	try_umount("/debug_ramdisk", false, MNT_DETACH);
 	try_umount("/sbin", false, MNT_DETACH);
 
-    if (saved)
-        revert_creds(saved);
+	if (saved)
+		revert_creds(saved);
 
-    if (tw->old_cred)
-        put_cred(tw->old_cred);
+	if (tw->old_cred)
+		put_cred(tw->old_cred);
 
-    kfree(tw);
+	kfree(tw);
 }
 
 int ksu_handle_setuid(struct cred *new, const struct cred *old)
 {
-    struct umount_tw *tw;
+	struct umount_tw *tw;
 	if (!new || !old) {
 		return 0;
 	}
@@ -459,61 +459,62 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 		current->pid);
 #endif
 
-    tw = kmalloc(sizeof(*tw), GFP_ATOMIC);
-    if (!tw)
-        return 0;
+	tw = kmalloc(sizeof(*tw), GFP_ATOMIC);
+	if (!tw)
+		return 0;
 
-    tw->old_cred = get_current_cred();
-    tw->cb.func = umount_tw_func;
+	tw->old_cred = get_current_cred();
+	tw->cb.func = umount_tw_func;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 7, 8)
-    int err = task_work_add(current, &tw->cb, TWA_RESUME);
+	int err = task_work_add(current, &tw->cb, TWA_RESUME);
 #else
 	int err = task_work_add(current, &tw->cb, true);
 #endif
-    if (err) {
-        if (tw->old_cred) {
-            put_cred(tw->old_cred);
-        }
-        kfree(tw);
-        pr_warn("unmount add task_work failed\n");
-    }
+	if (err) {
+		if (tw->old_cred) {
+			put_cred(tw->old_cred);
+		}
+		kfree(tw);
+		pr_warn("unmount add task_work failed\n");
+	}
 
 	return 0;
 }
 
-int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user **arg)
+int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
+			  void __user **arg)
 {
-
-    if (magic1 != KSU_INSTALL_MAGIC1)
-        return 0;
+	if (magic1 != KSU_INSTALL_MAGIC1)
+		return 0;
 
 #ifdef CONFIG_KSU_DEBUG
-    pr_info("sys_reboot: intercepted call! magic: 0x%x id: %d\n", magic1, magic2);
+	pr_info("sys_reboot: intercepted call! magic: 0x%x id: %d\n", magic1,
+		magic2);
 #endif
 
-    // Check if this is a request to install KSU fd
-    if (magic2 == KSU_INSTALL_MAGIC2) {
-        int fd = ksu_install_fd();
-        pr_info("[%d] install ksu fd: %d\n", current->pid, fd);
+	// Check if this is a request to install KSU fd
+	if (magic2 == KSU_INSTALL_MAGIC2) {
+		int fd = ksu_install_fd();
+		pr_info("[%d] install ksu fd: %d\n", current->pid, fd);
 
-        // downstream: dereference all arg usage!
-        if (copy_to_user((void __user *)*arg, &fd, sizeof(fd))) {
-            pr_err("install ksu fd reply err\n");
-        }
+		// downstream: dereference all arg usage!
+		if (copy_to_user((void __user *)*arg, &fd, sizeof(fd))) {
+			pr_err("install ksu fd reply err\n");
+		}
 
-        return 0;
-    }
+		return 0;
+	}
 
-    // extensions
+	// extensions
 
-    return 0;
+	return 0;
 }
 
 // -- For old kernel compat?
 #ifndef MODULE
-static int __maybe_unused ksu_task_fix_setuid(struct cred *new, const struct cred *old,
-			       int flags)
+static int __maybe_unused ksu_task_fix_setuid(struct cred *new,
+					      const struct cred *old, int flags)
 {
 	return ksu_handle_setuid(new, old);
 }
@@ -560,7 +561,6 @@ static void ksu_lsm_hook_init(void)
 #else
 static void ksu_lsm_hook_init(void)
 {
-
 }
 #endif
 #endif
@@ -569,13 +569,13 @@ static void ksu_lsm_hook_init(void)
 #if defined(MODULE) || defined(KSU_KPROBE_HOOK)
 static int reboot_handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
-    struct pt_regs *real_regs = PT_REAL_REGS(regs);
-    int magic1 = (int)PT_REGS_PARM1(real_regs);
-    int magic2 = (int)PT_REGS_PARM2(real_regs);
-    int cmd = (int)PT_REGS_PARM3(real_regs);
-    void __user **arg = (void __user **)&PT_REGS_SYSCALL_PARM4(real_regs);
+	struct pt_regs *real_regs = PT_REAL_REGS(regs);
+	int magic1 = (int)PT_REGS_PARM1(real_regs);
+	int magic2 = (int)PT_REGS_PARM2(real_regs);
+	int cmd = (int)PT_REGS_PARM3(real_regs);
+	void __user **arg = (void __user **)&PT_REGS_SYSCALL_PARM4(real_regs);
 
-    return ksu_handle_sys_reboot(magic1, magic2, cmd, arg);
+	return ksu_handle_sys_reboot(magic1, magic2, cmd, arg);
 }
 
 static struct kprobe reboot_kp = {
@@ -637,17 +637,16 @@ void __init ksu_core_init(void)
 		pr_err("ksu_kprobe_init failed: %d\n", rc);
 	}
 
-    if (ksu_register_feature_handler(&kernel_umount_handler)) {
-        pr_err("Failed to register umount feature handler\n");
-    }
-
+	if (ksu_register_feature_handler(&kernel_umount_handler)) {
+		pr_err("Failed to register umount feature handler\n");
+	}
 }
 
 void ksu_core_exit(void)
 {
 	pr_info("ksu_core_exit\n");
 	ksu_kprobe_exit();
-    ksu_unregister_feature_handler(KSU_FEATURE_KERNEL_UMOUNT);
+	ksu_unregister_feature_handler(KSU_FEATURE_KERNEL_UMOUNT);
 }
 #else
 
@@ -655,14 +654,14 @@ void __init ksu_core_init(void)
 {
 	ksu_lsm_hook_init();
 
-    if (ksu_register_feature_handler(&kernel_umount_handler)) {
-        pr_err("Failed to register umount feature handler\n");
-    }
+	if (ksu_register_feature_handler(&kernel_umount_handler)) {
+		pr_err("Failed to register umount feature handler\n");
+	}
 }
 
 void ksu_core_exit(void)
 {
-    ksu_unregister_feature_handler(KSU_FEATURE_KERNEL_UMOUNT);
+	ksu_unregister_feature_handler(KSU_FEATURE_KERNEL_UMOUNT);
 }
 
 #endif
