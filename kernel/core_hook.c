@@ -393,6 +393,7 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 		ksu_set_manager_uid(new_uid.val);
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	if (ksu_get_manager_uid() == new_uid.val) {
 		pr_info("install fd for: %d\n", new_uid.val);
 		ksu_install_fd();
@@ -411,6 +412,20 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 			spin_unlock_irq(&current->sighand->siglock);
 		}
 	}
+#else
+	if (ksu_is_allow_uid(new_uid.val)) {
+		spin_lock_irq(&current->sighand->siglock);
+		disable_seccomp(current);
+		spin_unlock_irq(&current->sighand->siglock);
+
+		if (ksu_get_manager_uid() == new_uid.val) {
+			pr_info("install fd for: %d\n", new_uid.val);
+			ksu_install_fd(); // install fd for ksu manager
+		}
+
+		return 0;
+	}
+#endif
 
 	// this hook is used for umounting overlayfs for some uid, if there isn't any module mounted, just ignore it!
 	if (!ksu_module_mounted) {

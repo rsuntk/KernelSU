@@ -1,6 +1,5 @@
 #include <linux/version.h>
 #include <linux/fs.h>
-#include <linux/refcount.h>
 #include <linux/nsproxy.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 #include <linux/sched/task.h>
@@ -213,14 +212,7 @@ long ksu_strncpy_from_user_retry(char *dst, const void __user *unsafe_addr,
 	return ret;
 }
 
-// small compat
-#ifndef SECCOMP_ARCH_NATIVE_NR
-#define SECCOMP_ARCH_NATIVE_NR	NR_syscalls
-#endif
-
-#ifndef SECCOMP_ARCH_COMPAT_NR
-#define SECCOMP_ARCH_COMPAT_NR __NR_compat_syscalls
-#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 
 struct action_cache {
 	DECLARE_BITMAP(allow_native, SECCOMP_ARCH_NATIVE_NR);
@@ -277,3 +269,5 @@ void ksu_seccomp_allow_cache(struct seccomp_filter *filter, int nr)
 	}
 #endif
 }
+
+#endif
