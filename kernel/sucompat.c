@@ -26,6 +26,9 @@
 #define SU_PATH "/system/bin/su"
 #define SH_PATH "/system/bin/sh"
 
+static const char su[] = SU_PATH;
+static const char ksud_path[] = KSUD_PATH;
+
 extern void escape_to_root(void);
 void ksu_sucompat_enable(void);
 void ksu_sucompat_disable(void);
