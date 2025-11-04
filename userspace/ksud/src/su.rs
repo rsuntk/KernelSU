@@ -17,7 +17,7 @@ use crate::{
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub fn grant_root(global_mnt: bool) -> Result<()> {
-    rustix::process::ksu_grant_root()?;
+    crate::ksucalls::grant_root()?;
 
     let mut command = Command::new("sh");
     let command = unsafe {
@@ -207,6 +207,7 @@ pub fn root_shell() -> Result<()> {
             let pw = libc::getpwnam(name.as_ptr()).as_ref();
             #[cfg(target_arch = "x86_64")]
             let pw = libc::getpwnam(name.as_ptr() as *const i8).as_ref();
+
             match pw {
                 Some(pw) => pw.pw_uid,
                 None => name.parse::<u32>().unwrap_or(0),

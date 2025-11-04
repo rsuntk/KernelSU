@@ -1,5 +1,3 @@
-use std::{ffi, path::Path, vec};
-
 use anyhow::{Result, bail};
 use derive_new::new;
 use nom::{
@@ -9,6 +7,7 @@ use nom::{
     character::complete::{space0, space1},
     combinator::map,
 };
+use std::{ffi, path::Path, vec};
 
 type SeObject<'a> = Vec<&'a str>;
 
@@ -20,7 +19,7 @@ fn parse_single_word(input: &str) -> IResult<&str, &str> {
     take_while1(is_sepolicy_char).parse(input)
 }
 
-fn parse_bracket_objs<'a>(input: &'a str) -> IResult<&'a str, SeObject<'a>> {
+fn parse_bracket_objs(input: &str) -> IResult<&str, SeObject<'_>> {
     let (input, (_, words, _)) = (
         tag("{"),
         take_while_m_n(1, 100, |c: char| is_sepolicy_char(c) || c.is_whitespace()),
@@ -30,12 +29,12 @@ fn parse_bracket_objs<'a>(input: &'a str) -> IResult<&'a str, SeObject<'a>> {
     Ok((input, words.split_whitespace().collect()))
 }
 
-fn parse_single_obj<'a>(input: &'a str) -> IResult<&'a str, SeObject<'a>> {
+fn parse_single_obj(input: &str) -> IResult<&str, SeObject<'_>> {
     let (input, word) = take_while1(is_sepolicy_char).parse(input)?;
     Ok((input, vec![word]))
 }
 
-fn parse_star<'a>(input: &'a str) -> IResult<&'a str, SeObject<'a>> {
+fn parse_star(input: &str) -> IResult<&str, SeObject<'_>> {
     let (input, _) = tag("*").parse(input)?;
     Ok((input, vec!["*"]))
 }
@@ -43,12 +42,12 @@ fn parse_star<'a>(input: &'a str) -> IResult<&'a str, SeObject<'a>> {
 // 1. a single sepolicy word
 // 2. { obj1 obj2 obj3 ...}
 // 3. *
-fn parse_seobj<'a>(input: &'a str) -> IResult<&'a str, SeObject<'a>> {
+fn parse_seobj(input: &str) -> IResult<&str, SeObject<'_>> {
     let (input, strs) = alt((parse_single_obj, parse_bracket_objs, parse_star)).parse(input)?;
     Ok((input, strs))
 }
 
-fn parse_seobj_no_star<'a>(input: &'a str) -> IResult<&'a str, SeObject<'a>> {
+fn parse_seobj_no_star(input: &str) -> IResult<&str, SeObject<'_>> {
     let (input, strs) = alt((parse_single_obj, parse_bracket_objs)).parse(input)?;
     Ok((input, strs))
 }
@@ -669,13 +668,11 @@ struct FfiPolicy {
     sepol7: u64,
 }
 
-fn to_u64_addr(pol: &PolicyObject) -> u64 {
-    let raw_ptr: *const ffi::c_char = match pol {
-        PolicyObject::None | PolicyObject::All => std::ptr::null(),
-        PolicyObject::One(s) => s.as_ptr().cast::<ffi::c_char>(),
-    };
-
-    raw_ptr as usize as u64
+fn to_c_ptr(pol: &PolicyObject) -> u64 {
+    match pol {
+        PolicyObject::None | PolicyObject::All => unsafe { std::ptr::null::<u8>() as u64 },
+        PolicyObject::One(s) => unsafe { s.as_ptr() as u64 },
+    }
 }
 
 impl From<AtomicStatement> for FfiPolicy {
@@ -683,13 +680,13 @@ impl From<AtomicStatement> for FfiPolicy {
         FfiPolicy {
             cmd: policy.cmd,
             subcmd: policy.subcmd,
-            sepol1: to_u64_addr(&policy.sepol1),
-            sepol2: to_u64_addr(&policy.sepol2),
-            sepol3: to_u64_addr(&policy.sepol3),
-            sepol4: to_u64_addr(&policy.sepol4),
-            sepol5: to_u64_addr(&policy.sepol5),
-            sepol6: to_u64_addr(&policy.sepol6),
-            sepol7: to_u64_addr(&policy.sepol7),
+            sepol1: to_c_ptr(&policy.sepol1),
+            sepol2: to_c_ptr(&policy.sepol2),
+            sepol3: to_c_ptr(&policy.sepol3),
+            sepol4: to_c_ptr(&policy.sepol4),
+            sepol5: to_c_ptr(&policy.sepol5),
+            sepol6: to_c_ptr(&policy.sepol6),
+            sepol7: to_c_ptr(&policy.sepol7),
         }
     }
 }
@@ -699,8 +696,13 @@ fn apply_one_rule<'a>(statement: &'a PolicyStatement<'a>, strict: bool) -> Resul
     let policies: Vec<AtomicStatement> = statement.try_into()?;
 
     for policy in policies {
-        if !rustix::process::ksu_set_policy(&FfiPolicy::from(policy)) {
-            log::warn!("apply rule: {:?} failed.", statement);
+        let ffi_policy = FfiPolicy::from(policy);
+        let cmd = crate::ksucalls::SetSepolicyCmd {
+            cmd: 0,
+            arg: &ffi_policy as *const _ as u64,
+        };
+        if crate::ksucalls::set_sepolicy(&cmd).is_err() {
+            log::warn!("apply rule: {statement:?} failed.");
             if strict {
                 return Err(anyhow::anyhow!("apply rule {:?} failed.", statement));
             }

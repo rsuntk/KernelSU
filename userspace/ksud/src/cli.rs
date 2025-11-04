@@ -63,6 +63,12 @@ enum Commands {
         command: Profile,
     },
 
+    /// Manage kernel features
+    Feature {
+        #[command(subcommand)]
+        command: Feature,
+    },
+
     /// Patch boot or init_boot images to apply KernelSU
     BootPatch {
         /// boot image path, if not specified, will try to find the boot image automatically
@@ -272,6 +278,38 @@ enum Profile {
     ListTemplates,
 }
 
+#[derive(clap::Subcommand, Debug)]
+enum Feature {
+    /// Get feature value and support status
+    Get {
+        /// Feature ID or name (su_compat, kernel_umount)
+        id: String,
+    },
+
+    /// Set feature value
+    Set {
+        /// Feature ID or name
+        id: String,
+        /// Feature value (0=disable, 1=enable)
+        value: u64,
+    },
+
+    /// List all available features
+    List,
+
+    /// Check feature status (supported/unsupported/managed)
+    Check {
+        /// Feature ID or name (su_compat, kernel_umount)
+        id: String,
+    },
+
+    /// Load configuration from file and apply to kernel
+    Load,
+
+    /// Save current kernel feature states to file
+    Save,
+}
+
 pub fn run() -> Result<()> {
     #[cfg(target_os = "android")]
     android_logger::init_once(
@@ -335,6 +373,15 @@ pub fn run() -> Result<()> {
             Profile::ListTemplates => crate::profile::list_templates(),
         },
 
+        Commands::Feature { command } => match command {
+            Feature::Get { id } => crate::feature::get_feature(id),
+            Feature::Set { id, value } => crate::feature::set_feature(id, value),
+            Feature::List => crate::feature::list_features(),
+            Feature::Check { id } => crate::feature::check_feature(id),
+            Feature::Load => crate::feature::load_config_and_apply(),
+            Feature::Save => crate::feature::save_config(),
+        },
+
         Commands::Debug { command } => match command {
             Debug::SetManager { apk } => debug::set_manager(&apk),
             Debug::GetSign { apk } => {
@@ -366,13 +413,13 @@ pub fn run() -> Result<()> {
         Commands::BootInfo { command } => match command {
             BootInfo::CurrentKmi => {
                 let kmi = crate::boot_patch::get_current_kmi()?;
-                println!("{}", kmi);
+                println!("{kmi}");
                 // return here to avoid printing the error message
                 return Ok(());
             }
             BootInfo::SupportedKmi => {
                 let kmi = crate::assets::list_supported_kmi()?;
-                kmi.iter().for_each(|kmi| println!("{}", kmi));
+                kmi.iter().for_each(|kmi| println!("{kmi}"));
                 return Ok(());
             }
         },
@@ -384,7 +431,7 @@ pub fn run() -> Result<()> {
     };
 
     if let Err(e) = &result {
-        log::error!("Error: {:?}", e);
+        log::error!("Error: {e:?}");
     }
     result
 }
