@@ -48,20 +48,13 @@ int __init kernelsu_init(void)
 		UTS_RELEASE, UTS_MACHINE, KSU_VERSION);
 
 #ifdef CONFIG_KSU_DEBUG
-	pr_alert(
-		"*************************************************************");
-	pr_alert(
-		"**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
-	pr_alert(
-		"**                                                         **");
-	pr_alert(
-		"**         You are running KernelSU in DEBUG mode          **");
-	pr_alert(
-		"**                                                         **");
-	pr_alert(
-		"**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
-	pr_alert(
-		"*************************************************************");
+	pr_alert("*************************************************************");
+	pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
+	pr_alert("**                                                         **");
+	pr_alert("**         You are running KernelSU in DEBUG mode          **");
+	pr_alert("**                                                         **");
+	pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
+	pr_alert("*************************************************************");
 #endif
 
 	ksu_feature_init();
