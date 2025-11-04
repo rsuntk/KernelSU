@@ -2,7 +2,6 @@
 #include <linux/task_work.h>
 #include <linux/thread_info.h>
 #include <linux/seccomp.h>
-#include <linux/bpf.h>
 #include <linux/capability.h>
 #include <linux/cred.h>
 #include <linux/dcache.h>
