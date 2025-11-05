@@ -550,6 +550,7 @@ static int ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 
 #ifndef KSU_KPROBE_HOOK
 #include <linux/lsm_hooks.h>
+
 static struct security_hook_list ksu_hooks[] = {
 	LSM_HOOK_INIT(task_fix_setuid, ksu_task_fix_setuid),
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0) ||                           \
@@ -558,10 +559,19 @@ static struct security_hook_list ksu_hooks[] = {
 #endif
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+static const struct lsm_id ksu_lsmid = {
+	.name = "ksu",
+	.id = 912,
+};
+#endif
+
 static void ksu_lsm_hook_init(void)
 {
 	pr_info("Initializing LSM hooks..\n");
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+	security_add_hooks(ksu_hooks, ARRAY_SIZE(ksu_hooks), &ksu_lsmid);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
 	security_add_hooks(ksu_hooks, ARRAY_SIZE(ksu_hooks), "ksu");
 #else
 	// https://elixir.bootlin.com/linux/v4.10.17/source/include/linux/lsm_hooks.h#L1892
