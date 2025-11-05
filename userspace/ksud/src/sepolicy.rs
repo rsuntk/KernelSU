@@ -671,7 +671,7 @@ struct FfiPolicy {
 fn to_c_ptr(pol: &PolicyObject) -> u64 {
     match pol {
         PolicyObject::None | PolicyObject::All => std::ptr::null::<u8>() as u64,
-        PolicyObject::One(s) => s.as_ptr() as u64
+        PolicyObject::One(s) => s.as_ptr() as u64,
     }
 }
 
