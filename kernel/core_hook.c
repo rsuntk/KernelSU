@@ -332,6 +332,28 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
 	}
 }
 
+static struct ksu_umount_list {
+	const char *mnt;
+	bool check_mnt;
+	int flags;
+};
+
+static void ksu_do_umount_lists(void)
+{
+	// fixme: use `collect_mounts` and `iterate_mount` to iterate all mountpoint and
+	// filter the mountpoint whose target is `/data/adb`
+	try_umount("/odm", true, 0);
+	try_umount("/system", true, 0);
+	try_umount("/vendor", true, 0);
+	try_umount("/product", true, 0);
+	try_umount("/system_ext", true, 0);
+	try_umount("/data/adb/modules", false, MNT_DETACH);
+
+	try_umount("/debug_ramdisk", false, MNT_DETACH);
+	try_umount("/sbin", false, MNT_DETACH);
+}
+
+#if defined(MODULE) || defined(KSU_KPROBE_HOOK)
 struct umount_tw {
 	struct callback_head cb;
 	const struct cred *old_cred;
@@ -345,17 +367,7 @@ static void umount_tw_func(struct callback_head *cb)
 		saved = override_creds(tw->old_cred);
 	}
 
-	// fixme: use `collect_mounts` and `iterate_mount` to iterate all mountpoint and
-	// filter the mountpoint whose target is `/data/adb`
-	try_umount("/odm", true, 0);
-	try_umount("/system", true, 0);
-	try_umount("/vendor", true, 0);
-	try_umount("/product", true, 0);
-	try_umount("/system_ext", true, 0);
-	try_umount("/data/adb/modules", false, MNT_DETACH);
-
-	try_umount("/debug_ramdisk", false, MNT_DETACH);
-	try_umount("/sbin", false, MNT_DETACH);
+	ksu_do_umount_lists();
 
 	if (saved)
 		revert_creds(saved);
@@ -365,6 +377,7 @@ static void umount_tw_func(struct callback_head *cb)
 
 	kfree(tw);
 }
+#endif
 
 int ksu_handle_setuid(struct cred *new, const struct cred *old)
 {
@@ -458,7 +471,7 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 	pr_info("handle umount for uid: %d, pid: %d\n", new_uid.val,
 		current->pid);
 #endif
-
+#if defined(MODULE) || defined(KSU_KPROBE_HOOK)
 	tw = kmalloc(sizeof(*tw), GFP_ATOMIC);
 	if (!tw)
 		return 0;
@@ -478,6 +491,9 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 		kfree(tw);
 		pr_warn("unmount add task_work failed\n");
 	}
+#else
+	ksu_do_umount_lists();
+#endif
 
 	return 0;
 }
