@@ -25,3 +25,4 @@ jobs:
         with:
           ignore_names: gradlew
           ignore_paths: ./userspace/ksud/src/installer.sh
+          ignore_paths: ./scripts/rsubot.sh
