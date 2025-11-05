@@ -78,6 +78,11 @@ pub fn on_post_data_fs() -> Result<()> {
         warn!("apply root profile sepolicy failed: {}", e);
     }
 
+    // load feature config
+    if let Err(e) = crate::feature::init_features() {
+        warn!("init features failed: {e}");
+    }
+
     let tmpfs_path = find_tmp_path();
     // for compatibility
     let no_mount = Path::new(NO_TMPFS_PATH).exists() || Path::new(NO_MOUNT_PATH).exists();

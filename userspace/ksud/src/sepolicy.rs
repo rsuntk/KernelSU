@@ -7,7 +7,7 @@ use nom::{
     character::complete::{space0, space1},
     combinator::map,
 };
-use std::{ffi, path::Path, vec};
+use std::{path::Path, vec};
 
 type SeObject<'a> = Vec<&'a str>;
 
@@ -670,8 +670,8 @@ struct FfiPolicy {
 
 fn to_c_ptr(pol: &PolicyObject) -> u64 {
     match pol {
-        PolicyObject::None | PolicyObject::All => unsafe { std::ptr::null::<u8>() as u64 },
-        PolicyObject::One(s) => unsafe { s.as_ptr() as u64 },
+        PolicyObject::None | PolicyObject::All => std::ptr::null::<u8>() as u64,
+        PolicyObject::One(s) => s.as_ptr() as u64
     }
 }
 
