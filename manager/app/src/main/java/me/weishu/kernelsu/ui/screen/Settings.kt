@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DeveloperMode
 import androidx.compose.material.icons.filled.Fence
 import androidx.compose.material.icons.filled.FolderDelete
+import androidx.compose.material.icons.filled.FolderOff
 import androidx.compose.material.icons.filled.RemoveModerator
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
@@ -81,7 +82,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.BuildConfig
 import me.weishu.kernelsu.Natives
-import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.AboutDialog
 import me.weishu.kernelsu.ui.component.ConfirmResult
@@ -165,13 +165,10 @@ fun SettingScreen(navigator: DestinationsNavigator) {
                         navigator.navigate(AppProfileTemplateScreenDestination)
                     }
                 )
-            }
 
-            var umountChecked by rememberSaveable {
-                mutableStateOf(Natives.isDefaultUmountModules())
-            }
-            
-            KsuIsValid() {
+            	var umountChecked by rememberSaveable {
+                    mutableStateOf(Natives.isDefaultUmountModules())
+            	}
                 SwitchItem(
                     icon = Icons.Filled.FolderDelete,
                     title = stringResource(id = R.string.settings_umount_modules_default),
@@ -198,8 +195,22 @@ fun SettingScreen(navigator: DestinationsNavigator) {
                             isSuDisabled = !shouldEnable
                         }
                     }
+                    var isKernelUmountDisabled by rememberSaveable {
+                        mutableStateOf(!Natives.isKernelUmountEnabled())
+                    }
+                    SwitchItem(
+                        icon = Icons.Filled.FolderOff,
+                        title = stringResource(id = R.string.settings_disable_kernel_umount),
+                        summary = stringResource(id = R.string.settings_disable_kernel_umount_summary),
+                        checked = isKernelUmountDisabled,
+                    ) { checked ->
+                        val shouldEnable = !checked
+                        if (Natives.setKernelUmountEnabled(shouldEnable)) {
+                            isKernelUmountDisabled = !shouldEnable
+                        }
+                    }
                 }
-                
+
                 SwitchItem(
                     icon = Icons.Filled.Engineering,
                     title = stringResource(id = R.string.settings_global_namespace_mode),
@@ -221,7 +232,7 @@ fun SettingScreen(navigator: DestinationsNavigator) {
             val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
             var checkUpdate by rememberSaveable {
                 mutableStateOf(
-                    prefs.getBoolean("check_update", false)
+                    prefs.getBoolean("check_update", true)
                 )
             }
             SwitchItem(
@@ -251,7 +262,7 @@ fun SettingScreen(navigator: DestinationsNavigator) {
                     enableWebDebugging = it
                 }
             }
-            
+
             var showBottomsheet by remember { mutableStateOf(false) }
 
             ListItem(
@@ -361,7 +372,7 @@ fun SettingScreen(navigator: DestinationsNavigator) {
                 )
             }
 
-            val lkmMode = Natives.version >= Natives.MINIMAL_SUPPORTED_KERNEL_LKM && Natives.isLkmMode
+            val lkmMode = Natives.isLkmMode
             if (lkmMode) {
                 UninstallItem(navigator) {
                     loadingDialog.withLoading(it)

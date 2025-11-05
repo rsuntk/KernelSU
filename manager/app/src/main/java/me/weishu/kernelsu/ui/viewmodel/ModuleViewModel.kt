@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.ui.util.HanziToPinyin
 import me.weishu.kernelsu.ui.util.listModules
+import me.weishu.kernelsu.ui.util.overlayFsAvailable
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.Collator
@@ -38,7 +39,6 @@ class ModuleViewModel : ViewModel() {
         val updateJson: String,
         val hasWebUi: Boolean,
         val hasActionScript: Boolean,
-        val dirId: String, // real module id (dir name)
     )
 
     data class ModuleUpdateInfo(
@@ -51,6 +51,9 @@ class ModuleViewModel : ViewModel() {
     var isRefreshing by mutableStateOf(false)
         private set
     var search by mutableStateOf("")
+
+    var isOverlayAvailable by mutableStateOf(overlayFsAvailable())
+        private set
 
     var sortEnabledFirst by mutableStateOf(false)
     var sortActionFirst by mutableStateOf(false)
@@ -84,6 +87,8 @@ class ModuleViewModel : ViewModel() {
             val start = SystemClock.elapsedRealtime()
 
             kotlin.runCatching {
+                isOverlayAvailable = overlayFsAvailable()
+
                 val result = listModules()
 
                 Log.i(TAG, "result: $result")
@@ -105,8 +110,7 @@ class ModuleViewModel : ViewModel() {
                             obj.getBoolean("remove"),
                             obj.optString("updateJson"),
                             obj.optBoolean("web"),
-                            obj.optBoolean("action"),
-                            obj.getString("dir_id"),
+                            obj.optBoolean("action")
                         )
                     }.toList()
                 isNeedRefresh = false

@@ -1,8 +1,11 @@
 package me.weishu.kernelsu.ui.screen
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.OpenableColumns
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
@@ -43,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
@@ -77,6 +81,7 @@ import me.weishu.kernelsu.ui.util.rootAvailable
 @Destination<RootGraph>
 @Composable
 fun InstallScreen(navigator: DestinationsNavigator) {
+    val context = LocalContext.current
     var installMethod by remember {
         mutableStateOf<InstallMethod?>(null)
     }
@@ -118,7 +123,17 @@ fun InstallScreen(navigator: DestinationsNavigator) {
         rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == Activity.RESULT_OK) {
                 it.data?.data?.let { uri ->
-                    lkmSelection = LkmSelection.LkmUri(uri)
+                    val isKo = isKoFile(context, uri)
+                    if (isKo) {
+                        lkmSelection = LkmSelection.LkmUri(uri)
+                    } else {
+                        lkmSelection = LkmSelection.KmiNone
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.install_only_support_ko_file),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
         }
@@ -182,7 +197,7 @@ fun InstallScreen(navigator: DestinationsNavigator) {
 sealed class InstallMethod {
     data class SelectFile(
         val uri: Uri? = null,
-        @get:StringRes override val label: Int = R.string.select_file,
+        @StringRes override val label: Int = R.string.select_file,
         override val summary: String?
     ) : InstallMethod()
 
@@ -353,6 +368,31 @@ private fun TopBar(
         windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
         scrollBehavior = scrollBehavior
     )
+}
+
+private fun isKoFile(context: Context, uri: Uri): Boolean {
+    val seg = uri.lastPathSegment ?: ""
+    if (seg.endsWith(".ko", ignoreCase = true)) return true
+
+    return try {
+        context.contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null
+        )?.use { cursor ->
+            val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (idx != -1 && cursor.moveToFirst()) {
+                val name = cursor.getString(idx)
+                name?.endsWith(".ko", ignoreCase = true) == true
+            } else {
+                false
+            }
+        } ?: false
+    } catch (_: Throwable) {
+        false
+    }
 }
 
 @Composable
