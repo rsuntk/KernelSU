@@ -276,11 +276,11 @@ pub fn root_shell() -> Result<()> {
             let ioctl_result = syscall(SYS_ioctl, 0, TCGETS, &mut t);
 
             if ioctl_result == 0 {
-                let mut pts = vec![0u8; 64];
+                let mut pts = std::mem::zeroed::<[u8; 64]>();
                 let ps = syscall(
                     SYS_readlinkat,
                     libc::AT_FDCWD,
-                    CString::new("/proc/self/fd/0").unwrap().as_ptr(),
+                    c"/proc/self/fd/0".as_ptr(),
                     pts.as_mut_ptr() as *mut libc::c_char,
                     pts.len() as libc::c_ulong,
                 );
@@ -288,13 +288,13 @@ pub fn root_shell() -> Result<()> {
                 if ps != -1 {
                     pts[ps as usize] = 0;
                     let pts_path = str::from_utf8(&pts[..ps as usize]).unwrap_or_default();
-                    let ctx = CString::new("u:object_r:devpts:s0").unwrap();
+                    let ctx = c"u:object_r:devpts:s0";
 
                     syscall(
                         SYS_setxattr,
                         pts_path.as_ptr() as *const libc::c_char,
-                        CString::new("security.selinux").unwrap().as_ptr(),
-                        ctx.as_ptr() as *const libc::c_char,
+                        c"security.selinux".as_ptr(),
+                        ctx.as_ptr(),
                         ctx.to_bytes().len() as libc::c_ulong,
                         0,
                     );
