@@ -332,12 +332,6 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
 	}
 }
 
-static struct ksu_umount_list {
-	const char *mnt;
-	bool check_mnt;
-	int flags;
-};
-
 static void ksu_do_umount_lists(void)
 {
 	// fixme: use `collect_mounts` and `iterate_mount` to iterate all mountpoint and
