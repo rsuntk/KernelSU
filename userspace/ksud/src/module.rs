@@ -565,4 +565,3 @@ pub fn get_managed_features() -> Result<HashMap<String, Vec<String>>> {
 
     Ok(managed_features_map)
 }
-
