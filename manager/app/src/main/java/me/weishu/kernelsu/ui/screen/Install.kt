@@ -10,6 +10,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,11 +25,13 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -150,7 +153,6 @@ fun InstallScreen(navigator: DestinationsNavigator) {
         topBar = {
             TopBar(
                 onBack = dropUnlessResumed { navigator.popBackStack() },
-                onLkmUpload = onLkmUpload,
                 scrollBehavior = scrollBehavior
             )
         },
@@ -169,17 +171,24 @@ fun InstallScreen(navigator: DestinationsNavigator) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(top = 12.dp)
             ) {
-                (lkmSelection as? LkmSelection.LkmUri)?.let {
-                    Text(
-                        stringResource(
-                            id = R.string.selected_lkm,
-                            it.uri.lastPathSegment ?: "(file)"
-                        )
-                    )
-                }
-                Button(modifier = Modifier.fillMaxWidth(),
+                ListItem(
+                    leadingContent = { Icon(Icons.AutoMirrored.Filled.DriveFileMove, null) },
+                    headlineContent = { Text(stringResource(id = R.string.install_upload_lkm_file)) },
+                    supportingContent = {
+                        (lkmSelection as? LkmSelection.LkmUri)?.let {
+                            Text(stringResource(id = R.string.selected_lkm, it.uri.lastPathSegment ?: "(file)"))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onLkmUpload() }
+                )
+                Button(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp, horizontal = 16.dp),
                     enabled = installMethod != null,
                     onClick = {
                         onClickNext()
@@ -352,7 +361,6 @@ fun rememberSelectKmiDialog(onSelected: (String?) -> Unit): DialogHandle {
 @Composable
 private fun TopBar(
     onBack: () -> Unit = {},
-    onLkmUpload: () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
     TopAppBar(
@@ -360,14 +368,16 @@ private fun TopBar(
             IconButton(
                 onClick = onBack
             ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
-        }, actions = {
-            IconButton(onClick = onLkmUpload) {
-                Icon(Icons.Filled.FileUpload, contentDescription = null)
-            }
         },
         windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
         scrollBehavior = scrollBehavior
     )
+}
+
+@Composable
+@Preview
+fun SelectInstallPreview() {
+    InstallScreen(EmptyDestinationsNavigator)
 }
 
 private fun isKoFile(context: Context, uri: Uri): Boolean {
@@ -393,10 +403,4 @@ private fun isKoFile(context: Context, uri: Uri): Boolean {
     } catch (_: Throwable) {
         false
     }
-}
-
-@Composable
-@Preview
-fun SelectInstallPreview() {
-    InstallScreen(EmptyDestinationsNavigator)
 }
