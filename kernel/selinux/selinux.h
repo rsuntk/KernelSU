@@ -27,4 +27,6 @@ u32 ksu_get_ksu_file_sid(void);
 
 int handle_sepolicy(unsigned long arg3, void __user *arg4);
 
+int handle_sepolicy(unsigned long arg3, void __user *arg4);
+
 #endif

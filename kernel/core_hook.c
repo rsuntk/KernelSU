@@ -4,6 +4,7 @@
 #include <linux/seccomp.h>
 #include <linux/capability.h>
 #include <linux/cred.h>
+#include "ob
 #include <linux/dcache.h>
 #include <linux/fs.h>
 #include <linux/init.h>
@@ -40,9 +41,7 @@
 #include "kernel_compat.h"
 #include "supercalls.h"
 
-bool ksu_module_mounted = false;
-
-extern int handle_sepolicy(unsigned long arg3, void __user *arg4);
+bool ksu_module_mounted __read_mostly = false;
 
 static bool ksu_kernel_umount_enabled = true;
 
