@@ -1,18 +1,23 @@
+use crate::{
+    defs,
+    utils::{self, umask},
+};
+use anyhow::{Context, Ok, Result, bail};
+use getopts::Options;
+use libc::c_int;
+use log::{debug, error, info};
+use procfs::process::FDTarget::Path;
+use std::env;
+use std::fs::File;
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
-use std::{env, ffi::CStr, path::PathBuf, process::Command};
+use std::path::PathBuf;
+use std::{ffi::CStr, process::Command};
 
-use anyhow::{Ok, Result};
-use getopts::Options;
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use rustix::{
     process::getuid,
     thread::{Gid, Uid, set_thread_res_gid, set_thread_res_uid},
-};
-
-use crate::{
-    defs,
-    utils::{self, umask},
 };
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
@@ -59,6 +64,29 @@ fn set_identity(uid: u32, gid: u32, groups: &[u32]) {
         let uid = unsafe { Uid::from_raw(uid) };
         set_thread_res_gid(gid, gid, gid).ok();
         set_thread_res_uid(uid, uid, uid).ok();
+    }
+}
+
+#[cfg(any(target_os = "android"))]
+fn wrap_tty(fd: c_int) {
+    let inner_fn = move || -> Result<()> {
+        if unsafe { libc::isatty(fd) != 1 } {
+            debug!("not a tty: {fd}");
+            return Ok(());
+        }
+        let new_fd = get_wrapped_fd(fd).context("get_wrapped_fd")?;
+        if unsafe { libc::dup2(new_fd, fd) } == -1 {
+            bail!("dup {new_fd} -> {fd} errno: {}", unsafe {
+                *libc::__errno()
+            });
+        } else {
+            unsafe { libc::close(new_fd) };
+            Ok(())
+        }
+    };
+
+    if let Err(e) = inner_fn() {
+        error!("wrap tty {fd}: {e:?}");
     }
 }
 
@@ -124,6 +152,8 @@ pub fn root_shell() -> Result<()> {
         "Specify a supplementary group. The first specified supplementary group is also used as a primary group if the option -g is not specified.",
         "GROUP",
     );
+    opts.optflag("w", "wrapper", "Use mksu fd wrapper");
+    opts.optflag("W", "no-wrapper", "Don't use mksu fd wrapper");
 
     // Replace -cn with -z, -mm with -M for supporting getopt_long
     let args = args
@@ -167,6 +197,11 @@ pub fn root_shell() -> Result<()> {
     let mut is_login = matches.opt_present("l");
     let preserve_env = matches.opt_present("p");
     let mount_master = matches.opt_present("M");
+    let use_fd_wrapper = (!std::path::Path::new(NO_FD_WRAPPER_PATH).exists()
+        || matches.opt_present("w"))
+        && !matches.opt_present("W");
+
+    info!("use_fd_wrapper={use_fd_wrapper}");
 
     let groups = matches
         .opt_strs("G")
@@ -267,39 +302,14 @@ pub fn root_shell() -> Result<()> {
                 let _ = utils::switch_mnt_ns(1);
             }
 
-            set_identity(uid, gid, &groups);
-
-            // devpts - https://github.com/backslashxx/kernelnosu/commit/c0f86b812d363de550131cd7e29820f3f7635e2a
-            // why is the rust representation of a 10-line c code like this on rs ??
-            use libc::{SYS_ioctl, SYS_readlinkat, SYS_setxattr, TCGETS, syscall};
-            let mut t = std::mem::zeroed::<libc::termios>();
-            let ioctl_result = syscall(SYS_ioctl, 0, TCGETS, &mut t);
-
-            if ioctl_result == 0 {
-                let mut pts = std::mem::zeroed::<[u8; 64]>();
-                let ps = syscall(
-                    SYS_readlinkat,
-                    libc::AT_FDCWD,
-                    c"/proc/self/fd/0".as_ptr(),
-                    pts.as_mut_ptr() as *mut libc::c_char,
-                    pts.len() as libc::c_ulong,
-                );
-
-                if ps != -1 {
-                    pts[ps as usize] = 0;
-                    let pts_path = str::from_utf8(&pts[..ps as usize]).unwrap_or_default();
-                    let ctx = c"u:object_r:devpts:s0";
-
-                    syscall(
-                        SYS_setxattr,
-                        pts_path.as_ptr() as *const libc::c_char,
-                        c"security.selinux".as_ptr(),
-                        ctx.as_ptr(),
-                        ctx.to_bytes().len() as libc::c_ulong,
-                        0,
-                    );
-                }
+            #[cfg(any(target_os = "android"))]
+            if use_fd_wrapper {
+                wrap_tty(0);
+                wrap_tty(1);
+                wrap_tty(2);
             }
+
+            set_identity(uid, gid, &groups);
 
             Result::Ok(())
         })

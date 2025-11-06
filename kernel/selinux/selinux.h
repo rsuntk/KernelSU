@@ -21,6 +21,10 @@ bool is_zygote(void *cred);
 
 void apply_kernelsu_rules(void);
 
-u32 ksu_get_devpts_sid(void);
+void apply_kernelsu_rules(void);
+
+u32 ksu_get_ksu_file_sid(void);
+
+int handle_sepolicy(unsigned long arg3, void __user *arg4);
 
 #endif

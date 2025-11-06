@@ -17,14 +17,9 @@
 #include "ksud.h"
 #include "manager.h"
 #include "selinux/selinux.h"
-
-// Forward declarations from core_hook.c
-extern void escape_to_root(void);
-extern void nuke_ext4_sysfs(void);
-extern bool ksu_module_mounted;
-extern int handle_sepolicy(unsigned long arg3, void __user *arg4);
-extern void ksu_sucompat_init(void);
-extern void ksu_sucompat_exit(void);
+#include "core_hook.h"
+#include "objsec.h"
+#include "file_wrapper.h"
 
 // Permission check functions
 bool only_manager(void)
@@ -334,6 +329,67 @@ static int do_set_feature(void __user *arg)
 	return 0;
 }
 
+static int do_get_wrapper_fd(void __user *arg)
+{
+	if (!ksu_file_sid) {
+		return -1;
+	}
+
+	struct ksu_get_wrapper_fd_cmd cmd;
+	int ret;
+
+	if (copy_from_user(&cmd, arg, sizeof(cmd))) {
+		pr_err("get_wrapper_fd: copy_from_user failed\n");
+		return -EFAULT;
+	}
+
+	struct file *f = fget(cmd.fd);
+	if (!f) {
+		return -EBADF;
+	}
+
+	struct ksu_file_wrapper *data = mksu_create_file_wrapper(f);
+	if (data == NULL) {
+		ret = -ENOMEM;
+		goto put_orig_file;
+	}
+
+	struct file *pf = anon_inode_getfile("[mksu_fdwrapper]", &data->ops,
+					     data, f->f_flags);
+	if (IS_ERR(pf)) {
+		ret = PTR_ERR(pf);
+		pr_err("mksu_fdwrapper: anon_inode_getfile failed: %ld\n",
+		       PTR_ERR(pf));
+		goto put_wrapper_data;
+	}
+
+	struct inode *wrapper_inode = file_inode(pf);
+	struct inode_security_struct *sec = selinux_inode(wrapper_inode);
+	if (sec) {
+		sec->sid = ksu_file_sid;
+	}
+
+	ret = get_unused_fd_flags(cmd.flags);
+	if (ret < 0) {
+		pr_err("mksu_fdwrapper: get unused fd failed: %d\n", ret);
+		goto put_wrapper_file;
+	}
+
+	// pr_info("mksu_fdwrapper: installed wrapper fd for %p %d (flags=%d, mode=%d) to %p %d (flags=%d, mode=%d)", f, cmd.fd, f->f_flags, f->f_mode, pf, ret, pf->f_flags, pf->f_mode);
+	// pf->f_mode |= FMODE_READ | FMODE_CAN_READ | FMODE_WRITE | FMODE_CAN_WRITE;
+	fd_install(ret, pf);
+	goto put_orig_file;
+
+put_wrapper_file:
+	fput(pf);
+put_wrapper_data:
+	mksu_delete_file_wrapper(data);
+put_orig_file:
+	fput(f);
+
+	return ret;
+}
+
 // IOCTL handlers mapping table
 static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
 	KSU_IOCTL_HANDLER(KSU_IOCTL_GRANT_ROOT, "GRANT_ROOT", do_grant_root, allowed_for_su),
@@ -350,6 +406,7 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
 	KSU_IOCTL_HANDLER(KSU_IOCTL_SET_APP_PROFILE, "SET_APP_PROFILE", do_set_app_profile, only_manager),
 	KSU_IOCTL_HANDLER(KSU_IOCTL_GET_FEATURE, "GET_FEATURE", do_get_feature, manager_or_root),
 	KSU_IOCTL_HANDLER(KSU_IOCTL_SET_FEATURE, "SET_FEATURE", do_set_feature, manager_or_root),
+	KSU_IOCTL_HANDLER(KSU_IOCTL_GET_WRAPPER_FD, "GET_WRAPPER_FD", do_get_wrapper_fd, manager_or_root),
 	KSU_IOCTL_HANDLER(0, NULL, NULL, NULL) // Sentinel
 };
 
