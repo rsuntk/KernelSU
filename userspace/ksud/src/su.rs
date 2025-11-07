@@ -14,6 +14,8 @@ use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::{ffi::CStr, process::Command};
 
+use crate::defs::NO_FD_WRAPPER_PATH;
+use crate::ksucalls::get_wrapped_fd;
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use rustix::{
     process::getuid,
@@ -100,8 +102,6 @@ pub fn root_shell() -> Result<()> {
     // we are root now, this was set in kernel!
 
     use anyhow::anyhow;
-    use std::str;
-
     let env_args: Vec<String> = env::args().collect();
     let program = env_args[0].clone();
     let args = env_args
