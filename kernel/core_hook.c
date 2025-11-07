@@ -1,3 +1,5 @@
+#include <linux/compiler.h>
+#include <linux/sched/signal.h>
 #include <linux/slab.h>
 #include <linux/task_work.h>
 #include <linux/thread_info.h>
@@ -39,10 +41,12 @@
 #include "throne_tracker.h"
 #include "kernel_compat.h"
 #include "supercalls.h"
+#include "sucompat.h"
 
 bool ksu_module_mounted __read_mostly = false;
 
 static bool ksu_kernel_umount_enabled = true;
+static bool ksu_enhanced_security_enabled = false;
 
 static int kernel_umount_feature_get(u64 *value)
 {
@@ -65,13 +69,34 @@ static const struct ksu_feature_handler kernel_umount_handler = {
 	.set_handler = kernel_umount_feature_set,
 };
 
+static int enhanced_security_feature_get(u64 *value)
+{
+	*value = ksu_enhanced_security_enabled ? 1 : 0;
+	return 0;
+}
+
+static int enhanced_security_feature_set(u64 value)
+{
+	bool enable = value != 0;
+	ksu_enhanced_security_enabled = enable;
+	pr_info("enhanced_security: set to %d\n", enable);
+	return 0;
+}
+
+static const struct ksu_feature_handler enhanced_security_handler = {
+	.feature_id = KSU_FEATURE_ENHANCED_SECURITY,
+	.name = "enhanced_security",
+	.get_handler = enhanced_security_feature_get,
+	.set_handler = enhanced_security_feature_set,
+};
+
 static inline bool is_allow_su(void)
 {
 	if (is_manager()) {
 		// we are manager, allow!
 		return true;
 	}
-	return ksu_is_allow_uid(current_uid().val);
+	return ksu_is_allow_uid_for_current(current_uid().val);
 }
 
 static inline bool is_unsupported_uid(uid_t uid)
@@ -166,6 +191,9 @@ static void disable_seccomp(struct task_struct *tsk)
 void escape_to_root(void)
 {
 	struct cred *cred;
+#ifdef KSU_SHOULD_USE_NEW_TP
+	struct task_struct *p = current;
+#endif
 
 	cred = prepare_creds();
 	if (!cred) {
@@ -216,8 +244,15 @@ void escape_to_root(void)
 	spin_unlock_irq(&current->sighand->siglock);
 
 	setup_selinux(profile->selinux_domain);
+
+#ifdef KSU_SHOULD_USE_NEW_TP
+	for_each_thread (p, t) {
+		ksu_set_task_tracepoint_flag(t);
+	}
+#endif
 }
 
+extern void ext4_unregister_sysfs(struct super_block *sb);
 void nuke_ext4_sysfs(void)
 {
 #ifdef CONFIG_EXT4_FS
@@ -272,6 +307,7 @@ static bool should_umount(struct path *path)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) ||                           \
 	defined(KSU_HAS_PATH_UMOUNT)
+extern int path_umount(struct path *path, int flags);
 #define ksu_umount_mnt(__unused, path, flags) (path_umount(path, flags))
 #else
 static int ksu_sys_umount(const char *mnt, int flags)
@@ -383,7 +419,37 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 
 	if (0 != old_uid.val) {
 		// old process is not root, ignore it.
+		if (ksu_enhanced_security_enabled) {
+			// disallow any non-ksu domain escalation from non-root to root!
+			if (unlikely(new_uid.val) == 0) {
+				if (!is_ksu_domain()) {
+					pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
+						current->pid, current->comm,
+						old_uid.val, new_uid.val);
+					kill_pgrp(SIGKILL, current, 0);
+					return 0;
+				}
+			}
+			// disallow appuid decrease to any other uid if it is allowed to su
+			if (is_appuid(old_uid)) {
+				if (new_uid.val < old_uid.val &&
+				    !ksu_is_allow_uid_for_current(
+					    old_uid.val)) {
+					pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
+						current->pid, current->comm,
+						old_uid.val, new_uid.val);
+					kill_pgrp(SIGKILL, current, 0);
+					return 0;
+				}
+			}
+		}
 		return 0;
+	}
+
+	if (new_uid.val == 2000) {
+		if (ksu_su_compat_enabled) {
+			ksu_set_task_tracepoint_flag(current);
+		}
 	}
 
 	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid.val)) {
@@ -404,10 +470,13 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 		spin_lock_irq(&current->sighand->siglock);
 		ksu_seccomp_allow_cache(current->seccomp.filter, __NR_reboot);
 		spin_unlock_irq(&current->sighand->siglock);
+		if (ksu_su_compat_enabled) {
+			ksu_set_task_tracepoint_flag(current);
+		}
 		return 0;
 	}
 
-	if (ksu_is_allow_uid(new_uid.val)) {
+	if (ksu_is_allow_uid_for_current(new_uid.val)) {
 		if (current->seccomp.mode == SECCOMP_MODE_FILTER &&
 		    current->seccomp.filter) {
 			spin_lock_irq(&current->sighand->siglock);
@@ -415,9 +484,17 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 						__NR_reboot);
 			spin_unlock_irq(&current->sighand->siglock);
 		}
+		if (ksu_su_compat_enabled) {
+			ksu_set_task_tracepoint_flag(current);
+		}
+	} else {
+		// Disable syscall tracepoint sucompat for non-allowed processes
+		if (ksu_su_compat_enabled) {
+			ksu_clear_task_tracepoint_flag(current);
+		}
 	}
 #else
-	if (ksu_is_allow_uid(new_uid.val)) {
+	if (ksu_is_allow_uid_for_current(new_uid.val)) {
 		spin_lock_irq(&current->sighand->siglock);
 		disable_seccomp(current);
 		spin_unlock_irq(&current->sighand->siglock);
@@ -452,7 +529,7 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 	// check old process's selinux context, if it is not zygote, ignore it!
 	// because some su apps may setuid to untrusted_app but they are in global mount namespace
 	// when we umount for such process, that is a disaster!
-	if (!is_zygote(old->security)) {
+	if (!is_zygote(old)) {
 		pr_info("handle umount ignore non zygote child: %d\n",
 			current->pid);
 		return 0;
@@ -654,6 +731,10 @@ void __init ksu_core_init(void)
 	if (ksu_register_feature_handler(&kernel_umount_handler)) {
 		pr_err("Failed to register umount feature handler\n");
 	}
+
+	if (ksu_register_feature_handler(&enhanced_security_handler)) {
+		pr_err("Failed to register enhanced security feature handler\n");
+	}
 }
 
 void ksu_core_exit(void)
@@ -671,11 +752,16 @@ void __init ksu_core_init(void)
 	if (ksu_register_feature_handler(&kernel_umount_handler)) {
 		pr_err("Failed to register umount feature handler\n");
 	}
+
+	if (ksu_register_feature_handler(&enhanced_security_handler)) {
+		pr_err("Failed to register enhanced security feature handler\n");
+	}
 }
 
 void ksu_core_exit(void)
 {
 	ksu_unregister_feature_handler(KSU_FEATURE_KERNEL_UMOUNT);
+	ksu_unregister_feature_handler(KSU_FEATURE_ENHANCED_SECURITY);
 }
 
 #endif

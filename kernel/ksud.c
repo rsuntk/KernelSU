@@ -75,6 +75,7 @@ void on_post_fs_data(void)
 	done = true;
 	pr_info("%s!\n", __func__);
 	ksu_load_allow_list();
+	ksu_mark_running_process();
 	ksu_observer_init();
 	// sanity check, this may influence the performance
 	stop_input_hook();

@@ -27,6 +27,10 @@
 #endif
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) && defined(KSU_KPROBE_HOOK)
+#define KSU_SHOULD_USE_NEW_TP
+#endif
+
 extern long ksu_strncpy_from_user_nofault(char *dst,
 					  const void __user *unsafe_addr,
 					  long count);

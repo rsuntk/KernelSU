@@ -231,9 +231,9 @@ out:
 	} else {
 		if (profile->allow_su) {
 			/*
-			 * 1024 apps with uid higher than BITMAP_UID_MAX
-			 * registered to request superuser?
-			 */
+             * 1024 apps with uid higher than BITMAP_UID_MAX
+             * registered to request superuser?
+             */
 			if (allow_list_pointer >= ARRAY_SIZE(allow_list_arr)) {
 				pr_err("too many apps registered\n");
 				WARN_ON(1);
@@ -270,11 +270,6 @@ bool __ksu_is_allow_uid(uid_t uid)
 {
 	int i;
 
-	if (unlikely(uid == 0)) {
-		// already root, but only allow our domain.
-		return is_ksu_domain();
-	}
-
 	if (forbid_system_uid(uid)) {
 		// do not bother going through the list if it's system
 		return false;
@@ -297,6 +292,15 @@ bool __ksu_is_allow_uid(uid_t uid)
 	}
 
 	return false;
+}
+
+bool __ksu_is_allow_uid_for_current(uid_t uid)
+{
+	if (unlikely(uid == 0)) {
+		// already root, but only allow our domain.
+		return is_ksu_domain();
+	}
+	return __ksu_is_allow_uid(uid);
 }
 
 bool ksu_uid_should_umount(uid_t uid)
@@ -391,7 +395,7 @@ void do_save_allow_list(struct work_struct *work)
 
 	list_for_each (pos, &allow_list) {
 		p = list_entry(pos, struct perm_data, list);
-		pr_info("save allow list, name: %s uid: %d, allow: %d\n",
+		pr_info("save allow list, name: %s uid :%d, allow: %d\n",
 			p->profile.key, p->profile.current_uid,
 			p->profile.allow_su);
 

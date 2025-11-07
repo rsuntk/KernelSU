@@ -1,8 +1,9 @@
 #ifndef __KSU_H_SELINUX
 #define __KSU_H_SELINUX
 
-#include <linux/types.h>
-#include <linux/version.h>
+#include "linux/types.h"
+#include "linux/version.h"
+#include "linux/sched.h"
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)) ||                        \
 	defined(KSU_COMPAT_HAS_SELINUX_STATE)
@@ -24,8 +25,6 @@ void apply_kernelsu_rules(void);
 void apply_kernelsu_rules(void);
 
 u32 ksu_get_ksu_file_sid(void);
-
-int handle_sepolicy(unsigned long arg3, void __user *arg4);
 
 int handle_sepolicy(unsigned long arg3, void __user *arg4);
 
