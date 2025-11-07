@@ -114,7 +114,7 @@ endif
 
 $(info -- Supported KernelSU Manager(s): tiann, rsuntk, 5ec1cff) 
 
-ccflags-y += -Wno-implicit-function-declaration -Wno-strict-prototypes -Wno-int-conversion -Wno-gcc-compat
+ccflags-y += -Wno-strict-prototypes -Wno-int-conversion -Wno-gcc-compat
 ccflags-y += -Wno-declaration-after-statement -Wno-unused-function -Wno-missing-prototypes
 
 all:
