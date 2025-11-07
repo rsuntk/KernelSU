@@ -6,10 +6,7 @@ use anyhow::{Context, Ok, Result, bail};
 use getopts::Options;
 use libc::c_int;
 use log::{debug, error, info};
-#[allow(unused_imports)]
-use procfs::process::FDTarget::Path;
 use std::env;
-use std::fs::File;
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
@@ -303,7 +300,7 @@ pub fn root_shell() -> Result<()> {
                 let _ = utils::switch_mnt_ns(1);
             }
 
-            #[cfg(any(target_os = "android"))]
+            #[cfg(target_os = "android")]
             if use_fd_wrapper {
                 wrap_tty(0);
                 wrap_tty(1);
