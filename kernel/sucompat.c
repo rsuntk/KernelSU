@@ -180,6 +180,7 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 
 int ksu_handle_devpts(struct inode *inode)
 {
+#if 0
 	struct inode_security_struct *sec;
 	uid_t uid = current_uid().val;
 
@@ -205,7 +206,7 @@ int ksu_handle_devpts(struct inode *inode)
 
 	if (ksu_file_sid && sec)
 		sec->sid = ksu_file_sid;
-
+#endif
 	return 0;
 }
 
@@ -243,23 +244,10 @@ static int execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 					  NULL);
 }
 
-static int pts_unix98_lookup_pre(struct kprobe *p, struct pt_regs *regs)
-{
-	struct inode *inode;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
-	struct file *file = (struct file *)PT_REGS_PARM2(regs);
-	inode = file->f_path.dentry->d_inode;
-#else
-	inode = (struct inode *)PT_REGS_PARM2(regs);
-#endif
-
-	return ksu_handle_devpts(inode);
-}
-
 #ifdef CONFIG_COMPAT
-static struct kprobe *su_kps[6];
+static struct kprobe *su_kps[5];
 #else
-static struct kprobe *su_kps[4];
+static struct kprobe *su_kps[3];
 #endif
 
 static struct kprobe *init_kprobe(const char *name,
@@ -299,10 +287,9 @@ void ksu_sucompat_enable(void)
 	su_kps[0] = init_kprobe(SYS_EXECVE_SYMBOL, execve_handler_pre);
 	su_kps[1] = init_kprobe(SYS_FACCESSAT_SYMBOL, faccessat_handler_pre);
 	su_kps[2] = init_kprobe(SYS_NEWFSTATAT_SYMBOL, newfstatat_handler_pre);
-	su_kps[3] = init_kprobe("pts_unix98_lookup", pts_unix98_lookup_pre);
 #ifdef CONFIG_COMPAT
-	su_kps[4] = init_kprobe(SYS_EXECVE_COMPAT_SYMBOL, execve_handler_pre);
-	su_kps[5] = init_kprobe(SYS_FSTATAT64_SYMBOL, newfstatat_handler_pre);
+	su_kps[3] = init_kprobe(SYS_EXECVE_COMPAT_SYMBOL, execve_handler_pre);
+	su_kps[4] = init_kprobe(SYS_FSTATAT64_SYMBOL, newfstatat_handler_pre);
 #endif
 #else
 	ksu_su_compat_enabled = true;
