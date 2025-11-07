@@ -1,5 +1,4 @@
 use std::fs;
-use std::os::fd::OwnedFd;
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use std::os::fd::RawFd;
 use std::sync::OnceLock;

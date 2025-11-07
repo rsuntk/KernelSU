@@ -6,6 +6,7 @@ use anyhow::{Context, Ok, Result, bail};
 use getopts::Options;
 use libc::c_int;
 use log::{debug, error, info};
+#[allow(unused_imports)]
 use procfs::process::FDTarget::Path;
 use std::env;
 use std::fs::File;
@@ -69,7 +70,7 @@ fn set_identity(uid: u32, gid: u32, groups: &[u32]) {
     }
 }
 
-#[cfg(any(target_os = "android"))]
+#[cfg(target_os = "android")]
 fn wrap_tty(fd: c_int) {
     let inner_fn = move || -> Result<()> {
         if unsafe { libc::isatty(fd) != 1 } {
