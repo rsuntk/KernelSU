@@ -46,7 +46,7 @@ static inline void ksu_set_task_tracepoint_flag(struct task_struct *t)
 	return;
 }
 
-static inline void ksu_set_task_tracepoint_flag(struct task_struct *t)
+static inline void ksu_clear_task_tracepoint_flag(struct task_struct *t)
 {
 	return;
 }
