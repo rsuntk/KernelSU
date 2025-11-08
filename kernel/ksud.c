@@ -26,6 +26,8 @@
 #include "ksud.h"
 #include "kernel_compat.h"
 #include "selinux/selinux.h"
+#include "manager.h"
+#include "sucompat.h"
 
 static const char KERNEL_SU_RC[] =
 	"\n"
