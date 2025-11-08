@@ -252,33 +252,6 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 
 int ksu_handle_devpts(struct inode *inode)
 {
-#if 0
-	struct inode_security_struct *sec;
-	uid_t uid = current_uid().val;
-
-#ifndef KSU_KPROBE_HOOK
-	if (!ksu_su_compat_enabled)
-		return 0;
-#endif
-
-	if (!current->mm)
-		return 0;
-	// not untrusted_app, ignore it
-	if (uid % 100000 < 10000)
-		return 0;
-	if (!ksu_is_allow_uid(uid))
-		return 0;
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0) ||                           \
-	defined(KSU_OPTIONAL_SELINUX_INODE)
-	sec = selinux_inode(inode);
-#else
-	sec = (struct inode_security_struct *)inode->i_security;
-#endif
-
-	if (ksu_file_sid && sec)
-		sec->sid = ksu_file_sid;
-#endif
 	return 0;
 }
 
