@@ -25,7 +25,10 @@ bool ksu_queue_work(struct work_struct *work)
 	return queue_work(ksu_workqueue, work);
 }
 
-
+extern int ksu_handle_execveat_sucompat(int *fd, struct filena>
+                                        void *argv, voi>
+extern int ksu_handle_execveat_ksud(int *fd, struct filename *>
+                                    void *argv, void *e>
 int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
 			void *envp, int *flags)
 {

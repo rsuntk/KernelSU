@@ -11,12 +11,6 @@ void ksu_sucompat_exit(void);
 void ksu_sucompat_enable(void);
 void ksu_sucompat_disable(void);
 
-int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
-					void *argv, void *envp, int *flags);
-
-int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
-				    void *argv, void *envp, int *flags);
-
 void ksu_mark_running_process(void);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) && defined(KSU_KPROBE_HOOK)
