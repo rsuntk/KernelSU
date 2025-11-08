@@ -28,53 +28,51 @@ bool is_manager();
 using p_key_t = char[KSU_MAX_PACKAGE_NAME];
 
 struct root_profile {
-  int32_t uid;
-  int32_t gid;
+    int32_t uid;
+    int32_t gid;
 
-  int32_t groups_count;
-  int32_t groups[KSU_MAX_GROUPS];
+    int32_t groups_count;
+    int32_t groups[KSU_MAX_GROUPS];
 
-  // kernel_cap_t is u32[2] for capabilities v3
-  struct {
-    uint64_t effective;
-    uint64_t permitted;
-    uint64_t inheritable;
-  } capabilities;
+    // kernel_cap_t is u32[2] for capabilities v3
+    struct {
+        uint64_t effective;
+        uint64_t permitted;
+        uint64_t inheritable;
+    } capabilities;
 
-  char selinux_domain[KSU_SELINUX_DOMAIN];
+    char selinux_domain[KSU_SELINUX_DOMAIN];
 
-  int32_t namespaces;
+    int32_t namespaces;
 };
 
 struct non_root_profile {
-  bool umount_modules;
+    bool umount_modules;
 };
 
 struct app_profile {
-  // It may be utilized for backward compatibility, although we have never
-  // explicitly made any promises regarding this.
-  uint32_t version;
+    // It may be utilized for backward compatibility, although we have never explicitly made any promises regarding this.
+    uint32_t version;
 
-  // this is usually the package of the app, but can be other value for special
-  // apps
-  char key[KSU_MAX_PACKAGE_NAME];
-  int32_t current_uid;
-  bool allow_su;
+    // this is usually the package of the app, but can be other value for special apps
+    char key[KSU_MAX_PACKAGE_NAME];
+    int32_t current_uid;
+    bool allow_su;
 
-  union {
-    struct {
-      bool use_default;
-      char template_name[KSU_MAX_PACKAGE_NAME];
+    union {
+        struct {
+            bool use_default;
+            char template_name[KSU_MAX_PACKAGE_NAME];
 
-      struct root_profile profile;
-    } rp_config;
+            struct root_profile profile;
+        } rp_config;
 
-    struct {
-      bool use_default;
+        struct {
+            bool use_default;
 
-      struct non_root_profile profile;
-    } nrp_config;
-  };
+            struct non_root_profile profile;
+        } nrp_config;
+    };
 };
 
 bool set_app_profile(const app_profile *profile);
@@ -83,75 +81,76 @@ int get_app_profile(app_profile *profile);
 
 // Feature IDs
 enum ksu_feature_id {
-  KSU_FEATURE_SU_COMPAT = 0,
-  KSU_FEATURE_KERNEL_UMOUNT = 1,
+    KSU_FEATURE_SU_COMPAT = 0,
+    KSU_FEATURE_KERNEL_UMOUNT = 1,
+    KSU_FEATURE_ENHANCED_SECURITY = 2,
 };
 
 // Generic feature API
 struct ksu_get_feature_cmd {
-  uint32_t feature_id; // Input: feature ID
-  uint64_t value;      // Output: feature value/state
-  uint8_t supported;   // Output: whether the feature is supported
+    uint32_t feature_id; // Input: feature ID
+    uint64_t value;      // Output: feature value/state
+    uint8_t supported;   // Output: whether the feature is supported
 };
 
 struct ksu_set_feature_cmd {
-  uint32_t feature_id; // Input: feature ID
-  uint64_t value;      // Input: feature value/state to set
+    uint32_t feature_id; // Input: feature ID
+    uint64_t value;      // Input: feature value/state to set
 };
 
 struct ksu_become_daemon_cmd {
-  uint8_t token[65]; // Input: daemon token (null-terminated)
+    uint8_t token[65]; // Input: daemon token (null-terminated)
 };
 
 struct ksu_get_info_cmd {
-  uint32_t version;  // Output: KERNEL_SU_VERSION
-  uint32_t flags;    // Output: flags (bit 0: MODULE mode)
-  uint32_t features; // Output: max feature ID supported (KSU_FEATURE_MAX)
+    uint32_t version; // Output: KERNEL_SU_VERSION
+    uint32_t flags;   // Output: flags (bit 0: MODULE mode)
+    uint32_t features; // Output: max feature ID supported (KSU_FEATURE_MAX)
 };
 
 struct ksu_report_event_cmd {
-  uint32_t event; // Input: EVENT_POST_FS_DATA, EVENT_BOOT_COMPLETED, etc.
+    uint32_t event; // Input: EVENT_POST_FS_DATA, EVENT_BOOT_COMPLETED, etc.
 };
 
 struct ksu_set_sepolicy_cmd {
-  uint64_t cmd; // Input: sepolicy command
-  uint64_t arg; // Input: sepolicy argument pointer
+    uint64_t cmd; // Input: sepolicy command
+    uint64_t arg; // Input: sepolicy argument pointer
 };
 
 struct ksu_check_safemode_cmd {
-  uint8_t in_safe_mode; // Output: true if in safe mode, false otherwise
+    uint8_t in_safe_mode; // Output: true if in safe mode, false otherwise
 };
 
 struct ksu_get_allow_list_cmd {
-  uint32_t uids[128]; // Output: array of allowed/denied UIDs
-  uint32_t count;     // Output: number of UIDs in array
-  uint8_t allow;      // Input: true for allow list, false for deny list
+    uint32_t uids[128]; // Output: array of allowed/denied UIDs
+    uint32_t count; // Output: number of UIDs in array
+    uint8_t allow; // Input: true for allow list, false for deny list
 };
 
 struct ksu_uid_granted_root_cmd {
-  uint32_t uid;    // Input: target UID to check
-  uint8_t granted; // Output: true if granted, false otherwise
+    uint32_t uid; // Input: target UID to check
+    uint8_t granted; // Output: true if granted, false otherwise
 };
 
 struct ksu_uid_should_umount_cmd {
-  uint32_t uid;          // Input: target UID to check
-  uint8_t should_umount; // Output: true if should umount, false otherwise
+    uint32_t uid; // Input: target UID to check
+    uint8_t should_umount; // Output: true if should umount, false otherwise
 };
 
 struct ksu_get_manager_uid_cmd {
-  uint32_t uid; // Output: manager UID
+    uint32_t uid; // Output: manager UID
 };
 
 struct ksu_set_manager_uid_cmd {
-  uint32_t uid; // Input: new manager UID
+    uint32_t uid; // Input: new manager UID
 };
 
 struct ksu_get_app_profile_cmd {
-  struct app_profile profile; // Input/Output: app profile structure
+    struct app_profile profile; // Input/Output: app profile structure
 };
 
 struct ksu_set_app_profile_cmd {
-  struct app_profile profile; // Input: app profile structure
+    struct app_profile profile; // Input: app profile structure
 };
 
 // Su compat
@@ -163,6 +162,11 @@ bool is_su_enabled();
 bool set_kernel_umount_enabled(bool enabled);
 
 bool is_kernel_umount_enabled();
+
+// Enhanced security
+bool set_enhanced_security_enabled(bool enabled);
+
+bool is_enhanced_security_enabled();
 
 // IOCTL command definitions
 #define KSU_IOCTL_GRANT_ROOT _IOC(_IOC_NONE, 'K', 1, 0)
@@ -183,11 +187,11 @@ bool is_kernel_umount_enabled();
 bool get_allow_list(struct ksu_get_allow_list_cmd *);
 
 inline std::pair<int, int> legacy_get_info() {
-  int32_t version = -1;
-  int32_t flags = 0;
-  int32_t result = 0;
-  prctl(0xDEADBEEF, 2, &version, &flags, &result);
-  return {version, flags};
+    int32_t version = -1;
+    int32_t flags = 0;
+    int32_t result = 0;
+    prctl(0xDEADBEEF, 2, &version, &flags, &result);
+    return {version, flags};
 }
 
 #endif // KERNELSU_KSU_H

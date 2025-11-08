@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Engineering
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DeveloperMode
+import androidx.compose.material.icons.filled.EnhancedEncryption
 import androidx.compose.material.icons.filled.Fence
 import androidx.compose.material.icons.filled.FolderDelete
 import androidx.compose.material.icons.filled.FolderOff
@@ -48,6 +49,7 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -86,17 +88,20 @@ import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.AboutDialog
 import me.weishu.kernelsu.ui.component.ConfirmResult
 import me.weishu.kernelsu.ui.component.DialogHandle
+import me.weishu.kernelsu.ui.component.DropdownItem
 import me.weishu.kernelsu.ui.component.SwitchItem
 import me.weishu.kernelsu.ui.component.KsuIsValid
 import me.weishu.kernelsu.ui.component.rememberConfirmDialog
 import me.weishu.kernelsu.ui.component.rememberCustomDialog
 import me.weishu.kernelsu.ui.component.rememberLoadingDialog
+import me.weishu.kernelsu.ui.util.execKsud
 import me.weishu.kernelsu.ui.util.LocalSnackbarHost
 import me.weishu.kernelsu.ui.util.getBugreportFile
 import me.weishu.kernelsu.ui.util.isGlobalNamespaceEnabled
 import me.weishu.kernelsu.ui.util.setGlobalNamespaceEnabled
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import androidx.core.content.edit
 
 /**
  * @author weishu
@@ -138,6 +143,7 @@ fun SettingScreen(navigator: DestinationsNavigator) {
 
             val context = LocalContext.current
             val scope = rememberCoroutineScope()
+            val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
 
             val exportBugreportLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.CreateDocument("application/gzip")
@@ -166,68 +172,169 @@ fun SettingScreen(navigator: DestinationsNavigator) {
                     }
                 )
 
-            	var umountChecked by rememberSaveable {
-                    mutableStateOf(Natives.isDefaultUmountModules())
-            	}
-                SwitchItem(
-                    icon = Icons.Filled.FolderDelete,
-                    title = stringResource(id = R.string.settings_umount_modules_default),
-                    summary = stringResource(id = R.string.settings_umount_modules_default_summary),
-                    checked = umountChecked
-                ) {
-                    if (Natives.setDefaultUmountModules(it)) {
-                        umountChecked = it
+                val modeItems = listOf(
+                    stringResource(id = R.string.settings_mode_default),
+                    stringResource(id = R.string.settings_mode_temp_enable),
+                    stringResource(id = R.string.settings_mode_always_enable),
+                )
+
+                var enhancedSecurityMode by rememberSaveable {
+                    mutableIntStateOf(
+                        run {
+                            val currentEnabled = Natives.isEnhancedSecurityEnabled()
+                            val savedPersist = prefs.getInt("enhanced_security_mode", 0)
+                            if (savedPersist == 2) 2 else if (currentEnabled) 1 else 0
+                        }
+                    )
+                }
+                DropdownItem(
+                    icon = Icons.Filled.EnhancedEncryption,
+                    title = stringResource(id = R.string.settings_enable_enhanced_security),
+                    summary = stringResource(id = R.string.settings_enable_enhanced_security_summary),
+                    items = modeItems,
+                    selectedIndex = enhancedSecurityMode,
+                ) { index ->
+                    when (index) {
+                        // Default: disable and save to persist
+                        0 -> if (Natives.setEnhancedSecurityEnabled(false)) {
+                            execKsud("feature save", true)
+                            prefs.edit { putInt("enhanced_security_mode", 0) }
+                            enhancedSecurityMode = 0
+                        }
+
+                        // Temporarily enable: save disabled state first, then enable
+                        1 -> if (Natives.setEnhancedSecurityEnabled(false)) {
+                            execKsud("feature save", true)
+                            if (Natives.setEnhancedSecurityEnabled(true)) {
+                                prefs.edit { putInt("enhanced_security_mode", 0) }
+                                enhancedSecurityMode = 1
+                            }
+                        }
+
+                        // Permanently enable: enable and save
+                        2 -> if (Natives.setEnhancedSecurityEnabled(true)) {
+                            execKsud("feature save", true)
+                            prefs.edit { putInt("enhanced_security_mode", 2) }
+                            enhancedSecurityMode = 2
+                        }
                     }
                 }
 
-                var isSuDisabled by rememberSaveable {
-                    mutableStateOf(!Natives.isSuEnabled())
+                var suCompatMode by rememberSaveable {
+                    mutableIntStateOf(
+                        run {
+                            val currentEnabled = Natives.isSuEnabled()
+                            val savedPersist = prefs.getInt("su_compat_mode", 0)
+                            if (savedPersist == 2) 2 else if (!currentEnabled) 1 else 0
+                        }
+                    )
                 }
-                SwitchItem(
+                DropdownItem(
                     icon = Icons.Filled.RemoveModerator,
                     title = stringResource(id = R.string.settings_disable_su),
                     summary = stringResource(id = R.string.settings_disable_su_summary),
-                    checked = isSuDisabled,
-                ) { checked ->
-                    val shouldEnable = !checked
-                    if (Natives.setSuEnabled(shouldEnable)) {
-                        isSuDisabled = !shouldEnable
+                    items = modeItems,
+                    selectedIndex = suCompatMode,
+                ) { index ->
+                    when (index) {
+                        // Default: enable and save to persist
+                        0 -> if (Natives.setSuEnabled(true)) {
+                            execKsud("feature save", true)
+                            prefs.edit { putInt("su_compat_mode", 0) }
+                            suCompatMode = 0
+                        }
+
+                        // Temporarily disable: save enabled state first, then disable
+                        1 -> if (Natives.setSuEnabled(true)) {
+                            execKsud("feature save", true)
+                            if (Natives.setSuEnabled(false)) {
+                                prefs.edit { putInt("su_compat_mode", 0) }
+                                suCompatMode = 1
+                            }
+                        }
+
+                        // Permanently disable: disable and save
+                        2 -> if (Natives.setSuEnabled(false)) {
+                            execKsud("feature save", true)
+                            prefs.edit { putInt("su_compat_mode", 2) }
+                            suCompatMode = 2
+                        }
                     }
                 }
-                var isKernelUmountDisabled by rememberSaveable {
-                    mutableStateOf(!Natives.isKernelUmountEnabled())
+
+                var kernelUmountMode by rememberSaveable {
+                    mutableIntStateOf(
+                        run {
+                            val currentEnabled = Natives.isKernelUmountEnabled()
+                            val savedPersist = prefs.getInt("kernel_umount_mode", 0)
+                            if (savedPersist == 2) 2 else if (!currentEnabled) 1 else 0
+                        }
+                    )
                 }
-                SwitchItem(
+                DropdownItem(
                     icon = Icons.Filled.FolderOff,
                     title = stringResource(id = R.string.settings_disable_kernel_umount),
                     summary = stringResource(id = R.string.settings_disable_kernel_umount_summary),
-                    checked = isKernelUmountDisabled,
-                ) { checked ->
-                    val shouldEnable = !checked
-                    if (Natives.setKernelUmountEnabled(shouldEnable)) {
-                        isKernelUmountDisabled = !shouldEnable
-                    }
-                }
+                    items = modeItems,
+                    selectedIndex = kernelUmountMode,
+                ) { index ->
+                    when (index) {
+                        // Default: enable and save to persist
+                        0 -> if (Natives.setKernelUmountEnabled(true)) {
+                            execKsud("feature save", true)
+                            prefs.edit { putInt("kernel_umount_mode", 0) }
+                            kernelUmountMode = 0
+                        }
 
-                SwitchItem(
-                    icon = Icons.Filled.Engineering,
-                    title = stringResource(id = R.string.settings_global_namespace_mode),
-                    summary = stringResource(id = R.string.settings_global_namespace_mode_summary),
-                    checked = isGlobalNamespaceEnabled,
-                    onCheckedChange = {
-                        setGlobalNamespaceEnabled(
-                            if (isGlobalNamespaceEnabled) {
-                                "0"
-                            } else {
-                                "1"
+                        // Temporarily disable: save enabled state first, then disable
+                        1 -> if (Natives.setKernelUmountEnabled(true)) {
+                            execKsud("feature save", true)
+                            if (Natives.setKernelUmountEnabled(false)) {
+                                prefs.edit { putInt("kernel_umount_mode", 0) }
+                                kernelUmountMode = 1
                             }
-                        )
-                        isGlobalNamespaceEnabled = it
-                    }
-                )
-            }
+                        }
 
-            val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                        // Permanently disable: disable and save
+                        2 -> if (Natives.setKernelUmountEnabled(false)) {
+                            execKsud("feature save", true)
+                            prefs.edit { putInt("kernel_umount_mode", 2) }
+                            kernelUmountMode = 2
+                        }
+                    }
+
+                    var umountChecked by rememberSaveable {
+                        mutableStateOf(Natives.isDefaultUmountModules())
+                    }
+                    SwitchItem(
+                        icon = Icons.Filled.FolderDelete,
+                        title = stringResource(id = R.string.settings_umount_modules_default),
+                        summary = stringResource(id = R.string.settings_umount_modules_default_summary),
+                        checked = umountChecked
+                    ) {
+                        if (Natives.setDefaultUmountModules(it)) {
+                            umountChecked = it
+                        }
+                    }
+
+                    SwitchItem(
+                        icon = Icons.Filled.Engineering,
+                        title = stringResource(id = R.string.settings_global_namespace_mode),
+                        summary = stringResource(id = R.string.settings_global_namespace_mode_summary),
+                        checked = isGlobalNamespaceEnabled,
+                        onCheckedChange = {
+                            setGlobalNamespaceEnabled(
+                                if (isGlobalNamespaceEnabled) {
+                                    "0"
+                                } else {
+                                    "1"
+                                }
+                            )
+                            isGlobalNamespaceEnabled = it
+                        }
+                    )
+                }
+            }
             var checkUpdate by rememberSaveable {
                 mutableStateOf(
                     prefs.getBoolean("check_update", true)
@@ -369,7 +476,6 @@ fun SettingScreen(navigator: DestinationsNavigator) {
                     }
                 )
             }
-
             val lkmMode = Natives.isLkmMode
             if (lkmMode) {
                 UninstallItem(navigator) {
