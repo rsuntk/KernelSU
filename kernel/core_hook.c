@@ -460,14 +460,13 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 	}
 
 #ifdef KSU_SHOULD_USE_NEW_TP
-	if (new_uid.val == 2000) {
+	if (new_uid.val == 2000 && ksu_su_compat_enabled) {
 		ksu_set_task_tracepoint_flag(current);
 	}
 #endif
 
 	if (!is_appuid(new_uid) || is_unsupported_uid(new_uid.val)) {
 		// pr_info("handle setuid ignore non application or isolated uid: %d\n", new_uid.val);
-		ksu_clear_task_tracepoint_flag(current);
 		return 0;
 	}
 
@@ -496,10 +495,14 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 						__NR_reboot);
 			spin_unlock_irq(&current->sighand->siglock);
 		}
-		ksu_set_task_tracepoint_flag(current);
+		if (ksu_su_compat_enabled) {
+			ksu_set_task_tracepoint_flag(current);
+		}
 	} else {
-		// Disable syscall tracepoint sucompat for non-allowed processes
-		ksu_clear_task_tracepoint_flag(current);
+		if (ksu_su_compat_enabled) {
+			// Disable syscall tracepoint sucompat for non-allowed processes
+			ksu_clear_task_tracepoint_flag(current);
+		}
 	}
 #else
 	if (ksu_is_allow_uid_for_current(new_uid.val)) {
