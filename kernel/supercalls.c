@@ -362,7 +362,7 @@ static int do_get_wrapper_fd(void __user *arg)
 #define getfd_secure anon_inode_getfd_secure
 #endif
 
-#ifdef KSU_HAS_GETFD_SECURE
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0) || defined(KSU_HAS_GETFD_SECURE)
 	ret = getfd_secure(anon_name, &data->ops, data, f->f_flags, NULL);
 #else
 	ret = anon_inode_getfd(anon_name, &data->ops, data, f->f_flags);
