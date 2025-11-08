@@ -93,7 +93,7 @@ struct ksu_get_wrapper_fd_cmd {
 #define KSU_IOCTL_SET_APP_PROFILE _IOC(_IOC_WRITE, 'K', 12, 0)
 #define KSU_IOCTL_GET_FEATURE _IOC(_IOC_READ | _IOC_WRITE, 'K', 13, 0)
 #define KSU_IOCTL_SET_FEATURE _IOC(_IOC_WRITE, 'K', 14, 0)
-#define KSU_IOCTL_GET_WRAPPER_FD _IOC(_IOC_NONE, 'K', 15, 0)
+#define KSU_IOCTL_GET_WRAPPER_FD _IOC(_IOC_WRITE, 'K', 15, 0)
 
 // IOCTL handler types
 typedef int (*ksu_ioctl_handler_t)(void __user *arg);
