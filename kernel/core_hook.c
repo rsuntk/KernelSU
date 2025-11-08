@@ -197,6 +197,7 @@ void escape_to_root(void)
 	struct cred *cred;
 #ifdef KSU_SHOULD_USE_NEW_TP
 	struct task_struct *p = current;
+	struct task_struct *t;
 #endif
 
 	cred = prepare_creds();
