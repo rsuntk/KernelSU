@@ -414,9 +414,9 @@ static void umount_tw_func(struct callback_head *cb)
 // force_sig kcompat, TODO: move it out of core_hook.c
 // https://elixir.bootlin.com/linux/v5.3-rc1/source/kernel/signal.c#L1613
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0)
-#define __force_sig(sig)	force_sig(sig)
+#define __force_sig(sig) force_sig(sig)
 #else
-#define __force_sig(sig)	force_sig(sig, current)
+#define __force_sig(sig) force_sig(sig, current)
 #endif
 
 int ksu_handle_setuid(struct cred *new, const struct cred *old)

@@ -44,7 +44,8 @@ bool always_allow(void)
 
 bool allowed_for_su(void)
 {
-	bool is_allowed = is_manager() || ksu_is_allow_uid_for_current(current_uid().val);
+	bool is_allowed =
+		is_manager() || ksu_is_allow_uid_for_current(current_uid().val);
 	return is_allowed;
 }
 
@@ -354,8 +355,8 @@ static int __do_get_wrapper_fd(void __user *arg, const char *anon_name)
 		goto put_orig_file;
 	}
 
-	struct file *pf = anon_inode_getfile(anon_name, &data->ops,
-					     data, f->f_flags);
+	struct file *pf =
+		anon_inode_getfile(anon_name, &data->ops, data, f->f_flags);
 	if (IS_ERR(pf)) {
 		ret = PTR_ERR(pf);
 		pr_err("fdwrapper: anon_inode_getfile failed: %ld\n",

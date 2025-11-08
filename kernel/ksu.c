@@ -66,9 +66,7 @@ int __init kernelsu_init(void)
 
 	ksu_sucompat_init();
 
-#ifdef KSU_KPROBE_HOOK
 	ksu_ksud_init();
-#endif
 
 #ifdef MODULE
 #ifndef CONFIG_KSU_DEBUG
@@ -89,9 +87,8 @@ void kernelsu_exit(void)
 
 	destroy_workqueue(ksu_workqueue);
 
-#ifdef KSU_KPROBE_HOOK
 	ksu_ksud_exit();
-#endif
+
 	ksu_sucompat_exit();
 
 	ksu_core_exit();

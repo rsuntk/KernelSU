@@ -25,7 +25,7 @@
 #ifdef KSU_NO___POLL_T
 typedef unsigned int ksu_poll_t;
 #else
-typedef __poll_t     ksu_poll_t;
+typedef __poll_t ksu_poll_t;
 #endif
 
 static loff_t mksu_wrapper_llseek(struct file *fp, loff_t off, int flags)
@@ -108,7 +108,7 @@ static int mksu_wrapper_iterate_shared(struct file *fp, struct dir_context *dc)
 #endif
 
 static ksu_poll_t mksu_wrapper_poll(struct file *fp,
-				  struct poll_table_struct *pts)
+				    struct poll_table_struct *pts)
 {
 	struct ksu_file_wrapper *data = fp->private_data;
 	struct file *orig = data->orig;
