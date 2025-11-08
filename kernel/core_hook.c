@@ -411,6 +411,14 @@ static void umount_tw_func(struct callback_head *cb)
 }
 #endif
 
+// force_sig kcompat, TODO: move it out of core_hook.c
+// https://elixir.bootlin.com/linux/v5.3-rc1/source/kernel/signal.c#L1613
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0)
+#define __force_sig(sig)	force_sig(sig)
+#else
+#define __force_sig(sig)	force_sig(sig, current)
+#endif
+
 int ksu_handle_setuid(struct cred *new, const struct cred *old)
 {
 	if (!new || !old) {
@@ -430,7 +438,7 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 					pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
 						current->pid, current->comm,
 						old_uid.val, new_uid.val);
-					kill_pgrp(SIGKILL, current, 0);
+					__force_sig(SIGKILL);
 					return 0;
 				}
 			}
@@ -442,7 +450,7 @@ int ksu_handle_setuid(struct cred *new, const struct cred *old)
 					pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
 						current->pid, current->comm,
 						old_uid.val, new_uid.val);
-					kill_pgrp(SIGKILL, current, 0);
+					__force_sig(SIGKILL);
 					return 0;
 				}
 			}
