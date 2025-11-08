@@ -11,10 +11,10 @@ void ksu_sucompat_exit(void);
 void ksu_sucompat_enable(void);
 void ksu_sucompat_disable(void);
 
-extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
+int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 					void *argv, void *envp, int *flags);
 
-extern int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 				    void *argv, void *envp, int *flags);
 
 void ksu_mark_running_process(void);
