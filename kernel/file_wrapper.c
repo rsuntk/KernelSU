@@ -20,6 +20,10 @@
 
 #include "file_wrapper.h"
 
+#ifdef KSU_NEED_POLL_T_DEF
+typedef unsigned __bitwise __poll_t;
+#endif
+
 static loff_t mksu_wrapper_llseek(struct file *fp, loff_t off, int flags)
 {
 	struct ksu_file_wrapper *data = fp->private_data;

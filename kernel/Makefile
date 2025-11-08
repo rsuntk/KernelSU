@@ -89,6 +89,11 @@ ifeq ($(shell grep -q "inode_security_struct\s\+\*selinux_inode" $(srctree)/secu
 ccflags-y += -DKSU_OPTIONAL_SELINUX_INODE
 endif
 
+# Check if __poll_t is available
+ifeq ($(shell grep -q "__poll_t" $(srctree)/include/linux/poll.h; echo $$?),1)
+ccflags-y += -DKSU_NEED_POLL_T_DEF
+endif
+
 # Checks Samsung
 ifeq ($(shell grep -q "CONFIG_KDP_CRED" $(srctree)/kernel/cred.c; echo $$?),0)
 ccflags-y += -DSAMSUNG_UH_DRIVER_EXIST
