@@ -88,7 +88,7 @@ static void unmark_all_process(void)
 	pr_info("sucompat: unmark all user process done!\n");
 }
 #else
-ksu_mark_running_process(void)
+void ksu_mark_running_process(void)
 {
 }
 
