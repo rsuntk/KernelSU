@@ -91,9 +91,11 @@ endif
 ifeq ($(shell grep -q "task_security_struct\s\+\*selinux_cred" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
 ccflags-y += -DKSU_OPTIONAL_SELINUX_CRED
 endif
-# Check if __poll_t is available
-ifeq ($(shell grep -q "__poll_t" $(srctree)/include/linux/poll.h; echo $$?),1)
-ccflags-y += -DKSU_NEED_POLL_T_DEF
+# Check if __poll_t exists in linux or uapi types headers (handles backports)
+ifneq ($(shell grep -q "__poll_t" \
+    $(srctree)/include/linux/types.h \
+    $(srctree)/include/uapi/linux/types.h; echo $$?),0)
+ccflags-y += -DKSU_NO___POLL_T
 endif
 
 # Checks Samsung
