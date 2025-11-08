@@ -302,39 +302,40 @@ fun SettingScreen(navigator: DestinationsNavigator) {
                             kernelUmountMode = 2
                         }
                     }
-
-                    var umountChecked by rememberSaveable {
-                        mutableStateOf(Natives.isDefaultUmountModules())
-                    }
-                    SwitchItem(
-                        icon = Icons.Filled.FolderDelete,
-                        title = stringResource(id = R.string.settings_umount_modules_default),
-                        summary = stringResource(id = R.string.settings_umount_modules_default_summary),
-                        checked = umountChecked
-                    ) {
-                        if (Natives.setDefaultUmountModules(it)) {
-                            umountChecked = it
-                        }
-                    }
-
-                    SwitchItem(
-                        icon = Icons.Filled.Engineering,
-                        title = stringResource(id = R.string.settings_global_namespace_mode),
-                        summary = stringResource(id = R.string.settings_global_namespace_mode_summary),
-                        checked = isGlobalNamespaceEnabled,
-                        onCheckedChange = {
-                            setGlobalNamespaceEnabled(
-                                if (isGlobalNamespaceEnabled) {
-                                    "0"
-                                } else {
-                                    "1"
-                                }
-                            )
-                            isGlobalNamespaceEnabled = it
-                        }
-                    )
                 }
+
+                var umountChecked by rememberSaveable {
+                    mutableStateOf(Natives.isDefaultUmountModules())
+                }
+                SwitchItem(
+                    icon = Icons.Filled.FolderDelete,
+                    title = stringResource(id = R.string.settings_umount_modules_default),
+                    summary = stringResource(id = R.string.settings_umount_modules_default_summary),
+                    checked = umountChecked
+                ) {
+                    if (Natives.setDefaultUmountModules(it)) {
+                        umountChecked = it
+                    }
+                }
+
+                SwitchItem(
+                    icon = Icons.Filled.Engineering,
+                    title = stringResource(id = R.string.settings_global_namespace_mode),
+                    summary = stringResource(id = R.string.settings_global_namespace_mode_summary),
+                    checked = isGlobalNamespaceEnabled,
+                    onCheckedChange = {
+                        setGlobalNamespaceEnabled(
+                            if (isGlobalNamespaceEnabled) {
+                                "0"
+                            } else {
+                                "1"
+                            }
+                        )
+                        isGlobalNamespaceEnabled = it
+                    }
+                )
             }
+
             var checkUpdate by rememberSaveable {
                 mutableStateOf(
                     prefs.getBoolean("check_update", true)
