@@ -2,7 +2,6 @@
 #define __KSU_H_KSU
 
 #include <linux/types.h>
-#include <linux/workqueue.h>
 
 #define KERNEL_SU_VERSION KSU_VERSION
 
@@ -63,8 +62,6 @@ struct app_profile {
 		} nrp_config;
 	};
 };
-
-bool ksu_queue_work(struct work_struct *work);
 
 static inline int startswith(char *s, char *prefix)
 {

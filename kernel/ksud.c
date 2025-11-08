@@ -1,3 +1,6 @@
+#include <linux/rcupdate.h>
+#include <linux/slab.h>
+#include <linux/task_work.h>
 #include <asm/current.h>
 #include <linux/compat.h>
 #include <linux/cred.h>
@@ -155,6 +158,13 @@ static int __maybe_unused count(struct user_arg_ptr argv, int max)
 	return i;
 }
 
+static void on_post_fs_data_cbfun(struct callback_head *cb)
+{
+	on_post_fs_data();
+}
+
+static struct callback_head on_post_fs_data_cb = { .func = on_post_fs_data_cbfun };
+                                                       
 // IMPORTANT NOTE: the call from execve_handler_pre WON'T provided correct value for envp and flags in GKI version
 int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 			     struct user_arg_ptr *argv,
@@ -276,7 +286,17 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 		first_app_process = false;
 		pr_info("exec app_process, /data prepared, second_stage: %d\n",
 			init_second_stage_executed);
-		on_post_fs_data(); // we keep this for old ksud
+		struct task_struct *init_task;
+		rcu_read_lock();
+		init_task = rcu_dereference(current->parent);
+		if (init_task) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 7, 8)
+			task_work_add(init_task, &on_post_fs_data_cb, TWA_RESUME);
+#else		
+			task_work_add(init_task, &on_post_fs_data_cb, true);
+#endif
+		}
+		rcu_read_unlock();
 		stop_execve_hook();
 	}
 
