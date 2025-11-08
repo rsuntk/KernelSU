@@ -212,7 +212,6 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 					pr_info("/system/bin/init second_stage executed\n");
 					apply_kernelsu_rules();
 					init_second_stage_executed = true;
-					ksu_android_ns_fs_check();
 				}
 			} else {
 				pr_err("/system/bin/init parse args err!\n");
@@ -236,7 +235,6 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 					pr_info("/init second_stage executed\n");
 					apply_kernelsu_rules();
 					init_second_stage_executed = true;
-					ksu_android_ns_fs_check();
 				}
 			} else {
 				pr_err("/init parse args err!\n");
@@ -274,7 +272,6 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 						apply_kernelsu_rules();
 						init_second_stage_executed =
 							true;
-						ksu_android_ns_fs_check();
 					}
 				}
 			}
@@ -292,7 +289,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 		if (init_task) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 7, 8)
 			task_work_add(init_task, &on_post_fs_data_cb, TWA_RESUME);
-#else		
+#else
 			task_work_add(init_task, &on_post_fs_data_cb, true);
 #endif
 		}
