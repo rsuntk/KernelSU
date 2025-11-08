@@ -10,18 +10,16 @@ jobs:
         include:
           - target: aarch64-linux-android
             os: ubuntu-latest
-            pack_ksuinit: true
           - target: armv7-linux-androideabi
             os: ubuntu-latest
-            pack_ksuinit: false
           - target: x86_64-linux-android
             os: ubuntu-latest
-            pack_ksuinit: true
     uses: ./.github/workflows/ksud.yml
     with:
       target: ${{ matrix.target }}
       os: ${{ matrix.os }}
-      pack_ksuinit: ${{ matrix.pack_ksuinit }}
+      pack_lkm: false
+      pack_ksuinit: false
 
   build-manager:
     needs: build-ksud
