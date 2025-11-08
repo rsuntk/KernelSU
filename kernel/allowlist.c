@@ -411,24 +411,28 @@ exit:
 
 void persistent_allow_list(void)
 {
-    struct task_struct *tsk;
+	struct task_struct *tsk;
 
-    tsk = get_pid_task(find_vpid(1), PIDTYPE_PID);
-    if (!tsk) {
-        pr_err("save_allow_list find init task err\n");
-        return;
-    }
+	tsk = get_pid_task(find_vpid(1), PIDTYPE_PID);
+	if (!tsk) {
+		pr_err("save_allow_list find init task err\n");
+		return;
+	}
 
-    struct callback_head *cb =
-        kzalloc(sizeof(struct callback_head), GFP_KERNEL);
-    if (!cb) {
-        pr_err("save_allow_list alloc cb err\b");
-        return;
-    }
-    cb->func = do_persistent_allow_list;
-    task_work_add(tsk, cb, TWA_RESUME);
+	struct callback_head *cb = kzalloc(sizeof(struct callback_head), GFP_KERNEL);
+	if (!cb) {
+		pr_err("save_allow_list alloc cb err\b");
+		return;
+	}
+	cb->func = do_persistent_allow_list;
 
-    put_task_struct(tsk);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 7, 8)
+	task_work_add(tsk, cb, TWA_RESUME);
+#else
+	task_work_add(tsk, cb, true);
+#endif
+
+	put_task_struct(tsk);
 }
 
 void ksu_load_allow_list(void)
