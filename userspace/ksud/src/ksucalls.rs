@@ -15,7 +15,7 @@ const KSU_IOCTL_SET_SEPOLICY: u32 = 0xc0004b04; // _IOC(_IOC_READ|_IOC_WRITE, 'K
 const KSU_IOCTL_CHECK_SAFEMODE: u32 = 0x80004b05; // _IOC(_IOC_READ, 'K', 5, 0)
 const KSU_IOCTL_GET_FEATURE: u32 = 0xc0004b0d; // _IOC(_IOC_READ|_IOC_WRITE, 'K', 13, 0)
 const KSU_IOCTL_SET_FEATURE: u32 = 0x40004b0e; // _IOC(_IOC_WRITE, 'K', 14, 0)
-const KSU_IOCTL_GET_WRAPPER_FD: u32 = 0x00006f10; // _IOC(_IOC_NONE, 'K', 10000, 0)
+const KSU_IOCTL_GET_WRAPPER_FD: u32 = 0x40004b0f; // _IOC(_IOC_WRITE, 'K', 15, 0)
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]

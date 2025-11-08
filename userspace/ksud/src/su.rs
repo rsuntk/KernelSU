@@ -71,7 +71,7 @@ fn set_identity(uid: u32, gid: u32, groups: &[u32]) {
 fn wrap_tty(fd: c_int) {
     let inner_fn = move || -> Result<()> {
         if unsafe { libc::isatty(fd) != 1 } {
-            debug!("not a tty: {fd}");
+            warn!("not a tty: {fd}");
             return Ok(());
         }
         let new_fd = get_wrapped_fd(fd).context("get_wrapped_fd")?;
@@ -150,8 +150,7 @@ pub fn root_shell() -> Result<()> {
         "Specify a supplementary group. The first specified supplementary group is also used as a primary group if the option -g is not specified.",
         "GROUP",
     );
-    opts.optflag("w", "wrapper", "Use mksu fd wrapper");
-    opts.optflag("W", "no-wrapper", "Don't use mksu fd wrapper");
+    opts.optflag("W", "no-wrapper", "don't use ksu fd wrapper");
 
     // Replace -cn with -z, -mm with -M for supporting getopt_long
     let args = args
@@ -195,9 +194,7 @@ pub fn root_shell() -> Result<()> {
     let mut is_login = matches.opt_present("l");
     let preserve_env = matches.opt_present("p");
     let mount_master = matches.opt_present("M");
-    let use_fd_wrapper = (!std::path::Path::new(NO_FD_WRAPPER_PATH).exists()
-        || matches.opt_present("w"))
-        && !matches.opt_present("W");
+    let use_fd_wrapper = !matches.opt_present("W");
 
     info!("use_fd_wrapper={use_fd_wrapper}");
 

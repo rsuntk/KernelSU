@@ -9,7 +9,7 @@ struct ksu_file_wrapper {
 	struct file_operations ops;
 };
 
-struct ksu_file_wrapper *mksu_create_file_wrapper(struct file *fp);
-void mksu_delete_file_wrapper(struct ksu_file_wrapper *data);
+struct ksu_file_wrapper *ksu_create_file_wrapper(struct file *fp);
+void ksu_delete_file_wrapper(struct ksu_file_wrapper *data);
 
 #endif
