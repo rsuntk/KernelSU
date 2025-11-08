@@ -14,6 +14,8 @@ void setup_selinux(const char *);
 
 void setenforce(bool);
 
+bool is_task_ksu_domain(const struct cred *cred);
+
 bool getenforce(void);
 
 bool is_ksu_domain(void);
