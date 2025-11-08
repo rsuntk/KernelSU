@@ -5,14 +5,13 @@ use crate::{
 use anyhow::{Context, Ok, Result, bail};
 use getopts::Options;
 use libc::c_int;
-use log::{debug, error, info};
+use log::{error, info, warn};
 use std::env;
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::{ffi::CStr, process::Command};
 
-use crate::defs::NO_FD_WRAPPER_PATH;
 use crate::ksucalls::get_wrapped_fd;
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use rustix::{
