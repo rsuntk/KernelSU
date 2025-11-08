@@ -3,9 +3,7 @@
 
 #include "selinux.h"
 #include "objsec.h"
-#ifdef SAMSUNG_SELINUX_PORTING
 #include "security.h" // Samsung SELinux Porting
-#endif
 #ifndef KSU_COMPAT_USE_SELINUX_STATE
 #include "avc.h"
 #endif
@@ -31,6 +29,12 @@
 #else
 #define __is_selinux_enforcing() (1)
 #define __setenforce(val)
+#endif
+
+#ifdef KSU_OPTIONAL_SELINUX_CRED
+#define __selinux_cred(cred) (selinux_cred(cred))
+#else
+#define __selinux_cred(cred) (cred->security)
 #endif
 
 #endif

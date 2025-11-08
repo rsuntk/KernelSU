@@ -88,7 +88,9 @@ endif
 ifeq ($(shell grep -q "inode_security_struct\s\+\*selinux_inode" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
 ccflags-y += -DKSU_OPTIONAL_SELINUX_INODE
 endif
-
+ifeq ($(shell grep -q "task_security_struct\s\+\*selinux_cred" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
+ccflags-y += -DKSU_OPTIONAL_SELINUX_CRED
+endif
 # Check if __poll_t is available
 ifeq ($(shell grep -q "__poll_t" $(srctree)/include/linux/poll.h; echo $$?),1)
 ccflags-y += -DKSU_NEED_POLL_T_DEF
