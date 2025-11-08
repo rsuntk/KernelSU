@@ -18,6 +18,7 @@
 #include <linux/errno.h>
 #include <linux/cred.h>
 
+extern int install_session_keyring_to_cred(struct cred *, struct key *);
 struct key *init_session_keyring = NULL;
 static inline int install_session_keyring(struct key *keyring)
 {
