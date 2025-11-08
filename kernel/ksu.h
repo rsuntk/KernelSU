@@ -2,6 +2,7 @@
 #define __KSU_H_KSU
 
 #include <linux/types.h>
+#include <linux/workqueue.h>
 
 #define KERNEL_SU_VERSION KSU_VERSION
 
@@ -63,6 +64,7 @@ struct app_profile {
 	};
 };
 
+#if 0
 static inline int startswith(char *s, char *prefix)
 {
 	return strncmp(s, prefix, strlen(prefix));
@@ -76,5 +78,6 @@ static inline int endswith(const char *s, const char *t)
 		return 1;
 	return strcmp(s + slen - tlen, t);
 }
+#endif
 
 #endif
