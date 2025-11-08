@@ -13,6 +13,11 @@
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 #include <linux/compiler_types.h>
 #endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+#include <linux/sched/task_stack.h>
+#else
+#include <linux/sched.h>
+#endif
 
 #include "ksu.h"
 #include "klog.h" // IWYU pragma: keep
