@@ -419,7 +419,8 @@ void persistent_allow_list(void)
 		return;
 	}
 
-	struct callback_head *cb = kzalloc(sizeof(struct callback_head), GFP_KERNEL);
+	struct callback_head *cb =
+		kzalloc(sizeof(struct callback_head), GFP_KERNEL);
 	if (!cb) {
 		pr_err("save_allow_list alloc cb err\b");
 		return;
