@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
 
-        if (Natives.isManager) install()
+        if (Natives.isManager && !Natives.requireNewKernel()) install()
 
         // Check if launched with a ZIP file
         val zipUri: ArrayList<Uri>? = if (intent.data != null) {
