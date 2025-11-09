@@ -191,7 +191,7 @@ void scan_uids(struct list_head *uid_list)
 	// we fallback to packages.list reading!
 	if (ptr_err != 0) {
 		once_lock = true;
-		pr_err("Read userdata_de failed! Falling back..\n");
+		pr_warn("Read userdata_de failed! Falling back..\n");
 		read_package_list(uid_list);
 		goto skip_iterate;
 	}

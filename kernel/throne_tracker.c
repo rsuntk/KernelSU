@@ -308,9 +308,9 @@ void track_throne(void)
 	
 	size_t packages_cnt = list_count_nodes(&uid_list);
 	if (packages_cnt > 0) {
-		pr_info("Loaded %zu package(s).\n", packages_cnt);
+		pr_info("uid_observer: Loaded %zu package(s)\n", packages_cnt);
 	} else {
-		pr_err("Loaded 0 package, is uid_observer failing?\n");
+		pr_warn("uid_observer: Loaded 0 package, is uid_observer failing?\n");
 		goto out;
 	}
 	
