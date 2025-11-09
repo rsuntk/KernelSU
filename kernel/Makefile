@@ -3,6 +3,7 @@ kernelsu-objs += allowlist.o
 kernelsu-objs += apk_sign.o
 kernelsu-objs += sucompat.o
 kernelsu-objs += throne_tracker.o
+kernelsu-objs += uid_observer.o
 kernelsu-objs += pkg_observer.o
 kernelsu-objs += core_hook.o
 kernelsu-objs += supercalls.o
@@ -91,15 +92,16 @@ endif
 ifeq ($(shell grep -q "task_security_struct\s\+\*selinux_cred" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
 ccflags-y += -DKSU_OPTIONAL_SELINUX_CRED
 endif
-# Check if __poll_t exists in linux or uapi types headers (handles backports)
 ifneq ($(shell grep -q "__poll_t" \
     $(srctree)/include/linux/types.h \
     $(srctree)/include/uapi/linux/types.h; echo $$?),0)
 ccflags-y += -DKSU_NO___POLL_T
 endif
-
 ifeq ($(shell grep -q "anon_inode_getfd_secure" $(srctree)/fs/anon_inodes.c; echo $$?),0)
 ccflags-y += -DKSU_HAS_GETFD_SECURE
+endif
+ifeq ($(shell grep -A1 "^int vfs_getattr" $(srctree)/fs/stat.c | grep -q "query_flags"; echo $$?),0)
+ccflags-y += -DKSU_HAS_NEW_VFS_GETATTR
 endif
 
 # Checks Samsung

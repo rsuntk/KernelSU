@@ -5,6 +5,30 @@
 #include <linux/version.h>
 #include "ss/policydb.h"
 #include "linux/key.h"
+#include <linux/list.h>
+
+/**
+ * list_count_nodes - count the number of nodes in a list
+ * the head of the list
+ * 
+ * Returns the number of nodes in the list
+ */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0)
+static inline size_t list_count_nodes(const struct list_head *head)
+{
+	const struct list_head *pos;
+	size_t count = 0;
+
+	if (!head)
+		return 0;
+
+	list_for_each(pos, head) {
+		count++;
+	}
+	
+	return count;
+}
+#endif
 
 /*
  * Adapt to Huawei HISI kernel without affecting other kernels ,
@@ -59,6 +83,21 @@ extern void ksu_seccomp_allow_cache(struct seccomp_filter *filter, int nr);
 #define ksu_access_ok(addr, size) access_ok(addr, size)
 #else
 #define ksu_access_ok(addr, size) access_ok(VERIFY_READ, addr, size)
+#endif
+
+// https://docs.kernel.org/filesystems/porting.html
+// filldir_t (readdir callbacks) calling conventions have changed. Instead of returning 0 or -E... it returns bool now. 
+// false means "no more" (as -E... used to) and true - "keep going" (as 0 in old calling conventions).
+// Rationale: callers never looked at specific -E... values anyway.
+// -> iterate_shared() instances require no changes at all, all filldir_t ones in the tree converted.
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+#define FILLDIR_RETURN_TYPE bool
+#define FILLDIR_ACTOR_CONTINUE true
+#define FILLDIR_ACTOR_STOP false
+#else
+#define FILLDIR_RETURN_TYPE int
+#define FILLDIR_ACTOR_CONTINUE 0
+#define FILLDIR_ACTOR_STOP -EINVAL
 #endif
 
 #endif

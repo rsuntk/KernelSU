@@ -8,20 +8,11 @@
 
 #include "allowlist.h"
 #include "klog.h" // IWYU pragma: keep
-#include "ksu.h"
 #include "manager.h"
 #include "throne_tracker.h"
 #include "kernel_compat.h"
 
 uid_t ksu_manager_uid = KSU_INVALID_UID;
-
-#define SYSTEM_PACKAGES_LIST_PATH "/data/system/packages.list"
-
-struct uid_data {
-	struct list_head list;
-	u32 uid;
-	char package[KSU_MAX_PACKAGE_NAME];
-};
 
 static int get_pkg_from_apk_path(char *pkg, const char *path)
 {
@@ -116,17 +107,6 @@ struct my_dir_context {
 	int depth;
 	int *stop;
 };
-// https://docs.kernel.org/filesystems/porting.html
-// filldir_t (readdir callbacks) calling conventions have changed. Instead of returning 0 or -E... it returns bool now. false means "no more" (as -E... used to) and true - "keep going" (as 0 in old calling conventions). Rationale: callers never looked at specific -E... values anyway. -> iterate_shared() instances require no changes at all, all filldir_t ones in the tree converted.
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
-#define FILLDIR_RETURN_TYPE bool
-#define FILLDIR_ACTOR_CONTINUE true
-#define FILLDIR_ACTOR_STOP false
-#else
-#define FILLDIR_RETURN_TYPE int
-#define FILLDIR_ACTOR_CONTINUE 0
-#define FILLDIR_ACTOR_STOP -EINVAL
-#endif
 
 static inline void print_iter(bool is_manager, char *dirpath)
 {
@@ -264,8 +244,7 @@ static void search_manager(const char *path, int depth,
 				if (!data_app_magic) {
 					if (file->f_inode->i_sb->s_magic) {
 						data_app_magic =
-							file->f_inode->i_sb
-								->s_magic;
+							file->f_inode->i_sb->s_magic;
 						pr_info("%s: dir: %s got magic! 0x%lx\n",
 							__func__, pos->dirpath,
 							data_app_magic);
@@ -319,67 +298,24 @@ static bool is_uid_exist(uid_t uid, char *package, void *data)
 	return exist;
 }
 
+extern void scan_uids(struct list_head *uid_list);
 void track_throne(void)
 {
 	struct list_head uid_list;
-	struct file *fp;
 	INIT_LIST_HEAD(&uid_list);
 
-	fp = ksu_filp_open_compat(SYSTEM_PACKAGES_LIST_PATH, O_RDONLY, 0);
-	if (IS_ERR(fp)) {
-		pr_err("%s: open " SYSTEM_PACKAGES_LIST_PATH " failed: %ld\n",
-		       __func__, PTR_ERR(fp));
-		return;
+	scan_uids(&uid_list);
+	
+	size_t packages_cnt = list_count_nodes(&uid_list);
+	if (packages_cnt > 0) {
+		pr_info("Loaded %zu package(s).\n", packages_cnt);
+	} else {
+		pr_err("Loaded 0 package, is uid_observer failing?\n");
+		goto out;
 	}
-
-	char chr = 0;
-	loff_t pos = 0;
-	loff_t line_start = 0;
-	char buf[KSU_MAX_PACKAGE_NAME];
-
-	for (;;) {
-		ssize_t count =
-			ksu_kernel_read_compat(fp, &chr, sizeof(chr), &pos);
-		if (count != sizeof(chr))
-			break;
-		if (chr != '\n')
-			continue;
-
-		count = ksu_kernel_read_compat(fp, buf, sizeof(buf),
-					       &line_start);
-
-		struct uid_data *data =
-			kzalloc(sizeof(struct uid_data), GFP_ATOMIC);
-		if (!data) {
-			filp_close(fp, 0);
-			goto out;
-		}
-
-		char *tmp = buf;
-		const char *delim = " ";
-		char *package = strsep(&tmp, delim);
-		char *uid = strsep(&tmp, delim);
-		if (!uid || !package) {
-			pr_err("update_uid: package or uid is NULL!\n");
-			break;
-		}
-
-		u32 res;
-		if (kstrtou32(uid, 10, &res)) {
-			pr_err("update_uid: uid parse err\n");
-			break;
-		}
-		data->uid = res;
-		strncpy(data->package, package, KSU_MAX_PACKAGE_NAME);
-		list_add_tail(&data->list, &uid_list);
-		// reset line start
-		line_start = pos;
-	}
-	filp_close(fp, 0);
-
+	
 	// now update uid list
-	struct uid_data *np;
-	struct uid_data *n;
+	struct uid_data *np, *n;
 
 	// first, check if manager_uid exist!
 	bool manager_exist = false;
