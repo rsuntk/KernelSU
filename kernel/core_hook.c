@@ -271,12 +271,13 @@ void nuke_ext4_sysfs(void)
 	struct super_block *sb = path.dentry->d_inode->i_sb;
 	const char *name = sb->s_type->name;
 	if (strcmp(name, "ext4") != 0) {
-		pr_info("skipping s_type: %s\n", name);
+		pr_info("nuke_module: skipping s_type: %s\n", name);
 		path_put(&path);
 		return;
 	}
 
 	ext4_unregister_sysfs(sb);
+	pr_info("nuke_module: ext4 sysfs unregistered.n\n");
 	path_put(&path);
 #endif
 }

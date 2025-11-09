@@ -498,6 +498,7 @@ int ksu_install_fd(void)
 
 	// Install fd
 	fd_install(fd, filp);
-
+	
+	pr_info("ksu fd[%d] installed for %s/%d\n", fd, current->comm, current->pid);
 	return fd;
 }
