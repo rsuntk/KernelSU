@@ -774,7 +774,7 @@ dependencies = [
  "procfs",
  "regex-lite",
  "rust-embed",
- "rustix 1.1.2 (git+https://github.com/bytecodealliance/rustix.git?branch=main)",
+ "rustix 1.1.2 (git+https://github.com/rsuntk/rustix.git?branch=main)",
  "serde_json",
  "sha1",
  "sha256",
@@ -1113,7 +1113,7 @@ dependencies = [
 [[package]]
 name = "rustix"
 version = "1.1.2"
-source = "git+https://github.com/bytecodealliance/rustix.git?branch=main#7f5d939bb823a944b9d97b8ebdf3890590472038"
+source = "git+https://github.com/rsuntk/rustix.git?branch=main#7dfa27789baeca1cce6beaca6ae2957d6b88054d"
 dependencies = [
  "bitflags 2.10.0",
  "errno 0.3.14",
