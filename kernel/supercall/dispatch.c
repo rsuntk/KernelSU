@@ -406,11 +406,69 @@ static int do_get_wrapper_fd(void __user *arg) {
 	return ksu_install_file_wrapper(cmd.fd);
 }
 
+// Get task mark status
+// Returns: 1 if marked, 0 if not marked, -ESRCH if task not found
+/* BRICKPORT: on this one we return 1 if seccomp is disabled and 0 if enabled */
+static int ksu_get_task_mark(pid_t pid)
+{
+	struct task_struct *task;
+	int ret = -ESRCH;
+
+	rcu_read_lock();
+	task = find_task_by_vpid(pid);
+	if (!task) {
+		rcu_read_unlock();
+		return ret;	
+	}
+
+	ret = !task->seccomp.mode;
+	rcu_read_unlock();
+
+	return ret;
+}
+
 static int do_manage_mark(void __user *arg)
 {
-	// not implemented here!
+	struct ksu_manage_mark_cmd cmd;
+	int ret = 0;
+
+	if (copy_from_user(&cmd, arg, sizeof(cmd))) {
+		pr_err("manage_mark: copy_from_user failed\n");
+		return -EFAULT;
+	}
+
+	switch (cmd.operation) {
+		case KSU_MARK_GET: {
+			// on this one, we return seccomp status of a pid instead
+			// at the very least we have partial featureset
+			ret = ksu_get_task_mark(cmd.pid);
+			if (ret < 0) {
+			    pr_err("manage_mark: get failed for pid %d: %d\n", cmd.pid, ret);
+			    return ret;
+			}
+			cmd.result = (u32)ret;
+			break;
+		}
+#if 0 // TODO: revisit this sometime
+		case KSU_MARK_MARK: { break; }
+		case KSU_MARK_UNMARK: { break; }
+		case KSU_MARK_REFRESH: { break; }
+#endif
+		default: {
+			pr_err("manage_mark: invalid operation %u\n", cmd.operation);
+			return -EINVAL;
+		}
+	}
+
+	if (copy_to_user(arg, &cmd, sizeof(cmd))) {
+		pr_err("manage_mark: copy_to_user failed\n");
+		return -EFAULT;
+	}
+
+
 	return 0;
 }
+
 static int do_nuke_ext4_sysfs(void __user *arg)
 {
 	struct ksu_nuke_ext4_sysfs_cmd cmd;
