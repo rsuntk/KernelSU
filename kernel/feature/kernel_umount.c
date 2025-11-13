@@ -72,8 +72,8 @@ static inline void try_umount(const char *mnt, int flags)
 
 static inline int ksu_handle_umount(struct cred *new, const struct cred *old)
 {
-	uid_t new_uid = new->uid.val;
-	uid_t old_uid = old->uid.val;
+	uid_t new_uid = ksu_get_uid_t(new->uid);
+	uid_t old_uid = ksu_get_uid_t(old->uid);
 
 	if (!ksu_kernel_umount_enabled)
 		return 0;
