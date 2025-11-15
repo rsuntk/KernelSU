@@ -1,8 +1,7 @@
-use std::path::Path;
-
+use crate::utils::ensure_dir_exists;
+use crate::{defs, sepolicy};
 use anyhow::{Context, Result};
-
-use crate::{defs, sepolicy, utils::ensure_dir_exists};
+use std::path::Path;
 
 pub fn set_sepolicy(pkg: String, policy: String) -> Result<()> {
     ensure_dir_exists(defs::PROFILE_SELINUX_DIR)?;

@@ -13,7 +13,6 @@ import android.util.Log
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ShellUtils
-import com.topjohnwu.superuser.io.SuFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
@@ -250,6 +249,7 @@ fun installBoot(
     bootUri: Uri?,
     lkm: LkmSelection,
     ota: Boolean,
+    partition: String?,
     onStdout: (String) -> Unit,
     onStderr: (String) -> Unit,
 ): FlashResult {
@@ -308,6 +308,10 @@ fun installBoot(
         Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
     cmd += " -o $downloadsDir"
 
+    partition?.let { part ->
+        cmd += " --partition $part"
+    }
+
     val result = flashWithIO("${getKsuDaemonPath()} $cmd", onStdout, onStderr)
     Log.i("KernelSU", "install boot result: ${result.isSuccess}")
 
@@ -336,19 +340,6 @@ fun rootAvailable(): Boolean {
     return shell.isRoot
 }
 
-fun isAbDevice(): Boolean {
-    val shell = getRootShell()
-    return ShellUtils.fastCmd(shell, "getprop ro.build.ab_update").trim().toBoolean()
-}
-
-fun isInitBoot(): Boolean {
-    val shell = getRootShell();
-    if (shell.isRoot) {
-        return SuFile("/dev/block/by-name/init_boot").exists() || SuFile("/dev/block/by-name/init_boot_a").exists()
-    }
-    return !Os.uname().release.contains("android12-")
-}
-
 suspend fun getCurrentKmi(): String = withContext(Dispatchers.IO) {
     val shell = getRootShell()
     val cmd = "boot-info current-kmi"
@@ -357,7 +348,40 @@ suspend fun getCurrentKmi(): String = withContext(Dispatchers.IO) {
 
 suspend fun getSupportedKmis(): List<String> = withContext(Dispatchers.IO) {
     val shell = getRootShell()
-    val cmd = "boot-info supported-kmi"
+    val cmd = "boot-info supported-kmis"
+    val out = shell.newJob().add("${getKsuDaemonPath()} $cmd").to(ArrayList(), null).exec().out
+    out.filter { it.isNotBlank() }.map { it.trim() }
+}
+
+suspend fun isAbDevice(): Boolean = withContext(Dispatchers.IO) {
+    val shell = getRootShell()
+    val cmd = "boot-info is-ab-device"
+    ShellUtils.fastCmd(shell, "${getKsuDaemonPath()} $cmd").trim().toBoolean()
+}
+
+suspend fun getDefaultPartition(): String = withContext(Dispatchers.IO) {
+    val shell = getRootShell()
+    if (shell.isRoot) {
+        val cmd = "boot-info default-partition"
+        ShellUtils.fastCmd(shell, "${getKsuDaemonPath()} $cmd").trim()
+    } else {
+        if (!Os.uname().release.contains("android12-")) "init_boot" else "boot"
+    }
+}
+
+suspend fun getSlotSuffix(ota: Boolean): String = withContext(Dispatchers.IO) {
+    val shell = getRootShell()
+    val cmd = if (ota) {
+        "boot-info slot-suffix --ota"
+    } else {
+        "boot-info slot-suffix"
+    }
+    ShellUtils.fastCmd(shell, "${getKsuDaemonPath()} $cmd").trim()
+}
+
+suspend fun getAvailablePartitions(): List<String> = withContext(Dispatchers.IO) {
+    val shell = getRootShell()
+    val cmd = "boot-info available-partitions"
     val out = shell.newJob().add("${getKsuDaemonPath()} $cmd").to(ArrayList(), null).exec().out
     out.filter { it.isNotBlank() }.map { it.trim() }
 }
@@ -367,21 +391,6 @@ fun hasMagisk(): Boolean {
     val result = shell.newJob().add("which magisk").exec()
     Log.i(TAG, "has magisk: ${result.isSuccess}")
     return result.isSuccess
-}
-fun isGlobalNamespaceEnabled(): Boolean {
-    val shell = getRootShell()
-    val result =
-        ShellUtils.fastCmd(shell, "cat ${Natives.GLOBAL_NAMESPACE_FILE}")
-    Log.i(TAG, "is global namespace enabled: $result")
-    return result == "1"
-}
-
-fun setGlobalNamespaceEnabled(value: String) {
-    getRootShell().newJob()
-        .add("echo $value > ${Natives.GLOBAL_NAMESPACE_FILE}")
-        .submit { result ->
-            Log.i(TAG, "setGlobalNamespaceEnabled result: ${result.isSuccess} [${result.out}]")
-        }
 }
 
 fun isSepolicyValid(rules: String?): Boolean {
@@ -445,7 +454,6 @@ fun forceStopApp(packageName: String) {
 }
 
 fun launchApp(packageName: String) {
-
     val shell = getRootShell()
     val result =
         shell.newJob()

@@ -35,7 +35,6 @@ const val TAG = "TemplateViewModel"
 
 class TemplateViewModel : ViewModel() {
     companion object {
-
         private var templates by mutableStateOf<List<TemplateInfo>>(emptyList())
     }
 
@@ -212,11 +211,11 @@ private fun getLocaleString(json: JSONObject, key: String): String {
     val localeKey = "${locale.language}_${locale.country}"
     json.optJSONObject("locales")?.let {
         // check locale first
-        it.optJSONObject(localeKey)?.let { json->
+        it.optJSONObject(localeKey)?.let { json ->
             return json.optString(key, fallback)
         }
         // fallback to language
-        it.optJSONObject(locale.language)?.let { json->
+        it.optJSONObject(locale.language)?.let { json ->
             return json.optString(key, fallback)
         }
     }
@@ -274,8 +273,9 @@ fun TemplateViewModel.TemplateInfo.toJSON(): JSONObject {
         put("gid", template.gid)
 
         if (template.groups.isNotEmpty()) {
-            put("groups", JSONArray(
-                Groups.entries.filter {
+            put(
+                "groups", JSONArray(
+                    Groups.entries.filter {
                     template.groups.contains(it.gid)
                 }.map {
                     it.name
@@ -284,8 +284,9 @@ fun TemplateViewModel.TemplateInfo.toJSON(): JSONObject {
         }
 
         if (template.capabilities.isNotEmpty()) {
-            put("capabilities", JSONArray(
-                Capabilities.entries.filter {
+            put(
+                "capabilities", JSONArray(
+                    Capabilities.entries.filter {
                     template.capabilities.contains(it.cap)
                 }.map {
                     it.name

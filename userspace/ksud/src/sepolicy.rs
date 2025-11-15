@@ -7,7 +7,7 @@ use nom::{
     character::complete::{space0, space1},
     combinator::map,
 };
-use std::{path::Path, vec};
+use std::{ffi, path::Path, vec};
 
 type SeObject<'a> = Vec<&'a str>;
 
@@ -668,11 +668,13 @@ struct FfiPolicy {
     sepol7: u64,
 }
 
-fn to_c_ptr(pol: &PolicyObject) -> u64 {
-    match pol {
-        PolicyObject::None | PolicyObject::All => std::ptr::null::<u8>() as u64,
-        PolicyObject::One(s) => s.as_ptr() as u64,
-    }
+fn to_u64_addr(pol: &PolicyObject) -> u64 {
+    let raw_ptr: *const ffi::c_char = match pol {
+        PolicyObject::None | PolicyObject::All => std::ptr::null(),
+        PolicyObject::One(s) => s.as_ptr().cast::<ffi::c_char>(),
+    };
+
+    raw_ptr as usize as u64
 }
 
 impl From<AtomicStatement> for FfiPolicy {
@@ -680,13 +682,13 @@ impl From<AtomicStatement> for FfiPolicy {
         FfiPolicy {
             cmd: policy.cmd,
             subcmd: policy.subcmd,
-            sepol1: to_c_ptr(&policy.sepol1),
-            sepol2: to_c_ptr(&policy.sepol2),
-            sepol3: to_c_ptr(&policy.sepol3),
-            sepol4: to_c_ptr(&policy.sepol4),
-            sepol5: to_c_ptr(&policy.sepol5),
-            sepol6: to_c_ptr(&policy.sepol6),
-            sepol7: to_c_ptr(&policy.sepol7),
+            sepol1: to_u64_addr(&policy.sepol1),
+            sepol2: to_u64_addr(&policy.sepol2),
+            sepol3: to_u64_addr(&policy.sepol3),
+            sepol4: to_u64_addr(&policy.sepol4),
+            sepol5: to_u64_addr(&policy.sepol5),
+            sepol6: to_u64_addr(&policy.sepol6),
+            sepol7: to_u64_addr(&policy.sepol7),
         }
     }
 }

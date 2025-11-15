@@ -17,7 +17,7 @@ object Natives {
     // 10977: change groups_count and groups to avoid overflow write
     // 11071: Fix the issue of failing to set a custom SELinux type.
     // 12143: breaking: new supercall impl
-    const val MINIMAL_SUPPORTED_KERNEL = 22141
+    const val MINIMAL_SUPPORTED_KERNEL = 22000
 
     const val KERNEL_SU_DOMAIN = "u:r:su:s0"
 
@@ -81,6 +81,11 @@ object Natives {
     external fun isEnhancedSecurityEnabled(): Boolean
     external fun setEnhancedSecurityEnabled(enabled: Boolean): Boolean
 
+    /**
+     * Get the user name for the uid.
+     */
+    external fun getUserName(uid: Int): String?
+
     private const val NON_ROOT_DEFAULT_PROFILE_KEY = "$"
     private const val NOBODY_UID = 9999
 
@@ -104,9 +109,6 @@ object Natives {
     fun requireNewKernel(): Boolean {
         return version != -1 && version < MINIMAL_SUPPORTED_KERNEL
     }
-
-    val KSU_WORK_DIR = "/data/adb/ksu/"
-    val GLOBAL_NAMESPACE_FILE = KSU_WORK_DIR + ".global_mnt"
 
     @Immutable
     @Parcelize
