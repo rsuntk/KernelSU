@@ -72,7 +72,7 @@ static void remove_uid_from_arr(uid_t uid)
 	kfree(temp_arr);
 }
 
-static void init_default_profiles()
+static void init_default_profiles(void)
 {
 	kernel_cap_t full_cap = CAP_FULL_SET;
 
@@ -116,7 +116,7 @@ void ksu_show_allow_list(void)
 }
 
 #ifdef CONFIG_KSU_DEBUG
-static void ksu_grant_root_to_shell()
+static void ksu_grant_root_to_shell(void)
 {
 	struct app_profile profile = {
 		.version = KSU_APP_PROFILE_VER,
@@ -419,7 +419,7 @@ unlock:
 	kfree(_cb);
 }
 
-void persistent_allow_list()
+void persistent_allow_list(void)
 {
 	struct task_struct *tsk;
 
@@ -442,7 +442,7 @@ put_task:
 	put_task_struct(tsk);
 }
 
-void ksu_load_allow_list()
+void ksu_load_allow_list(void)
 {
 	loff_t off = 0;
 	ssize_t ret = 0;

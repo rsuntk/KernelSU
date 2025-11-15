@@ -107,7 +107,7 @@ static int __security_secid_to_secctx(u32 secid, struct lsm_context *cp)
 }
 static void __security_release_secctx(struct lsm_context *cp)
 {
-	return security_release_secctx(cp->context, cp->len);
+	security_release_secctx(cp->context, cp->len);
 }
 #else
 #define __security_secid_to_secctx security_secid_to_secctx
@@ -134,7 +134,7 @@ bool is_task_ksu_domain(const struct cred *cred)
 	return result;
 }
 
-bool is_ksu_domain()
+bool is_ksu_domain(void)
 {
 	current_sid();
 	return is_task_ksu_domain(current_cred());
@@ -172,7 +172,7 @@ bool is_init(const struct cred *cred)
 
 #define KSU_FILE_DOMAIN "u:object_r:ksu_file:s0"
 
-u32 ksu_get_ksu_file_sid()
+u32 ksu_get_ksu_file_sid(void)
 {
 	u32 ksu_file_sid = 0;
 	int err = security_secctx_to_secid(

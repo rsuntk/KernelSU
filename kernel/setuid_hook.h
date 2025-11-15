@@ -1,5 +1,5 @@
-#ifndef __KSU_H_KSU_CORE
-#define __KSU_H_KSU_CORE
+#ifndef __KSU_H_KSU_SETUID_HOOK
+#define __KSU_H_KSU_SETUID_HOOK
 
 #include <linux/init.h>
 #include <linux/types.h>

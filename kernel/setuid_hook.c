@@ -63,7 +63,7 @@ static const struct ksu_feature_handler enhanced_security_handler = {
 	.set_handler = enhanced_security_feature_set,
 };
 
-static inline bool is_allow_su()
+static inline bool is_allow_su(void)
 {
 	if (is_manager()) {
 		// we are manager, allow!

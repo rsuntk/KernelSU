@@ -38,7 +38,7 @@ static struct policydb *get_policydb(void)
 
 static DEFINE_MUTEX(ksu_rules);
 
-void apply_kernelsu_rules()
+void apply_kernelsu_rules(void)
 {
 	struct policydb *db;
 
@@ -189,7 +189,7 @@ extern int avc_ss_reset(u32 seqno);
 extern int avc_ss_reset(struct selinux_avc *avc, u32 seqno);
 #endif
 // reset avc cache table, otherwise the new rules will not take effect if already denied
-static void reset_avc_cache()
+static void reset_avc_cache(void)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0) ||                           \
 	!defined(KSU_COMPAT_USE_SELINUX_STATE)

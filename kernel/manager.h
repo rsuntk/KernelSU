@@ -8,17 +8,17 @@
 
 extern uid_t ksu_manager_uid; // DO NOT DIRECT USE
 
-static inline bool ksu_is_manager_uid_valid()
+static inline bool ksu_is_manager_uid_valid(void)
 {
 	return ksu_manager_uid != KSU_INVALID_UID;
 }
 
-static inline bool is_manager()
+static inline bool is_manager(void)
 {
 	return unlikely(ksu_manager_uid == current_uid().val);
 }
 
-static inline uid_t ksu_get_manager_uid()
+static inline uid_t ksu_get_manager_uid(void)
 {
 	return ksu_manager_uid;
 }
@@ -28,7 +28,7 @@ static inline void ksu_set_manager_uid(uid_t uid)
 	ksu_manager_uid = uid;
 }
 
-static inline void ksu_invalidate_manager_uid()
+static inline void ksu_invalidate_manager_uid(void)
 {
 	ksu_manager_uid = KSU_INVALID_UID;
 }

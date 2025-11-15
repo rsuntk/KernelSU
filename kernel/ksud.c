@@ -64,9 +64,9 @@ static const char KERNEL_SU_RC[] =
 
 	"\n";
 
-static void stop_vfs_read_hook();
-static void stop_execve_hook();
-static void stop_input_hook();
+static void stop_vfs_read_hook(void);
+static void stop_execve_hook(void);
+static void stop_input_hook(void);
 
 #ifdef KSU_SHOULD_USE_NEW_TP
 static struct work_struct stop_vfs_read_work;
@@ -509,7 +509,7 @@ int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
 	return 0;
 }
 
-bool ksu_is_safe_mode()
+bool ksu_is_safe_mode(void)
 {
 	static bool safe_mode = false;
 	if (safe_mode) {
@@ -606,7 +606,7 @@ static void do_stop_input_hook(struct work_struct *work)
 }
 #endif
 
-static void stop_vfs_read_hook()
+static void stop_vfs_read_hook(void)
 {
 #ifdef KSU_SHOULD_USE_NEW_TP
 	bool ret = schedule_work(&stop_vfs_read_work);
@@ -617,7 +617,7 @@ static void stop_vfs_read_hook()
 #endif
 }
 
-static void stop_execve_hook()
+static void stop_execve_hook(void)
 {
 #ifdef KSU_SHOULD_USE_NEW_TP
 	bool ret = schedule_work(&stop_execve_hook_work);
@@ -628,7 +628,7 @@ static void stop_execve_hook()
 #endif
 }
 
-static void stop_input_hook()
+static void stop_input_hook(void)
 {
 	static bool input_hook_stopped = false;
 	if (input_hook_stopped) {
@@ -645,7 +645,7 @@ static void stop_input_hook()
 }
 
 // ksud: module support
-void ksu_ksud_init()
+void ksu_ksud_init(void)
 {
 #ifdef KSU_SHOULD_USE_NEW_TP
 	int ret;
@@ -665,7 +665,7 @@ void ksu_ksud_init()
 #endif
 }
 
-void ksu_ksud_exit()
+void ksu_ksud_exit(void)
 {
 #ifdef KSU_SHOULD_USE_NEW_TP
 	unregister_kprobe(&execve_kp);

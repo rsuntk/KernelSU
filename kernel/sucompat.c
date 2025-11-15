@@ -171,14 +171,14 @@ int ksu_handle_devpts(struct inode *inode)
 }
 
 // sucompat: permitted process can execute 'su' to gain root access.
-void ksu_sucompat_init()
+void ksu_sucompat_init(void)
 {
 	if (ksu_register_feature_handler(&su_compat_handler)) {
 		pr_err("Failed to register su_compat feature handler\n");
 	}
 }
 
-void ksu_sucompat_exit()
+void ksu_sucompat_exit(void)
 {
 	ksu_unregister_feature_handler(KSU_FEATURE_SU_COMPAT);
 }
