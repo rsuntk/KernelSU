@@ -8,10 +8,9 @@
 
 #include "allowlist.h"
 #include "klog.h" // IWYU pragma: keep
-#include "ksu.h"
 #include "manager.h"
-#include "throne_tracker.h"
 #include "kernel_compat.h"
+#include "throne_tracker.h"
 
 uid_t ksu_manager_uid = KSU_INVALID_UID;
 
@@ -92,6 +91,17 @@ static void crown_manager(const char *apk, struct list_head *uid_data)
 	}
 }
 
+static inline void print_iter(bool is_manager, char *path)
+{
+#ifdef CONFIG_KSU_DEBUG
+	pr_info("Found new base.apk at path: %s, is_manager: %d\n", path,
+		is_manager);
+#else
+	if (is_manager)
+		pr_info("Found KernelSU base.apk at %s\n", path);
+#endif
+}
+
 #define DATA_PATH_LEN 384 // 384 is enough for /data/app/<package>/base.apk
 
 struct data_path {
@@ -106,7 +116,7 @@ struct apk_path_hash {
 	struct list_head list;
 };
 
-static struct list_head apk_path_hash_list;
+static struct list_head apk_path_hash_list = LIST_HEAD_INIT(apk_path_hash_list);
 
 struct my_dir_context {
 	struct dir_context ctx;
@@ -127,18 +137,6 @@ struct my_dir_context {
 #define FILLDIR_ACTOR_CONTINUE 0
 #define FILLDIR_ACTOR_STOP -EINVAL
 #endif
-
-static inline void print_iter(bool is_manager, char *dirpath)
-{
-#ifdef CONFIG_KSU_DEBUG
-	pr_info("Found new base.apk at path: %s, is_manager: %d\n", dirpath,
-		is_manager);
-#else
-	if (is_manager)
-		pr_info("Found KernelSU base.apk at %s\n", dirpath);
-#endif
-}
-
 extern bool is_manager_apk(char *path);
 FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 			     int namelen, loff_t off, u64 ino,
@@ -189,14 +187,9 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 	} else {
 		if ((namelen == 8) &&
 		    (strncmp(name, "base.apk", namelen) == 0)) {
-			struct apk_path_hash *pos;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
-			unsigned int hash =
-				full_name_hash(dirpath, strlen(dirpath));
-#else
+			struct apk_path_hash *pos, *n;
 			unsigned int hash =
 				full_name_hash(NULL, dirpath, strlen(dirpath));
-#endif
 			list_for_each_entry (pos, &apk_path_hash_list, list) {
 				if (hash == pos->hash) {
 					pos->exists = true;
@@ -209,6 +202,21 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 			if (is_manager) {
 				crown_manager(dirpath, my_ctx->private_data);
 				*my_ctx->stop = 1;
+
+				// Manager found, clear APK cache list
+				list_for_each_entry_safe (
+					pos, n, &apk_path_hash_list, list) {
+					list_del(&pos->list);
+					kfree(pos);
+				}
+			} else {
+				struct apk_path_hash *apk_data =
+					kmalloc(sizeof(struct apk_path_hash),
+						GFP_ATOMIC);
+				apk_data->hash = hash;
+				apk_data->exists = true;
+				list_add_tail(&apk_data->list,
+					      &apk_path_hash_list);
 			}
 		}
 	}
@@ -216,13 +224,11 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 	return FILLDIR_ACTOR_CONTINUE;
 }
 
-static void search_manager(const char *path, int depth,
-			   struct list_head *uid_data)
+void search_manager(const char *path, int depth, struct list_head *uid_data)
 {
 	int i, stop = 0;
 	struct list_head data_path_list;
 	INIT_LIST_HEAD(&data_path_list);
-	INIT_LIST_HEAD(&apk_path_hash_list);
 	unsigned long data_app_magic = 0;
 
 	// Initialize APK cache list
@@ -295,11 +301,12 @@ static void search_manager(const char *path, int depth,
 		}
 	}
 
-	// clear apk_path_hash_list unconditionally
-	pr_info("search manager: cleanup!\n");
+	// Remove stale cached APK entries
 	list_for_each_entry_safe (pos, n, &apk_path_hash_list, list) {
-		list_del(&pos->list);
-		kfree(pos);
+		if (!pos->exists) {
+			list_del(&pos->list);
+			kfree(pos);
+		}
 	}
 }
 
@@ -319,24 +326,23 @@ static bool is_uid_exist(uid_t uid, char *package, void *data)
 	return exist;
 }
 
-void track_throne(void)
+void track_throne(bool prune_only)
 {
-	struct list_head uid_list;
-	struct file *fp;
-	INIT_LIST_HEAD(&uid_list);
-
-	fp = ksu_filp_open_compat(SYSTEM_PACKAGES_LIST_PATH, O_RDONLY, 0);
+	struct file *fp =
+		ksu_filp_open_compat(SYSTEM_PACKAGES_LIST_PATH, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
 		pr_err("%s: open " SYSTEM_PACKAGES_LIST_PATH " failed: %ld\n",
 		       __func__, PTR_ERR(fp));
 		return;
 	}
 
+	struct list_head uid_list;
+	INIT_LIST_HEAD(&uid_list);
+
 	char chr = 0;
 	loff_t pos = 0;
 	loff_t line_start = 0;
 	char buf[KSU_MAX_PACKAGE_NAME];
-
 	for (;;) {
 		ssize_t count =
 			ksu_kernel_read_compat(fp, &chr, sizeof(chr), &pos);
@@ -381,6 +387,9 @@ void track_throne(void)
 	struct uid_data *np;
 	struct uid_data *n;
 
+	if (prune_only)
+		goto prune;
+
 	// first, check if manager_uid exist!
 	bool manager_exist = false;
 	list_for_each_entry (np, &uid_list, list) {
@@ -415,12 +424,12 @@ out:
 	}
 }
 
-void ksu_throne_tracker_init(void)
+void ksu_throne_tracker_init()
 {
 	// nothing to do
 }
 
-void ksu_throne_tracker_exit(void)
+void ksu_throne_tracker_exit()
 {
 	// nothing to do
 }

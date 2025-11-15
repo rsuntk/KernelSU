@@ -59,6 +59,7 @@ is_ksu_transition(const struct task_security_struct *old_tsec,
 }
 #endif
 
+
 void setup_selinux(const char *domain)
 {
 	if (transive_to_domain(domain)) {
@@ -133,13 +134,13 @@ bool is_task_ksu_domain(const struct cred *cred)
 	return result;
 }
 
-bool is_ksu_domain(void)
+bool is_ksu_domain()
 {
 	current_sid();
 	return is_task_ksu_domain(current_cred());
 }
 
-bool is_zygote(const struct cred *cred)
+bool is_context(const struct cred *cred, const char *context)
 {
 	if (!cred) {
 		return false;
@@ -154,14 +155,24 @@ bool is_zygote(const struct cred *cred)
 	if (err) {
 		return false;
 	}
-	result = strncmp("u:r:zygote:s0", ctx.context, ctx.len) == 0;
+	result = strncmp(context, ctx.context, ctx.len) == 0;
 	__security_release_secctx(&ctx);
 	return result;
 }
 
+bool is_zygote(const struct cred *cred)
+{
+	return is_context(cred, "u:r:zygote:s0");
+}
+
+bool is_init(const struct cred *cred)
+{
+	return is_context(cred, "u:r:init:s0");
+}
+
 #define KSU_FILE_DOMAIN "u:object_r:ksu_file:s0"
 
-u32 ksu_get_ksu_file_sid(void)
+u32 ksu_get_ksu_file_sid()
 {
 	u32 ksu_file_sid = 0;
 	int err = security_secctx_to_secid(

@@ -21,16 +21,24 @@
 #include <linux/printk.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
+#include <linux/namei.h>
 #include <linux/workqueue.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+#include <linux/sched/signal.h>
+#else
+#include <linux/sched.h>
+#endif
 
+#include "manager.h"
 #include "allowlist.h"
 #include "arch.h"
 #include "klog.h" // IWYU pragma: keep
 #include "ksud.h"
-#include "kernel_compat.h"
 #include "selinux/selinux.h"
-#include "manager.h"
-#include "sucompat.h"
+#include "throne_tracker.h"
+
+bool ksu_module_mounted __read_mostly = false;
+bool ksu_boot_completed __read_mostly = false;
 
 static const char KERNEL_SU_RC[] =
 	"\n"
@@ -55,11 +63,11 @@ static const char KERNEL_SU_RC[] =
 
 	"\n";
 
-static void stop_vfs_read_hook(void);
-static void stop_execve_hook(void);
-static void stop_input_hook(void);
+static void stop_vfs_read_hook();
+static void stop_execve_hook();
+static void stop_input_hook();
 
-#ifdef KSU_KPROBE_HOOK
+#ifdef KSU_SHOULD_USE_NEW_TP
 static struct work_struct stop_vfs_read_work;
 static struct work_struct stop_execve_hook_work;
 static struct work_struct stop_input_hook_work;
@@ -74,19 +82,54 @@ void on_post_fs_data(void)
 {
 	static bool done = false;
 	if (done) {
-		pr_info("%s already done\n", __func__);
+		pr_info("on_post_fs_data already done\n");
 		return;
 	}
 	done = true;
-	pr_info("%s!\n", __func__);
+	pr_info("on_post_fs_data!\n");
 	ksu_load_allow_list();
-	ksu_mark_running_process();
 	ksu_observer_init();
 	// sanity check, this may influence the performance
 	stop_input_hook();
 
 	ksu_file_sid = ksu_get_ksu_file_sid();
 	pr_info("ksu_file sid: %d\n", ksu_file_sid);
+}
+
+extern void ext4_unregister_sysfs(struct super_block *sb);
+static void nuke_ext4_sysfs(void)
+{
+	struct path path;
+	int err = kern_path("/data/adb/modules", 0, &path);
+	if (err) {
+		pr_err("nuke path err: %d\n", err);
+		return;
+	}
+
+	struct super_block *sb = path.dentry->d_inode->i_sb;
+	const char *name = sb->s_type->name;
+	if (strcmp(name, "ext4") != 0) {
+		pr_info("nuke but module aren't mounted\n");
+		path_put(&path);
+		return;
+	}
+
+	ext4_unregister_sysfs(sb);
+	path_put(&path);
+}
+
+void on_module_mounted(void)
+{
+	pr_info("on_module_mounted!\n");
+	ksu_module_mounted = true;
+	nuke_ext4_sysfs();
+}
+
+void on_boot_completed(void)
+{
+	ksu_boot_completed = true;
+	pr_info("on_boot_completed!\n");
+	track_throne(true);
 }
 
 #define MAX_ARG_STRINGS 0x7FFFFFFF
@@ -152,7 +195,6 @@ static int __maybe_unused count(struct user_arg_ptr argv, int max)
 
 			if (fatal_signal_pending(current))
 				return -ERESTARTNOHAND;
-			cond_resched();
 		}
 	}
 	return i;
@@ -163,14 +205,16 @@ static void on_post_fs_data_cbfun(struct callback_head *cb)
 	on_post_fs_data();
 }
 
-static struct callback_head on_post_fs_data_cb = { .func = on_post_fs_data_cbfun };
-                                                       
+static struct callback_head on_post_fs_data_cb = {
+	.func = on_post_fs_data_cbfun
+};
+
 // IMPORTANT NOTE: the call from execve_handler_pre WON'T provided correct value for envp and flags in GKI version
 int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 			     struct user_arg_ptr *argv,
 			     struct user_arg_ptr *envp, int *flags)
 {
-#ifndef KSU_KPROBE_HOOK
+#ifndef KSU_SHOULD_USE_NEW_TP
 	if (!ksu_execveat_hook) {
 		return 0;
 	}
@@ -204,8 +248,8 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 			const char __user *p = get_user_arg_ptr(*argv, 1);
 			if (p && !IS_ERR(p)) {
 				char first_arg[16];
-				ksu_strncpy_from_user_retry(first_arg, p,
-							    sizeof(first_arg));
+				ksu_strncpy_from_user_nofault(
+					first_arg, p, sizeof(first_arg));
 				pr_info("/system/bin/init first arg: %s\n",
 					first_arg);
 				if (!strcmp(first_arg, "second_stage")) {
@@ -228,8 +272,8 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 			const char __user *p = get_user_arg_ptr(*argv, 1);
 			if (p && !IS_ERR(p)) {
 				char first_arg[16];
-				ksu_strncpy_from_user_retry(first_arg, p,
-							    sizeof(first_arg));
+				ksu_strncpy_from_user_nofault(
+					first_arg, p, sizeof(first_arg));
 				pr_info("/init first arg: %s\n", first_arg);
 				if (!strcmp(first_arg, "--second-stage")) {
 					pr_info("/init second_stage executed\n");
@@ -252,7 +296,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 					}
 					char env[256];
 					// Reading environment variable strings from user space
-					if (ksu_strncpy_from_user_retry(
+					if (ksu_strncpy_from_user_nofault(
 						    env, p, sizeof(env)) < 0)
 						continue;
 					// Parsing environment variable names and values
@@ -287,13 +331,11 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 		rcu_read_lock();
 		init_task = rcu_dereference(current->real_parent);
 		if (init_task) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 7, 8)
-			task_work_add(init_task, &on_post_fs_data_cb, TWA_RESUME);
-#else
-			task_work_add(init_task, &on_post_fs_data_cb, true);
-#endif
+			ksu_task_work_add(init_task, &on_post_fs_data_cb,
+				      TWA_RESUME);
 		}
 		rcu_read_unlock();
+
 		stop_execve_hook();
 	}
 
@@ -331,9 +373,9 @@ static ssize_t read_iter_proxy(struct kiocb *iocb, struct iov_iter *to)
 }
 
 int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
-			size_t *count_ptr, loff_t **pos)
+			       size_t *count_ptr, loff_t **pos)
 {
-#ifndef KSU_KPROBE_HOOK
+#ifndef KSU_SHOULD_USE_NEW_TP
 	if (!ksu_vfs_read_hook) {
 		return 0;
 	}
@@ -424,8 +466,8 @@ int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
 	return 0;
 }
 
-int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr,
-			size_t *count_ptr)
+static int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr,
+			       size_t *count_ptr)
 {
 	struct file *file = fget(fd);
 	if (!file) {
@@ -446,7 +488,7 @@ static bool is_volumedown_enough(unsigned int count)
 int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
 				  int *value)
 {
-#ifndef KSU_KPROBE_HOOK
+#ifndef KSU_SHOULD_USE_NEW_TP
 	if (!ksu_input_hook) {
 		return 0;
 	}
@@ -466,7 +508,7 @@ int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
 	return 0;
 }
 
-bool ksu_is_safe_mode(void)
+bool ksu_is_safe_mode()
 {
 	static bool safe_mode = false;
 	if (safe_mode) {
@@ -488,28 +530,7 @@ bool ksu_is_safe_mode(void)
 	return false;
 }
 
-#ifdef KSU_KPROBE_HOOK
-
-// https://elixir.bootlin.com/linux/v5.10.158/source/fs/exec.c#L1864
-static int execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
-{
-	int *fd = (int *)&PT_REGS_PARM1(regs);
-	struct filename **filename_ptr =
-		(struct filename **)&PT_REGS_PARM2(regs);
-	struct user_arg_ptr argv;
-#ifdef CONFIG_COMPAT
-	argv.is_compat = PT_REGS_PARM3(regs);
-	if (unlikely(argv.is_compat)) {
-		argv.ptr.compat = PT_REGS_CCALL_PARM4(regs);
-	} else {
-		argv.ptr.native = PT_REGS_CCALL_PARM4(regs);
-	}
-#else
-	argv.ptr.native = PT_REGS_PARM3(regs);
-#endif
-
-	return ksu_handle_execveat_ksud(fd, filename_ptr, &argv, NULL, NULL);
-}
+#ifdef KSU_SHOULD_USE_NEW_TP
 
 static int sys_execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
@@ -582,58 +603,11 @@ static void do_stop_input_hook(struct work_struct *work)
 {
 	unregister_kprobe(&input_event_kp);
 }
-#else
-static int ksu_execve_ksud_common(const char __user *filename_user,
-				  struct user_arg_ptr *argv)
-{
-	struct filename filename_in, *filename_p;
-	char path[32];
-	long len;
-
-	// return early if disabled.
-	if (!ksu_execveat_hook) {
-		return 0;
-	}
-
-	if (!filename_user)
-		return 0;
-
-	len = ksu_strncpy_from_user_nofault(path, filename_user, 32);
-	if (len <= 0)
-		return 0;
-
-	path[sizeof(path) - 1] = '\0';
-
-	// this is because ksu_handle_execveat_ksud calls it filename->name
-	filename_in.name = path;
-	filename_p = &filename_in;
-
-	return ksu_handle_execveat_ksud(AT_FDCWD, &filename_p, argv, NULL,
-					NULL);
-}
-
-int __maybe_unused
-ksu_handle_execve_ksud(const char __user *filename_user,
-		       const char __user *const __user *__argv)
-{
-	struct user_arg_ptr argv = { .ptr.native = __argv };
-	return ksu_execve_ksud_common(filename_user, &argv);
-}
-
-#if defined(CONFIG_COMPAT) && defined(CONFIG_64BIT)
-int __maybe_unused ksu_handle_compat_execve_ksud(
-	const char __user *filename_user, const compat_uptr_t __user *__argv)
-{
-	struct user_arg_ptr argv = { .ptr.compat = __argv };
-	return ksu_execve_ksud_common(filename_user, &argv);
-}
-#endif /* COMPAT & 64BIT */
-
 #endif
 
-static void stop_vfs_read_hook(void)
+static void stop_vfs_read_hook()
 {
-#ifdef KSU_KPROBE_HOOK
+#ifdef KSU_SHOULD_USE_NEW_TP
 	bool ret = schedule_work(&stop_vfs_read_work);
 	pr_info("unregister vfs_read kprobe: %d!\n", ret);
 #else
@@ -642,9 +616,9 @@ static void stop_vfs_read_hook(void)
 #endif
 }
 
-static void stop_execve_hook(void)
+static void stop_execve_hook()
 {
-#ifdef KSU_KPROBE_HOOK
+#ifdef KSU_SHOULD_USE_NEW_TP
 	bool ret = schedule_work(&stop_execve_hook_work);
 	pr_info("unregister execve kprobe: %d!\n", ret);
 #else
@@ -653,29 +627,26 @@ static void stop_execve_hook(void)
 #endif
 }
 
-static void stop_input_hook(void)
+static void stop_input_hook()
 {
-#ifdef KSU_KPROBE_HOOK
 	static bool input_hook_stopped = false;
 	if (input_hook_stopped) {
 		return;
 	}
 	input_hook_stopped = true;
+#ifdef KSU_SHOULD_USE_NEW_TP
 	bool ret = schedule_work(&stop_input_hook_work);
 	pr_info("unregister input kprobe: %d!\n", ret);
 #else
-	if (!ksu_input_hook) {
-		return;
-	}
 	ksu_input_hook = false;
 	pr_info("stop input_hook\n");
 #endif
 }
 
 // ksud: module support
-void ksu_ksud_init(void)
+void ksu_ksud_init()
 {
-#ifdef KSU_KPROBE_HOOK
+#ifdef KSU_SHOULD_USE_NEW_TP
 	int ret;
 
 	ret = register_kprobe(&execve_kp);
@@ -693,9 +664,9 @@ void ksu_ksud_init(void)
 #endif
 }
 
-void ksu_ksud_exit(void)
+void ksu_ksud_exit()
 {
-#ifdef KSU_KPROBE_HOOK
+#ifdef KSU_SHOULD_USE_NEW_TP
 	unregister_kprobe(&execve_kp);
 	// this should be done before unregister vfs_read_kp
 	// unregister_kprobe(&vfs_read_kp);

@@ -8,6 +8,11 @@ config KSU
 	  To compile as a module, choose M here: the
 	  module will be called kernelsu.
 
+# For easier extern ifdef handling
+config RKSU
+	bool
+	default y
+
 config KSU_DEBUG
 	bool "KernelSU debug mode"
 	depends on KSU
@@ -16,20 +21,27 @@ config KSU_DEBUG
 	  Enable KernelSU debug mode.
 
 config KSU_ALLOWLIST_WORKAROUND
-	bool "KernelSU Session init keyring workaround"
+	bool "KernelSU allowlist workaround"
 	depends on KSU
 	default n
 	help
-	  Enable session keyring init workaround for problematic devices.
-	  Useful for situations where the SU allowlist is not kept after a reboot.
+	  Enable workaround for broken allowlist save
 
 config KSU_MANUAL_HOOK
-	bool "Manual hooking GKI kernels without kprobes"
+	bool "KernelSU manual hook mode."
 	depends on KSU && KSU != m
 	default y if !KPROBES
 	default n
 	help
-	  If enabled, Hook required KernelSU syscalls with manually-patched function.
-	  If disabled, Hook required KernelSU syscalls with Kernel-probe.
+	  Enable manual hook support.
+
+config KSU_SHOULD_USE_NEW_TP
+	bool "KernelSU tracepoint+kretprobe hook"
+	depends on KSU && KRETPROBES
+	depends on KPROBES && HAVE_SYSCALL_TRACEPOINTS
+	depends on !KSU_MANUAL_HOOK
+	default n
+	help
+	  Enable KPROBES, KRETPROBES and TRACEPOINT hook for KernelSU core.
 
 endmenu

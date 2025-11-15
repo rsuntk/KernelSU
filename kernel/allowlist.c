@@ -10,21 +10,17 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/version.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
-#include <linux/sched/task.h>
-#else
-#include <linux/sched.h>
-#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 #include <linux/compiler_types.h>
 #endif
 
-#include "ksu.h"
 #include "klog.h" // IWYU pragma: keep
+#include "ksud.h"
 #include "selinux/selinux.h"
-#include "kernel_compat.h"
 #include "allowlist.h"
 #include "manager.h"
+#include "kernel_compat.h"
+#include "syscall_hook_manager.h"
 
 #define FILE_MAGIC 0x7f4b5355 // ' KSU', u32
 #define FILE_FORMAT_VERSION 3 // u32
@@ -71,7 +67,7 @@ static void remove_uid_from_arr(uid_t uid)
 	kfree(temp_arr);
 }
 
-static void init_default_profiles(void)
+static void init_default_profiles()
 {
 	kernel_cap_t full_cap = CAP_FULL_SET;
 
@@ -115,7 +111,7 @@ void ksu_show_allow_list(void)
 }
 
 #ifdef CONFIG_KSU_DEBUG
-static void ksu_grant_root_to_shell(void)
+static void ksu_grant_root_to_shell()
 {
 	struct app_profile profile = {
 		.version = KSU_APP_PROFILE_VER,
@@ -264,8 +260,11 @@ out:
 		       sizeof(default_root_profile));
 	}
 
-	if (persist)
+	if (persist) {
 		persistent_allow_list();
+		// FIXME: use a new flag
+		ksu_mark_running_process();
+	}
 
 	return result;
 }
@@ -415,7 +414,7 @@ unlock:
 	kfree(_cb);
 }
 
-void persistent_allow_list(void)
+void persistent_allow_list()
 {
 	struct task_struct *tsk;
 
@@ -432,18 +431,13 @@ void persistent_allow_list(void)
 		goto put_task;
 	}
 	cb->func = do_persistent_allow_list;
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 7, 8)
-	task_work_add(tsk, cb, TWA_RESUME);
-#else
-	task_work_add(tsk, cb, true);
-#endif
+	ksu_task_work_add(tsk, cb, TWA_RESUME);
 
 put_task:
 	put_task_struct(tsk);
 }
 
-void ksu_load_allow_list(void)
+void ksu_load_allow_list()
 {
 	loff_t off = 0;
 	ssize_t ret = 0;
@@ -506,6 +500,11 @@ void ksu_prune_allowlist(bool (*is_uid_valid)(uid_t, char *, void *),
 	struct perm_data *np = NULL;
 	struct perm_data *n = NULL;
 
+	if (!ksu_boot_completed) {
+		pr_info("boot not completed, skip prune\n");
+		return;
+	}
+
 	bool modified = false;
 	// TODO: use RCU!
 	mutex_lock(&allowlist_mutex);
@@ -553,8 +552,6 @@ void ksu_allowlist_exit(void)
 {
 	struct perm_data *np = NULL;
 	struct perm_data *n = NULL;
-
-	persistent_allow_list();
 
 	// free allowlist
 	mutex_lock(&allowlist_mutex);

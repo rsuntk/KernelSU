@@ -6,7 +6,7 @@
 #include "selinux.h"
 #include "sepolicy.h"
 #include "ss/services.h"
-#include "linux/lsm_audit.h"
+#include "linux/lsm_audit.h" // IWYU pragma: keep
 #include "xfrm.h"
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
@@ -37,7 +37,8 @@ static struct policydb *get_policydb(void)
 }
 
 static DEFINE_MUTEX(ksu_rules);
-void apply_kernelsu_rules(void)
+
+void apply_kernelsu_rules()
 {
 	struct policydb *db;
 
@@ -95,7 +96,6 @@ void apply_kernelsu_rules(void)
 	ksu_allow(db, "init", "adb_data_file", "file", ALL);
 	ksu_allow(db, "init", "adb_data_file", "dir", ALL); // #1289
 	ksu_allow(db, "init", KERNEL_SU_DOMAIN, ALL, ALL);
-
 	// we need to umount modules in zygote
 	ksu_allow(db, "zygote", "adb_data_file", "dir", "search");
 
@@ -139,9 +139,6 @@ void apply_kernelsu_rules(void)
 	ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "getpgid");
 	ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
 
-	// https://android-review.googlesource.com/c/platform/system/logging/+/3725346
-	ksu_dontaudit(db, "untrusted_app", KERNEL_SU_DOMAIN, "dir", "getattr");
-
 	mutex_unlock(&ksu_rules);
 }
 
@@ -158,15 +155,15 @@ void apply_kernelsu_rules(void)
 #define CMD_GENFSCON 9
 
 struct sepol_data {
-	uint32_t cmd;
-	uint32_t subcmd;
-	uint64_t sepol1;
-	uint64_t sepol2;
-	uint64_t sepol3;
-	uint64_t sepol4;
-	uint64_t sepol5;
-	uint64_t sepol6;
-	uint64_t sepol7;
+	u32 cmd;
+	u32 subcmd;
+	u64 sepol1;
+	u64 sepol2;
+	u64 sepol3;
+	u64 sepol4;
+	u64 sepol5;
+	u64 sepol6;
+	u64 sepol7;
 };
 
 static int get_object(char *buf, char __user *user_object, size_t buf_sz,
@@ -185,16 +182,14 @@ static int get_object(char *buf, char __user *user_object, size_t buf_sz,
 
 	return 0;
 }
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0) ||                           \
 	!defined(KSU_COMPAT_USE_SELINUX_STATE)
 extern int avc_ss_reset(u32 seqno);
 #else
 extern int avc_ss_reset(struct selinux_avc *avc, u32 seqno);
 #endif
-
 // reset avc cache table, otherwise the new rules will not take effect if already denied
-static void reset_avc_cache(void)
+static void reset_avc_cache()
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0) ||                           \
 	!defined(KSU_COMPAT_USE_SELINUX_STATE)
@@ -222,7 +217,7 @@ int handle_sepolicy(unsigned long arg3, void __user *arg4)
 		pr_info("SELinux permissive or disabled when handle policy!\n");
 	}
 
-	struct sepol_data data = { 0 };
+	struct sepol_data data;
 	if (copy_from_user(&data, arg4, sizeof(struct sepol_data))) {
 		pr_err("sepol: copy sepol_data failed.\n");
 		return -EINVAL;
@@ -236,7 +231,6 @@ int handle_sepolicy(unsigned long arg3, void __user *arg4)
 	db = get_policydb();
 
 	int ret = -EINVAL;
-
 	switch (cmd) {
 	case CMD_NORMAL_PERM: {
 		char src_buf[MAX_SEPOL_LEN];
