@@ -1,5 +1,6 @@
 #include <linux/export.h>
 #include <linux/fs.h>
+#include <linux/printk.h>
 #include <linux/kobject.h>
 #include <linux/module.h>
 #include <generated/utsrelease.h>
@@ -8,12 +9,11 @@
 
 #include "allowlist.h"
 #include "arch.h"
-#include "core_hook.h"
 #include "feature.h"
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
 #include "throne_tracker.h"
-#include "sucompat.h"
+#include "syscall_hook_manager.h"
 #include "ksud.h"
 #include "supercalls.h"
 
@@ -31,8 +31,10 @@ int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
 
 int __init kernelsu_init(void)
 {
+#ifndef DDK_ENV
 	pr_info("Initialized on: %s (%s) with driver version: %u\n",
 		UTS_RELEASE, UTS_MACHINE, KSU_VERSION);
+#endif
 
 #ifdef CONFIG_KSU_DEBUG
 	pr_alert("*************************************************************");
@@ -48,13 +50,11 @@ int __init kernelsu_init(void)
 
 	ksu_supercalls_init();
 
-	ksu_core_init();
+	ksu_syscall_hook_manager_init();
 
 	ksu_allowlist_init();
 
 	ksu_throne_tracker_init();
-
-	ksu_sucompat_init();
 
 	ksu_ksud_init();
 
@@ -77,9 +77,10 @@ void kernelsu_exit(void)
 
 	ksu_ksud_exit();
 
-	ksu_sucompat_exit();
+	ksu_syscall_hook_manager_exit();
 
-	ksu_core_exit();
+	ksu_supercalls_exit();
+
 	ksu_feature_exit();
 }
 

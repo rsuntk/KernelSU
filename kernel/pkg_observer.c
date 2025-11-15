@@ -31,7 +31,7 @@ static KSU_DECL_FSNOTIFY_OPS(ksu_handle_generic_event)
 	if (ksu_fname_len(file_name) == 13 &&
 	    !memcmp(ksu_fname_arg(file_name), "packages.list", 13)) {
 		pr_info("packages.list detected (mask=%d)\n", mask);
-		track_throne();
+		track_throne(false);
 	}
 	return 0;
 }

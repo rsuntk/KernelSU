@@ -157,7 +157,7 @@ void ksu_feature_init(void)
 		feature_handlers[i] = NULL;
 	}
 
-	pr_info("%s: feature management initialized\n", __func__);
+	pr_info("feature: feature management initialized\n");
 }
 
 void ksu_feature_exit(void)
@@ -172,5 +172,5 @@ void ksu_feature_exit(void)
 
 	mutex_unlock(&feature_mutex);
 
-	pr_info("%s: feature management cleaned up\n", __func__);
+	pr_info("feature: feature management cleaned up\n");
 }
