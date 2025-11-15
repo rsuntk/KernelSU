@@ -213,7 +213,8 @@ class ModuleViewModel : ViewModel() {
                                 obj.getBoolean("remove"),
                                 obj.optString("updateJson"),
                                 obj.optBoolean("web"),
-                                obj.optBoolean("action")
+                                obj.optBoolean("action"),
+                                obj.getString("dir_id"),
                             )
                         }.toList()
                 }.getOrElse {
