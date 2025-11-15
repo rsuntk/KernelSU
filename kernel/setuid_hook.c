@@ -1,8 +1,8 @@
 #include <linux/compiler.h>
+#include <linux/version.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 #include <linux/sched/signal.h>
 #endif
-#include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/task_work.h>
 #include <linux/thread_info.h>
@@ -23,12 +23,12 @@
 #include <linux/nsproxy.h>
 #include <linux/path.h>
 #include <linux/printk.h>
+#include <linux/sched.h>
 #include <linux/stddef.h>
 #include <linux/string.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
 #include <linux/uidgid.h>
-#include <linux/version.h>
 
 #include "allowlist.h"
 #include "setuid_hook.h"
