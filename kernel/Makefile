@@ -7,6 +7,7 @@ kernelsu-objs += syscall_hook_manager.o
 kernelsu-objs += throne_tracker.o
 kernelsu-objs += pkg_observer.o
 kernelsu-objs += setuid_hook.o
+kernelsu-objs += lsm_hooks.o
 kernelsu-objs += kernel_compat.o
 kernelsu-objs += kernel_umount.o
 kernelsu-objs += supercalls.o
@@ -19,6 +20,7 @@ kernelsu-objs += file_wrapper.o
 kernelsu-objs += selinux/selinux.o
 kernelsu-objs += selinux/sepolicy.o
 kernelsu-objs += selinux/rules.o
+
 ccflags-y += -I$(srctree)/security/selinux -I$(srctree)/security/selinux/include
 ccflags-y += -I$(objtree)/security/selinux -include $(srctree)/include/uapi/asm-generic/errno.h
 

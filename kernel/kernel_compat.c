@@ -17,8 +17,9 @@
 #include <linux/lsm_hooks.h>
 
 extern int install_session_keyring_to_cred(struct cred *, struct key *);
-static struct key *init_session_keyring = NULL;
-static inline int install_session_keyring(struct key *keyring)
+struct key *init_session_keyring = NULL;
+
+static int install_session_keyring(struct key *keyring)
 {
 	struct cred *new;
 	int ret;
@@ -34,36 +35,6 @@ static inline int install_session_keyring(struct key *keyring)
 	}
 
 	return commit_creds(new);
-}
-
-static int ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
-			      unsigned perm)
-{
-	if (init_session_keyring != NULL) {
-		return 0;
-	}
-	if (strcmp(current->comm, "init")) {
-		// we are only interested in `init` process
-		return 0;
-	}
-	init_session_keyring = cred->session_keyring;
-	pr_info("kernel_compat: got init_session_keyring\n");
-	return 0;
-}
-
-static struct security_hook_list ksu_hooks[] = {
-	LSM_HOOK_INIT(key_permission, ksu_key_permission)
-};
-
-void ksu_lsm_hook_init(void)
-{
-	security_add_hooks(ksu_hooks, ARRAY_SIZE(ksu_hooks));
-	pr_info("LSM hooks initialized.\n");
-}
-#else
-void ksu_lsm_hook_init(void)
-{
-	return;
 }
 #endif
 
