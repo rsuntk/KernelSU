@@ -7,7 +7,6 @@
 #include <linux/task_work.h>
 #include <linux/thread_info.h>
 #include <linux/seccomp.h>
-#include <linux/bpf.h>
 #include <linux/capability.h>
 #include <linux/cred.h>
 #include <linux/dcache.h>
@@ -147,14 +146,14 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 		ksu_clear_task_tracepoint_flag_if_needed(current);
 	}
 #else
-	if (ksu_is_allow_uid_for_current(new_uid.val)) {
+	if (ksu_is_allow_uid_for_current(new_uid)) {
 		spin_lock_irq(&current->sighand->siglock);
 		disable_seccomp(current);
 		spin_unlock_irq(&current->sighand->siglock);
 
-		if (ksu_get_manager_uid() == new_uid.val) {
+		if (ksu_get_manager_uid() == new_uid) {
 			pr_info("install fd for ksu manager(uid=%d)\n",
-				new_uid.val);
+				new_uid);
 			ksu_install_fd();
 		}
 
