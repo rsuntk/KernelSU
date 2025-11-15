@@ -796,7 +796,6 @@ dependencies = [
  "jwalk",
  "libc",
  "log",
- "loopdev",
  "nom",
  "procfs",
  "regex-lite",
@@ -879,15 +878,6 @@ name = "log"
 version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
-
-[[package]]
-name = "loopdev"
-version = "0.5.0"
-source = "git+https://github.com/Kernel-SU/loopdev#7a921f8d966477a645b1188732fac486c71a68ef"
-dependencies = [
- "errno 0.2.8",
- "libc",
-]
 
 [[package]]
 name = "lzma-rs"
