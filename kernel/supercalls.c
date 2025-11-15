@@ -474,7 +474,7 @@ static int do_manage_mark(void __user *arg)
 	return 0;
 #else
 	// We don't care, just return -ENOTSUPP
-	pr_warn("%s: supercalls not implemented for non-tp usage\n");
+	pr_warn("%s: supercalls not implemented for non-tp usage\n", __func__);
 	return -ENOTSUPP;
 #endif
 }

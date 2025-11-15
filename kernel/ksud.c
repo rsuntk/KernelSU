@@ -32,6 +32,7 @@
 #include "manager.h"
 #include "allowlist.h"
 #include "arch.h"
+#include "kernel_compat.h"
 #include "klog.h" // IWYU pragma: keep
 #include "ksud.h"
 #include "selinux/selinux.h"
