@@ -87,7 +87,8 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 	uid_t new_uid = ruid;
 	uid_t old_uid = current_uid().val;
 
-	pr_info("handle_setresuid from %d to %d\n", old_uid, new_uid);
+	if (old_uid != new_uid)
+		pr_info("handle_setresuid from %d to %d\n", old_uid, new_uid);
 
 	// if old process is root, ignore it.
 	if (old_uid != 0 && ksu_enhanced_security_enabled) {
