@@ -36,10 +36,11 @@ $(info -- MDIR: $(MDIR))
 
 # DDK environment workaround.
 ccflags-y += -DDDK_ENV
-IS_GKI2 := true
+IS_GKI2 := "true"
 CONFIG_KSU_SHOULD_USE_NEW_TP := y
 else
 IS_GKI2 := $(shell test $(VERSION) -ge 5 -a $(SUBLEVEL) -ge 10 && echo "true")
+IS_MODULE := $(shell test $(CONFIG_KSU) = "m" && echo "true")
 endif
 
 # Check if this is a git repository
@@ -68,23 +69,31 @@ $(warning "KSU_GIT_VERSION not defined! It is better to make KernelSU a git repo
 ccflags-y += -DKSU_VERSION=16
 endif
 
-# TP check
-IS_MODULE := $(shell test $(CONFIG_KSU) = "m" && echo "true")
-
-# Last attempt to check manual hook state
-HAVE_KSU_HOOK := $(shell grep -q "ksu_handle_faccessat" $(srctree)/fs/open.c; echo $$?)
+# RKSU: checks for available hook
+## Logic flipped for HAVE_KSU_HOOK: 0 is success, 1 is failure, but not with KSU_DRY_RUN
+HAVE_KSU_HOOK ?= 1
+KSU_DRY_RUN ?= 0
 
 # Checks hooks state
-ifeq ($(CONFIG_KSU_MANUAL_HOOK), y)
-$(info -- KernelSU: CONFIG_KSU_MANUAL_HOOK)
-else ifeq ($(CONFIG_KSU_SHOULD_USE_NEW_TP), y)
+ifeq ($(CONFIG_KSU_SHOULD_USE_NEW_TP), y)
+ifneq ($(strip $(IS_GKI2) $(IS_MODULE)),)
 $(info -- KernelSU: SHOULD_USE_NEW_TP)
-ifeq ($(or $(IS_GKI2), $(IS_MODULE)), true)
 ccflags-y += -DKSU_SHOULD_USE_NEW_TP
+# Let's make it 0, so it would pass.
+HAVE_KSU_HOOK := 0
 endif
-else
+endif
+
+ifeq ($(CONFIG_KSU_MANUAL_HOOK), y)
+HAVE_KSU_HOOK := $(shell grep -q "ksu_handle_faccessat" $(srctree)/fs/open.c; echo $$?)
+ifeq ($(HAVE_KSU_HOOK),0)
+$(info -- KernelSU: CONFIG_KSU_MANUAL_HOOK)
+endif
+endif
+
+ifeq ($(KSU_DRY_RUN),0)
 ifneq ($(HAVE_KSU_HOOKS),0)
-$(warning -- KernelSU: No hooks were defined, KernelSU may failing..)
+$(error -- KernelSU: No hooks were defined, bail!)
 endif
 endif
 
