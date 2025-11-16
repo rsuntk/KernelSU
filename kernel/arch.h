@@ -22,10 +22,12 @@
 #define REBOOT_SYMBOL "__arm64_sys_reboot"
 #define SYS_READ_SYMBOL "__arm64_sys_read"
 #define SYS_EXECVE_SYMBOL "__arm64_sys_execve"
+#define SYS_SETNS_SYMBOL __arm64_sys_setns
 #else
 #define REBOOT_SYMBOL "sys_reboot"
 #define SYS_READ_SYMBOL "sys_read"
 #define SYS_EXECVE_SYMBOL "sys_execve"
+#define SYS_SETNS_SYMBOL sys_setns
 #endif
 
 #elif defined(__x86_64__)
@@ -48,10 +50,12 @@
 #define REBOOT_SYMBOL "__x64_sys_reboot"
 #define SYS_READ_SYMBOL "__x64_sys_read"
 #define SYS_EXECVE_SYMBOL "__x64_sys_execve"
+#define SYS_SETNS_SYMBOL __x64_sys_setns
 #else
 #define REBOOT_SYMBOL "sys_reboot"
 #define SYS_READ_SYMBOL "sys_read"
 #define SYS_EXECVE_SYMBOL "sys_execve"
+#define SYS_SETNS_SYMBOL sys_setns
 #endif
 
 #else
