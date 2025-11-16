@@ -71,6 +71,9 @@ endif
 # TP check
 IS_MODULE := $(shell test $(CONFIG_KSU) = "m" && echo "true")
 
+# Last attempt to check manual hook state
+HAVE_KSU_HOOKS := $(shell grep -q "CONFIG_KSU" $(srctree)/fs/open.c; echo $$?)
+
 # Checks hooks state
 ifeq ($(CONFIG_KSU_MANUAL_HOOK), y)
 $(info -- KernelSU: CONFIG_KSU_MANUAL_HOOK)
@@ -80,7 +83,9 @@ ifeq ($(or $(IS_GKI2), $(IS_MODULE)), true)
 ccflags-y += -DKSU_SHOULD_USE_NEW_TP
 endif
 else
+ifneq ($(HAVE_KSU_HOOKS),0)
 $(warning -- KernelSU: No hooks were defined, KernelSU may failing..)
+endif
 endif
 
 # SELinux drivers check
