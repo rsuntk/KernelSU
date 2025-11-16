@@ -354,7 +354,6 @@ bool ksu_get_allow_list(int *array, u16 length, u16 *out_length, u16 *out_total,
 	return true;
 }
 
-// TODO: move to kernel thread or work queue
 static void do_persistent_allow_list()
 {
 	u32 magic = FILE_MAGIC;
@@ -381,11 +380,9 @@ static void do_persistent_allow_list()
 		goto close_file;
 	}
 
-	mutex_lock(&allowlist_mutex);
 	hash_for_each (allow_list, i, p, list) {
 		kernel_write(fp, &p->profile, sizeof(p->profile), &off);
 	}
-	mutex_unlock(&allowlist_mutex);
 
 close_file:
 	filp_close(fp, 0);
@@ -393,9 +390,27 @@ out:
 	revert_creds(saved);
 }
 
+static int persistent_allow_list_pre(void *data)
+{
+	/**
+	 * repurpose the mutex they were holding on ksu_persistent_allow_list_fn
+	 * since all this does eventually is to call kernel_write
+	 * we hit two birds in one stone. exclusive io + exclusive kthread
+	 * there wont be a single instance lock, but for what we need, its finee
+	 * we just let other threads stall.
+	 * 'mutex-trylock-fail-then-return' is detrimental here
+	 */
+	guarded_mutex_lock(&allowlist_mutex);
+	pr_info("do_persistent_allow_list: pid: %d started\n", current->pid);
+	escape_to_root_forced(); // give permissions for everything
+	do_persistent_allow_list();
+	pr_info("do_persistent_allow_list: pid: %d exit\n", current->pid);
+	return 0;
+}
+
 void ksu_persistent_allow_list()
 {
-	do_persistent_allow_list();
+	kthread_run(persistent_allow_list_pre, NULL, "allowlist");
 }
 
 static void migrate_profile(u32 version, struct app_profile *profile)
