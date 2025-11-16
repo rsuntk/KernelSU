@@ -53,6 +53,7 @@ import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.profile.Capabilities
 import me.weishu.kernelsu.profile.Groups
+import me.weishu.kernelsu.ui.component.SuperDropdown
 import me.weishu.kernelsu.ui.component.rememberCustomDialog
 import me.weishu.kernelsu.ui.util.isSepolicyValid
 
@@ -174,6 +175,15 @@ fun RootProfileConfig(
             )
         }
 
+        MountNameSpacePanel(profile = profile) {
+            onProfileChange(
+                profile.copy(
+                    namespace = it,
+                    rootUseDefault = false
+                )
+            )
+        }
+
         SELinuxPanel(profile = profile, onSELinuxChange = { domain, rules ->
             onProfileChange(
                 profile.copy(
@@ -263,6 +273,22 @@ fun GroupsPanel(selected: List<Groups>, closeSelection: (selection: Set<Groups>)
         }
 
     }
+}
+
+@Composable
+fun MountNameSpacePanel(profile: Natives.Profile, onMntNamespaceChange: (namespaceType: Int) -> Unit) {
+    SuperDropdown(
+        title = stringResource(id = R.string.profile_namespace),
+        items = listOf(
+            stringResource(id = R.string.profile_namespace_inherited),
+            stringResource(id = R.string.profile_namespace_global),
+            stringResource(id = R.string.profile_namespace_individual),
+        ),
+        selectedIndex = profile.namespace,
+        onSelectedIndexChange = { index ->
+            onMntNamespaceChange(index)
+        }
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)

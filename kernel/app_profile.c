@@ -102,7 +102,7 @@ __weak int ksys_unshare(unsigned long unshare_flags)
 static void setup_mount_namespace(int32_t ns_mode)
 {
 	pr_info("setup mount namespace for pid: %d\n", current->pid);
-	// inherit mode
+
 	if (ns_mode == 0) {
 		pr_info("mount namespace mode: inherit\n");
 		// do nothing
@@ -113,6 +113,7 @@ static void setup_mount_namespace(int32_t ns_mode)
 		pr_warn("unknown mount namespace mode: %d\n", ns_mode);
 		return;
 	}
+
 	const struct cred *old_cred = NULL;
 	struct cred *new_cred = NULL;
 	if (!(capable(CAP_SYS_ADMIN) && capable(CAP_SYS_CHROOT))) {
@@ -126,7 +127,7 @@ static void setup_mount_namespace(int32_t ns_mode)
 		cap_raise(new_cred->cap_effective, CAP_SYS_CHROOT);
 		old_cred = override_creds(new_cred);
 	}
-	// global mode , need CAP_SYS_ADMIN and CAP_SYS_CHROOT to perform setns
+
 	if (ns_mode == 1) {
 		pr_info("mount namespace mode: global\n");
 		struct file *ns_file;
@@ -187,7 +188,7 @@ static void setup_mount_namespace(int32_t ns_mode)
 		sys_close(fd);
 #endif
 	}
-	// independent mode , need CAP_SYS_ADMIN to perform unshare
+
 	if (ns_mode == 2) {
 		long ret;
 		pr_info("mount namespace mode: independent\n");
@@ -197,7 +198,7 @@ static void setup_mount_namespace(int32_t ns_mode)
 			pr_warn("call ksys_unshare failed: %ld\n", ret);
 		}
 	}
-// finally drop capability
+
 try_drop_caps:
 	if (old_cred) {
 		pr_info("dropping temporarily capability.\n");
