@@ -178,7 +178,7 @@ static void disable_seccomp(struct task_struct *tsk)
 	tsk->seccomp.mode = 0;
 	if (tsk->seccomp.filter) {
 		// 5.9+ have filter_count and use seccomp_filter_release
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
+#ifdef KSU_OPTIONAL_SECCOMP
 		seccomp_filter_release(tsk);
 		atomic_set(&tsk->seccomp.filter_count, 0);
 #else

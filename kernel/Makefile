@@ -91,6 +91,9 @@ endif
 ifeq ($(shell grep -q "task_security_struct\s\+\*selinux_cred" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
 ccflags-y += -DKSU_OPTIONAL_SELINUX_CRED
 endif
+ifeq ($(shell grep -q "void seccomp_filter_release" $(srctree)/kernel/seccomp.c; echo $$?),0)
+ccflags-y += -DKSU_OPTIONAL_SECCOMP
+endif
 # Check if __poll_t exists in linux or uapi types headers (handles backports)
 ifneq ($(shell grep -q "__poll_t" \
     $(srctree)/include/linux/types.h \
