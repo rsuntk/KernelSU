@@ -92,7 +92,7 @@ endif
 endif
 
 ifeq ($(KSU_DRY_RUN),0)
-ifneq ($(HAVE_KSU_HOOK),0)
+ifneq ($(HAVE_KSU_HOOKS),0)
 $(error -- KernelSU: No hooks were defined, bail!)
 endif
 else
