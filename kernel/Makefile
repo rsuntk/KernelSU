@@ -72,7 +72,7 @@ endif
 IS_MODULE := $(shell test $(CONFIG_KSU) = "m" && echo "true")
 
 # Last attempt to check manual hook state
-HAVE_KSU_HOOKS := $(shell grep -q "CONFIG_KSU" $(srctree)/fs/open.c; echo $$?)
+HAVE_KSU_HOOK := $(shell grep -q "ksu_handle_faccessat" $(srctree)/fs/open.c; echo $$?)
 
 # Checks hooks state
 ifeq ($(CONFIG_KSU_MANUAL_HOOK), y)
