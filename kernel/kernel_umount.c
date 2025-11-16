@@ -191,7 +191,7 @@ int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
 
 #ifdef KSU_SHOULD_USE_NEW_TP
 	struct umount_tw *tw;
-	tw = kmalloc(sizeof(*tw), GFP_ATOMIC);
+	tw = kzalloc(sizeof(*tw), GFP_ATOMIC);
 	if (!tw)
 		return 0;
 
