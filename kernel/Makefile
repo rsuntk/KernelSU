@@ -95,6 +95,8 @@ ifeq ($(KSU_DRY_RUN),0)
 ifneq ($(HAVE_KSU_HOOKS),0)
 $(error -- KernelSU: No hooks were defined, bail!)
 endif
+else
+$(info -- KernelSU in dry run mode, skip hook checks)
 endif
 
 # SELinux drivers check
