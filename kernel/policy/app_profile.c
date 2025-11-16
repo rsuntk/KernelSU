@@ -71,7 +71,7 @@ static void disable_seccomp(void)
 	spin_unlock_irq(&current->sighand->siglock);
 }
 
-int escape_with_root_profile(void)
+static int escape_to_root(bool is_forced)
 {
 	int ret = 0;
 	struct cred *cred;
@@ -84,7 +84,7 @@ int escape_with_root_profile(void)
 		return -ENOMEM;
 	}
 
-	if (cred->euid.val == 0) {
+	if (!is_forced && cred->euid.val == 0) {
 		pr_warn("Already root, don't escape!\n");
 		goto out_abort_creds;
 	}
@@ -169,6 +169,19 @@ out_abort_creds:
 		ksu_put_root_profile(profile);
 	abort_creds(cred);
 	return ret;
+}
+
+int escape_with_root_profile(void)
+{
+	return escape_to_root(false);
+}
+
+void escape_to_root_forced(void)
+{
+	// I'm not really sure which permissions are needed
+	// its just escape to root but bypasses cred check
+	// which we likely already have on contexts where this will be used.
+	escape_to_root(true);
 }
 
 void __init ksu_app_profile_init(void) { }
