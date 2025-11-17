@@ -116,7 +116,7 @@ struct apk_path_hash {
 	struct list_head list;
 };
 
-static struct list_head apk_path_hash_list = LIST_HEAD_INIT(apk_path_hash_list);
+static struct list_head apk_path_hash_list;
 
 struct my_dir_context {
 	struct dir_context ctx;
@@ -187,7 +187,7 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 	} else {
 		if ((namelen == 8) &&
 		    (strncmp(name, "base.apk", namelen) == 0)) {
-			struct apk_path_hash *pos, *n;
+			struct apk_path_hash *pos;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
 			unsigned int hash =
 				full_name_hash(dirpath, strlen(dirpath));
@@ -207,21 +207,6 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 			if (is_manager) {
 				crown_manager(dirpath, my_ctx->private_data);
 				*my_ctx->stop = 1;
-
-				// Manager found, clear APK cache list
-				list_for_each_entry_safe (
-					pos, n, &apk_path_hash_list, list) {
-					list_del(&pos->list);
-					kfree(pos);
-				}
-			} else {
-				struct apk_path_hash *apk_data =
-					kzalloc(sizeof(struct apk_path_hash),
-						GFP_ATOMIC);
-				apk_data->hash = hash;
-				apk_data->exists = true;
-				list_add_tail(&apk_data->list,
-					      &apk_path_hash_list);
 			}
 		}
 	}
@@ -229,11 +214,12 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 	return FILLDIR_ACTOR_CONTINUE;
 }
 
-void search_manager(const char *path, int depth, struct list_head *uid_data)
+static void search_manager(const char *path, int depth, struct list_head *uid_data)
 {
 	int i, stop = 0;
 	struct list_head data_path_list;
 	INIT_LIST_HEAD(&data_path_list);
+	INIT_LIST_HEAD(&apk_path_hash_list);
 	unsigned long data_app_magic = 0;
 
 	// Initialize APK cache list
@@ -306,12 +292,11 @@ void search_manager(const char *path, int depth, struct list_head *uid_data)
 		}
 	}
 
-	// Remove stale cached APK entries
+	// clear apk_path_hash_list unconditionally
+	pr_info("search manager: cleanup!\n");
 	list_for_each_entry_safe (pos, n, &apk_path_hash_list, list) {
-		if (!pos->exists) {
-			list_del(&pos->list);
-			kfree(pos);
-		}
+		list_del(&pos->list);
+		kfree(pos);
 	}
 }
 
