@@ -374,8 +374,7 @@ void track_throne(bool prune_only)
 	filp_close(fp, 0);
 
 	// now update uid list
-	struct uid_data *np;
-	struct uid_data *n;
+	struct uid_data *np, *n;
 
 	if (prune_only)
 		goto prune;
