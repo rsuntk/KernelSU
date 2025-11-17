@@ -232,12 +232,13 @@ void disable_seccomp(struct task_struct *tsk)
 		atomic_set(&tsk->seccomp.filter_count, 0);
 #endif
 		// some old kernel backport seccomp_filter_release..
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) &&                          \
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) &&                            \
 	defined(KSU_OPTIONAL_SECCOMP_FILTER_RELEASE)
 		seccomp_filter_release(tsk);
 #else
 		// never, ever call seccomp_filter_release on 6.10+ (no effect)
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) &&                          \
+     LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 0))
 		seccomp_filter_release(tsk);
 #else
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0)
