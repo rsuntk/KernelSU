@@ -1,24 +1,27 @@
-#[cfg(unix)]
-use std::os::unix::prelude::PermissionsExt;
+use anyhow::{Context, Error, Ok, Result, bail};
 use std::{
     fs::{self, File, OpenOptions, create_dir_all, remove_file, write},
-    fs::{Permissions, set_permissions},
     io::{
         ErrorKind::{AlreadyExists, NotFound},
         Write,
     },
-    path::{Path, PathBuf},
+    path::Path,
     process::Command,
 };
 
-use anyhow::{Context, Error, Ok, Result, bail};
+use crate::{assets, boot_patch, defs, ksucalls, module, restorecon};
+#[allow(unused_imports)]
+use std::fs::{Permissions, set_permissions};
+#[cfg(unix)]
+use std::os::unix::prelude::PermissionsExt;
+
+use std::path::PathBuf;
+
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use rustix::{
     process,
     thread::{LinkNameSpaceType, move_into_link_name_space},
 };
-
-use crate::{assets, boot_patch, defs, ksucalls, module, restorecon};
 
 pub fn ensure_clean_dir(dir: impl AsRef<Path>) -> Result<()> {
     let path = dir.as_ref();
@@ -173,7 +176,7 @@ pub fn has_magisk() -> bool {
 }
 
 fn is_ok_empty(dir: &str) -> bool {
-    use std::result::Result::{Err, Ok};
+    use std::result::Result::Ok;
 
     match fs::read_dir(dir) {
         Ok(mut entries) => entries.next().is_none(),
