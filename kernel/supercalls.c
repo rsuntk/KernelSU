@@ -1,25 +1,34 @@
-#include "supercalls.h"
-
 #include <linux/anon_inodes.h>
 #include <linux/capability.h>
 #include <linux/cred.h>
 #include <linux/err.h>
+#include <linux/fdtable.h>
 #include <linux/file.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
+#include <linux/syscalls.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
+#include <linux/kprobes.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+#include <linux/sched/task.h>
+#else
+#include <linux/sched.h>
+#endif
 
+#include "supercalls.h"
+#include "arch.h"
 #include "allowlist.h"
 #include "feature.h"
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
 #include "ksud.h"
+#include "kernel_compat.h"
 #include "manager.h"
 #include "selinux/selinux.h"
-#include "core_hook.h"
 #include "objsec.h"
 #include "file_wrapper.h"
+#include "syscall_hook_manager.h"
 
 // Permission check functions
 bool only_manager(void)
@@ -54,7 +63,7 @@ static int do_grant_root(void __user *arg)
 	// we already check uid above on allowed_for_su()
 
 	pr_info("allow root for: %d\n", current_uid().val);
-	escape_to_root();
+	escape_with_root_profile();
 
 	return 0;
 }
@@ -104,13 +113,13 @@ static int do_report_event(void __user *arg)
 		if (!boot_complete_lock) {
 			boot_complete_lock = true;
 			pr_info("boot_complete triggered\n");
+			on_boot_completed();
 		}
 		break;
 	}
 	case EVENT_MODULE_MOUNTED: {
-		ksu_module_mounted = true;
 		pr_info("module mounted!\n");
-		nuke_ext4_sysfs();
+		on_module_mounted();
 		break;
 	}
 	default:
@@ -330,13 +339,23 @@ static int do_set_feature(void __user *arg)
 	return 0;
 }
 
+// kcompat for older kernel
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+#define getfd_secure anon_inode_create_getfd
+#elif defined(KSU_HAS_GETFD_SECURE)
+#define getfd_secure anon_inode_getfd_secure
+#else
+// technically not a secure inode, but, this is the only way so.
+#define getfd_secure(name, ops, data, flags, __unused)                         \
+	anon_inode_getfd(name, ops, data, flags)
+#endif
+
 static int do_get_wrapper_fd(void __user *arg)
 {
 	if (!ksu_file_sid) {
 		return -EINVAL;
 	}
 
-	const char *anon_name = "[ksu_fdwrapper]";
 	struct ksu_get_wrapper_fd_cmd cmd;
 	int ret;
 
@@ -356,25 +375,18 @@ static int do_get_wrapper_fd(void __user *arg)
 		goto put_orig_file;
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
-#define getfd_secure anon_inode_create_getfd
-#elif defined(KSU_HAS_GETFD_SECURE)
-#define getfd_secure anon_inode_getfd_secure
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0) || defined(KSU_HAS_GETFD_SECURE)
-	ret = getfd_secure(anon_name, &data->ops, data, f->f_flags, NULL);
-#else
-	ret = anon_inode_getfd(anon_name, &data->ops, data, f->f_flags);
-#endif
-
+	ret = getfd_secure("[ksu_fdwrapper]", &data->ops, data, f->f_flags,
+			   NULL);
 	if (ret < 0) {
 		pr_err("ksu_fdwrapper: getfd failed: %d\n", ret);
 		goto put_wrapper_data;
 	}
-
 	struct file *pf = fget(ret);
+
 	struct inode *wrapper_inode = file_inode(pf);
+	// copy original inode mode
+	wrapper_inode->i_mode = file_inode(f)->i_mode;
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0) ||                           \
 	defined(KSU_OPTIONAL_SELINUX_INODE)
 	struct inode_security_struct *sec = selinux_inode(wrapper_inode);
@@ -382,13 +394,13 @@ static int do_get_wrapper_fd(void __user *arg)
 	struct inode_security_struct *sec =
 		(struct inode_security_struct *)wrapper_inode->i_security;
 #endif
+
 	if (sec) {
 		sec->sid = ksu_file_sid;
 	}
 
 	fput(pf);
 	goto put_orig_file;
-
 put_wrapper_data:
 	ksu_delete_file_wrapper(data);
 put_orig_file:
@@ -397,25 +409,239 @@ put_orig_file:
 	return ret;
 }
 
+static int do_manage_mark(void __user *arg)
+{
+#ifdef KSU_SHOULD_USE_NEW_TP
+	struct ksu_manage_mark_cmd cmd;
+	int ret = 0;
+
+	if (copy_from_user(&cmd, arg, sizeof(cmd))) {
+		pr_err("manage_mark: copy_from_user failed\n");
+		return -EFAULT;
+	}
+
+	switch (cmd.operation) {
+	case KSU_MARK_GET: {
+		// Get task mark status
+		ret = ksu_get_task_mark(cmd.pid);
+		if (ret < 0) {
+			pr_err("manage_mark: get failed for pid %d: %d\n",
+			       cmd.pid, ret);
+			return ret;
+		}
+		cmd.result = (u32)ret;
+		break;
+	}
+	case KSU_MARK_MARK: {
+		if (cmd.pid == 0) {
+			ksu_mark_all_process();
+		} else {
+			ret = ksu_set_task_mark(cmd.pid, true);
+			if (ret < 0) {
+				pr_err("manage_mark: set_mark failed for pid %d: %d\n",
+				       cmd.pid, ret);
+				return ret;
+			}
+		}
+		break;
+	}
+	case KSU_MARK_UNMARK: {
+		if (cmd.pid == 0) {
+			ksu_unmark_all_process();
+		} else {
+			ret = ksu_set_task_mark(cmd.pid, false);
+			if (ret < 0) {
+				pr_err("manage_mark: set_unmark failed for pid %d: %d\n",
+				       cmd.pid, ret);
+				return ret;
+			}
+		}
+		break;
+	}
+	case KSU_MARK_REFRESH: {
+		ksu_mark_running_process();
+		pr_info("manage_mark: refreshed running processes\n");
+		break;
+	}
+	default: {
+		pr_err("manage_mark: invalid operation %u\n", cmd.operation);
+		return -EINVAL;
+	}
+	}
+	if (copy_to_user(arg, &cmd, sizeof(cmd))) {
+		pr_err("manage_mark: copy_to_user failed\n");
+		return -EFAULT;
+	}
+	return 0;
+#else
+	// We don't care, just return -ENOTSUPP
+	pr_warn("%s: supercalls not implemented for non-tp usage\n", __func__);
+	return -ENOTSUPP;
+#endif
+}
+
 // IOCTL handlers mapping table
 static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
-	KSU_IOCTL_HANDLER(KSU_IOCTL_GRANT_ROOT, "GRANT_ROOT", do_grant_root, allowed_for_su),
-	KSU_IOCTL_HANDLER(KSU_IOCTL_GET_INFO, "GET_INFO", do_get_info, always_allow),
-	KSU_IOCTL_HANDLER(KSU_IOCTL_REPORT_EVENT, "REPORT_EVENT", do_report_event, only_root),
-	KSU_IOCTL_HANDLER(KSU_IOCTL_SET_SEPOLICY, "SET_SEPOLICY", do_set_sepolicy, only_root),
-	KSU_IOCTL_HANDLER(KSU_IOCTL_CHECK_SAFEMODE, "CHECK_SAFEMODE", do_check_safemode, always_allow),
-	KSU_IOCTL_HANDLER(KSU_IOCTL_GET_ALLOW_LIST, "GET_ALLOW_LIST", do_get_allow_list, manager_or_root),
-	KSU_IOCTL_HANDLER(KSU_IOCTL_GET_DENY_LIST, "GET_DENY_LIST", do_get_deny_list, manager_or_root),
-	KSU_IOCTL_HANDLER(KSU_IOCTL_UID_GRANTED_ROOT, "UID_GRANTED_ROOT", do_uid_granted_root, manager_or_root),
-	KSU_IOCTL_HANDLER(KSU_IOCTL_UID_SHOULD_UMOUNT, "UID_SHOULD_UMOUNT", do_uid_should_umount, manager_or_root),
-	KSU_IOCTL_HANDLER(KSU_IOCTL_GET_MANAGER_UID, "GET_MANAGER_UID", do_get_manager_uid, manager_or_root),
-	KSU_IOCTL_HANDLER(KSU_IOCTL_GET_APP_PROFILE, "GET_APP_PROFILE", do_get_app_profile, only_manager),
-	KSU_IOCTL_HANDLER(KSU_IOCTL_SET_APP_PROFILE, "SET_APP_PROFILE", do_set_app_profile, only_manager),
-	KSU_IOCTL_HANDLER(KSU_IOCTL_GET_FEATURE, "GET_FEATURE", do_get_feature, manager_or_root),
-	KSU_IOCTL_HANDLER(KSU_IOCTL_SET_FEATURE, "SET_FEATURE", do_set_feature, manager_or_root),
-	KSU_IOCTL_HANDLER(KSU_IOCTL_GET_WRAPPER_FD, "GET_WRAPPER_FD", do_get_wrapper_fd, manager_or_root),
-	KSU_IOCTL_HANDLER(0, NULL, NULL, NULL) // Sentinel
+	{ .cmd = KSU_IOCTL_GRANT_ROOT,
+	  .name = "GRANT_ROOT",
+	  .handler = do_grant_root,
+	  .perm_check = allowed_for_su },
+	{ .cmd = KSU_IOCTL_GET_INFO,
+	  .name = "GET_INFO",
+	  .handler = do_get_info,
+	  .perm_check = always_allow },
+	{ .cmd = KSU_IOCTL_REPORT_EVENT,
+	  .name = "REPORT_EVENT",
+	  .handler = do_report_event,
+	  .perm_check = only_root },
+	{ .cmd = KSU_IOCTL_SET_SEPOLICY,
+	  .name = "SET_SEPOLICY",
+	  .handler = do_set_sepolicy,
+	  .perm_check = only_root },
+	{ .cmd = KSU_IOCTL_CHECK_SAFEMODE,
+	  .name = "CHECK_SAFEMODE",
+	  .handler = do_check_safemode,
+	  .perm_check = always_allow },
+	{ .cmd = KSU_IOCTL_GET_ALLOW_LIST,
+	  .name = "GET_ALLOW_LIST",
+	  .handler = do_get_allow_list,
+	  .perm_check = manager_or_root },
+	{ .cmd = KSU_IOCTL_GET_DENY_LIST,
+	  .name = "GET_DENY_LIST",
+	  .handler = do_get_deny_list,
+	  .perm_check = manager_or_root },
+	{ .cmd = KSU_IOCTL_UID_GRANTED_ROOT,
+	  .name = "UID_GRANTED_ROOT",
+	  .handler = do_uid_granted_root,
+	  .perm_check = manager_or_root },
+	{ .cmd = KSU_IOCTL_UID_SHOULD_UMOUNT,
+	  .name = "UID_SHOULD_UMOUNT",
+	  .handler = do_uid_should_umount,
+	  .perm_check = manager_or_root },
+	{ .cmd = KSU_IOCTL_GET_MANAGER_UID,
+	  .name = "GET_MANAGER_UID",
+	  .handler = do_get_manager_uid,
+	  .perm_check = manager_or_root },
+	{ .cmd = KSU_IOCTL_GET_APP_PROFILE,
+	  .name = "GET_APP_PROFILE",
+	  .handler = do_get_app_profile,
+	  .perm_check = only_manager },
+	{ .cmd = KSU_IOCTL_SET_APP_PROFILE,
+	  .name = "SET_APP_PROFILE",
+	  .handler = do_set_app_profile,
+	  .perm_check = only_manager },
+	{ .cmd = KSU_IOCTL_GET_FEATURE,
+	  .name = "GET_FEATURE",
+	  .handler = do_get_feature,
+	  .perm_check = manager_or_root },
+	{ .cmd = KSU_IOCTL_SET_FEATURE,
+	  .name = "SET_FEATURE",
+	  .handler = do_set_feature,
+	  .perm_check = manager_or_root },
+	{ .cmd = KSU_IOCTL_GET_WRAPPER_FD,
+	  .name = "GET_WRAPPER_FD",
+	  .handler = do_get_wrapper_fd,
+	  .perm_check = manager_or_root },
+	{ .cmd = KSU_IOCTL_MANAGE_MARK,
+	  .name = "MANAGE_MARK",
+	  .handler = do_manage_mark,
+	  .perm_check = manager_or_root },
+	{ .cmd = 0,
+	  .name = NULL,
+	  .handler = NULL,
+	  .perm_check = NULL } // Sentinel
 };
+
+#ifdef KSU_SHOULD_USE_NEW_TP
+struct ksu_install_fd_tw {
+	struct callback_head cb;
+	int __user *outp;
+};
+
+static void ksu_install_fd_tw_func(struct callback_head *cb)
+{
+	struct ksu_install_fd_tw *tw =
+		container_of(cb, struct ksu_install_fd_tw, cb);
+	int fd = ksu_install_fd();
+	pr_info("[%d] install ksu fd: %d\n", current->pid, fd);
+
+	if (copy_to_user(tw->outp, &fd, sizeof(fd))) {
+		pr_err("install ksu fd reply err\n");
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
+		close_fd(fd);
+#else
+		ksys_close(fd);
+#endif
+	}
+
+	kfree(tw);
+}
+
+static int reboot_handler_pre(struct kprobe *p, struct pt_regs *regs)
+{
+	struct pt_regs *real_regs = PT_REAL_REGS(regs);
+	int magic1 = (int)PT_REGS_PARM1(real_regs);
+	int magic2 = (int)PT_REGS_PARM2(real_regs);
+	unsigned long arg4;
+
+	// Check if this is a request to install KSU fd
+	if (magic1 == KSU_INSTALL_MAGIC1 && magic2 == KSU_INSTALL_MAGIC2) {
+		struct ksu_install_fd_tw *tw;
+
+		arg4 = (unsigned long)PT_REGS_SYSCALL_PARM4(real_regs);
+
+		tw = kzalloc(sizeof(*tw), GFP_ATOMIC);
+		if (!tw)
+			return 0;
+
+		tw->outp = (int __user *)arg4;
+		tw->cb.func = ksu_install_fd_tw_func;
+
+		if (ksu_task_work_add(current, &tw->cb, TWA_RESUME)) {
+			kfree(tw);
+			pr_warn("install fd add task_work failed\n");
+		}
+	}
+
+	return 0;
+}
+
+static struct kprobe reboot_kp = {
+	.symbol_name = REBOOT_SYMBOL,
+	.pre_handler = reboot_handler_pre,
+};
+#else
+int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
+			  void __user **arg)
+{
+	if (magic1 != KSU_INSTALL_MAGIC1)
+		return 0;
+
+#ifdef CONFIG_KSU_DEBUG
+	pr_info("sys_reboot: intercepted call! magic: 0x%x id: %d\n", magic1,
+		magic2);
+#endif
+
+	// Check if this is a request to install KSU fd
+	if (magic2 == KSU_INSTALL_MAGIC2) {
+		int fd = ksu_install_fd();
+		// downstream: dereference all arg usage!
+		if (copy_to_user((void __user *)*arg, &fd, sizeof(fd))) {
+			pr_err("install ksu fd reply err\n");
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
+			close_fd(fd);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
+			ksys_close(fd);
+#else
+			sys_close(fd);
+#endif
+		}
+		return 0;
+	}
+
+	return 0;
+}
+#endif
 
 void ksu_supercalls_init(void)
 {
@@ -426,6 +652,21 @@ void ksu_supercalls_init(void)
 		pr_info("  %-18s = 0x%08x\n", ksu_ioctl_handlers[i].name,
 			ksu_ioctl_handlers[i].cmd);
 	}
+#ifdef KSU_SHOULD_USE_NEW_TP
+	int rc = register_kprobe(&reboot_kp);
+	if (rc) {
+		pr_err("reboot kprobe failed: %d\n", rc);
+	} else {
+		pr_info("reboot kprobe registered successfully\n");
+	}
+#endif
+}
+
+void ksu_supercalls_exit(void)
+{
+#ifdef KSU_SHOULD_USE_NEW_TP
+	unregister_kprobe(&reboot_kp);
+#endif
 }
 
 // IOCTL dispatcher
@@ -436,7 +677,7 @@ static long anon_ksu_ioctl(struct file *filp, unsigned int cmd,
 	int i;
 
 #ifdef CONFIG_KSU_DEBUG
-	pr_info("ksu_ioctl: cmd=0x%x from uid=%d\n", cmd, current_uid().val);
+	pr_info("ksu ioctl: cmd=0x%x from uid=%d\n", cmd, current_uid().val);
 #endif
 
 	for (i = 0; ksu_ioctl_handlers[i].handler; i++) {
@@ -444,7 +685,7 @@ static long anon_ksu_ioctl(struct file *filp, unsigned int cmd,
 			// Check permission first
 			if (ksu_ioctl_handlers[i].perm_check &&
 			    !ksu_ioctl_handlers[i].perm_check()) {
-				pr_warn("ksu_ioctl: permission denied for cmd=0x%x uid=%d\n",
+				pr_warn("ksu ioctl: permission denied for cmd=0x%x uid=%d\n",
 					cmd, current_uid().val);
 				return -EPERM;
 			}
@@ -453,7 +694,7 @@ static long anon_ksu_ioctl(struct file *filp, unsigned int cmd,
 		}
 	}
 
-	pr_warn("ksu_ioctl: unsupported command 0x%x\n", cmd);
+	pr_warn("ksu ioctl: unsupported command 0x%x\n", cmd);
 	return -ENOTTY;
 }
 
@@ -498,7 +739,9 @@ int ksu_install_fd(void)
 
 	// Install fd
 	fd_install(fd, filp);
-	
-	pr_info("ksu fd[%d] installed for %s/%d\n", fd, current->comm, current->pid);
+
+	pr_info("ksu fd[%d] installed for %s/%d\n", fd, current->comm,
+		current->pid);
+
 	return fd;
 }

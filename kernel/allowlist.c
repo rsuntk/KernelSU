@@ -19,12 +19,13 @@
 #include <linux/compiler_types.h>
 #endif
 
-#include "ksu.h"
 #include "klog.h" // IWYU pragma: keep
+#include "ksud.h"
 #include "selinux/selinux.h"
-#include "kernel_compat.h"
 #include "allowlist.h"
 #include "manager.h"
+#include "kernel_compat.h"
+#include "syscall_hook_manager.h"
 
 #define FILE_MAGIC 0x7f4b5355 // ' KSU', u32
 #define FILE_FORMAT_VERSION 3 // u32
@@ -50,7 +51,7 @@ static void remove_uid_from_arr(uid_t uid)
 	if (allow_list_pointer == 0)
 		return;
 
-	temp_arr = kmalloc(sizeof(allow_list_arr), GFP_KERNEL);
+	temp_arr = kzalloc(sizeof(allow_list_arr), GFP_KERNEL);
 	if (temp_arr == NULL) {
 		pr_err("%s: unable to allocate memory\n", __func__);
 		return;
@@ -205,7 +206,7 @@ bool ksu_set_app_profile(struct app_profile *profile, bool persist)
 	}
 
 	// not found, alloc a new node!
-	p = (struct perm_data *)kmalloc(sizeof(struct perm_data), GFP_KERNEL);
+	p = (struct perm_data *)kzalloc(sizeof(struct perm_data), GFP_KERNEL);
 	if (!p) {
 		pr_err("ksu_set_app_profile alloc failed\n");
 		return false;
@@ -264,8 +265,11 @@ out:
 		       sizeof(default_root_profile));
 	}
 
-	if (persist)
+	if (persist) {
 		persistent_allow_list();
+		// FIXME: use a new flag
+		ksu_mark_running_process();
+	}
 
 	return result;
 }
@@ -432,12 +436,7 @@ void persistent_allow_list(void)
 		goto put_task;
 	}
 	cb->func = do_persistent_allow_list;
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 7, 8)
-	task_work_add(tsk, cb, TWA_RESUME);
-#else
-	task_work_add(tsk, cb, true);
-#endif
+	ksu_task_work_add(tsk, cb, TWA_RESUME);
 
 put_task:
 	put_task_struct(tsk);
@@ -506,6 +505,11 @@ void ksu_prune_allowlist(bool (*is_uid_valid)(uid_t, char *, void *),
 	struct perm_data *np = NULL;
 	struct perm_data *n = NULL;
 
+	if (!ksu_boot_completed) {
+		pr_info("boot not completed, skip prune\n");
+		return;
+	}
+
 	bool modified = false;
 	// TODO: use RCU!
 	mutex_lock(&allowlist_mutex);
@@ -553,8 +557,6 @@ void ksu_allowlist_exit(void)
 {
 	struct perm_data *np = NULL;
 	struct perm_data *n = NULL;
-
-	persistent_allow_list();
 
 	// free allowlist
 	mutex_lock(&allowlist_mutex);
