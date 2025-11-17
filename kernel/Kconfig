@@ -43,6 +43,6 @@ config KSU_SHOULD_USE_NEW_TP
 	default n
 	help
 	  Enable KPROBES, KRETPROBES and TRACEPOINT hook for KernelSU core.
-	  This method does not work on kernel below 5.10.
+	  This should not be used on kernel below 5.10.
 
 endmenu

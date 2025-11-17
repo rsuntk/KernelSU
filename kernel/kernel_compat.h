@@ -57,9 +57,11 @@ extern struct key *init_session_keyring;
 #else
 // Linux pre-5.7
 // task_work_add (struct, struct, bool)
-#define ksu_task_work_add(tsk, cb, __unused) task_work_add(tsk, cb, true)
+#define ksu_task_work_add(tsk, cb, notify) task_work_add(tsk, cb, notify)
 // Decoy, so it wouldn't complain.
-#define TWA_RESUME	1
+#ifndef TWA_RESUME
+#define TWA_RESUME	true
+#endif
 #endif
 
 #endif

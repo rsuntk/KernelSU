@@ -1,6 +1,3 @@
-#include "kernel_compat.h"
-
-// RKSU hack: Just include the damn header
 #ifdef KSU_SHOULD_USE_NEW_TP
 #include "linux/compiler.h"
 #include "linux/cred.h"
@@ -363,7 +360,6 @@ void ksu_syscall_hook_manager_exit(void)
 	ksu_setuid_hook_exit();
 }
 #else
-
 #include "klog.h" // IWYU pragma: keep
 #include "syscall_hook_manager.h"
 #include "sucompat.h"

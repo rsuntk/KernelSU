@@ -467,7 +467,7 @@ int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
 	return 0;
 }
 
-static int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr,
+int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr,
 			       size_t *count_ptr)
 {
 	struct file *file = fget(fd);
@@ -604,6 +604,53 @@ static void do_stop_input_hook(struct work_struct *work)
 {
 	unregister_kprobe(&input_event_kp);
 }
+#else
+static int ksu_execve_ksud_common(const char __user *filename_user,
+				  struct user_arg_ptr *argv)
+{
+	struct filename filename_in, *filename_p;
+	char path[32];
+	long len;
+
+	// return early if disabled.
+	if (!ksu_execveat_hook) {
+		return 0;
+	}
+
+	if (!filename_user)
+		return 0;
+
+	len = ksu_strncpy_from_user_nofault(path, filename_user, 32);
+	if (len <= 0)
+		return 0;
+
+	path[sizeof(path) - 1] = '\0';
+
+	// this is because ksu_handle_execveat_ksud calls it filename->name
+	filename_in.name = path;
+	filename_p = &filename_in;
+
+	return ksu_handle_execveat_ksud(AT_FDCWD, &filename_p, argv, NULL,
+					NULL);
+}
+
+int __maybe_unused
+ksu_handle_execve_ksud(const char __user *filename_user,
+		       const char __user *const __user *__argv)
+{
+	struct user_arg_ptr argv = { .ptr.native = __argv };
+	return ksu_execve_ksud_common(filename_user, &argv);
+}
+
+#if defined(CONFIG_COMPAT) && defined(CONFIG_64BIT)
+int __maybe_unused ksu_handle_compat_execve_ksud(
+	const char __user *filename_user, const compat_uptr_t __user *__argv)
+{
+	struct user_arg_ptr argv = { .ptr.compat = __argv };
+	return ksu_execve_ksud_common(filename_user, &argv);
+}
+#endif /* COMPAT & 64BIT */
+
 #endif
 
 static void stop_vfs_read_hook(void)
@@ -630,15 +677,18 @@ static void stop_execve_hook(void)
 
 static void stop_input_hook(void)
 {
+#ifdef KSU_SHOULD_USE_NEW_TP
 	static bool input_hook_stopped = false;
 	if (input_hook_stopped) {
 		return;
 	}
 	input_hook_stopped = true;
-#ifdef KSU_SHOULD_USE_NEW_TP
 	bool ret = schedule_work(&stop_input_hook_work);
 	pr_info("unregister input kprobe: %d!\n", ret);
 #else
+	if (!ksu_input_hook) {
+		return;
+	}
 	ksu_input_hook = false;
 	pr_info("stop input_hook\n");
 #endif
