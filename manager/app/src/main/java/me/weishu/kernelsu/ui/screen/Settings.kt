@@ -31,10 +31,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -47,6 +49,11 @@ import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.AboutScreenDestination
 import com.ramcosta.composedestinations.generated.destinations.AppProfileTemplateScreenDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
@@ -81,10 +88,21 @@ fun SettingPager(
     bottomInnerPadding: Dp
 ) {
     val scrollBehavior = MiuixScrollBehavior()
+    val hazeState = remember { HazeState() }
+    val hazeStyle = HazeStyle(
+        backgroundColor = colorScheme.background,
+        tint = HazeTint(colorScheme.background.copy(0.8f))
+    )
 
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.hazeEffect(hazeState) {
+                    style = hazeStyle
+                    blurRadius = 30.dp
+                    noiseFactor = 0f
+                },
+                color = Color.Transparent,
                 title = stringResource(R.string.settings),
                 scrollBehavior = scrollBehavior
             )
@@ -105,6 +123,7 @@ fun SettingPager(
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .hazeSource(state = hazeState)
                 .padding(horizontal = 12.dp),
             contentPadding = innerPadding,
             overscrollEffect = null,

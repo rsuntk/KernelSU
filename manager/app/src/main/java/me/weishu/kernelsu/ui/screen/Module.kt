@@ -87,6 +87,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ramcosta.composedestinations.generated.destinations.ExecuteModuleActionScreenDestination
 import com.ramcosta.composedestinations.generated.destinations.FlashScreenDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -358,10 +362,17 @@ fun ModulePager(
         animationSpec = tween(durationMillis = 350)
     )
 
+    val hazeState = remember { HazeState() }
+    val hazeStyle = HazeStyle(
+        backgroundColor = colorScheme.background,
+        tint = HazeTint(colorScheme.background.copy(0.8f))
+    )
+
     Scaffold(
         topBar = {
-            searchStatus.TopAppBarAnim {
+            searchStatus.TopAppBarAnim(hazeState = hazeState, hazeStyle = hazeStyle) {
                 TopAppBar(
+                    color = Color.Transparent,
                     title = stringResource(R.string.module),
                     actions = {
                         val showTopPopup = remember { mutableStateOf(false) }
@@ -504,7 +515,9 @@ fun ModulePager(
                 defaultResult = {},
                 searchBarTopPadding = dynamicTopPadding,
             ) {
-                val updateInfoMap = viewModel.updateInfo
+                item {
+                    Spacer(Modifier.height(6.dp))
+                }
                 items(
                     viewModel.searchResults.value,
                     key = { it.id },
@@ -516,6 +529,7 @@ fun ModulePager(
                         exit = fadeOut() + shrinkVertically()
                     ) {
                         val itemScope = rememberCoroutineScope()
+                        val updateInfoMap = viewModel.updateInfo
                         val currentModuleState = rememberUpdatedState(module)
                         val moduleUpdateInfo = updateInfoMap[module.id] ?: ModuleViewModel.ModuleUpdateInfo.Empty
 
@@ -570,7 +584,6 @@ fun ModulePager(
                                 )
                             }
                         }
-
                         ModuleItem(
                             module = module,
                             updateUrl = moduleUpdateInfo.downloadUrl,
@@ -614,6 +627,8 @@ fun ModulePager(
                         start = innerPadding.calculateStartPadding(layoutDirection),
                         end = innerPadding.calculateEndPadding(layoutDirection)
                     ),
+                    hazeState = hazeState,
+                    hazeStyle = hazeStyle
                 ) { boxHeight ->
                     ModuleList(
                         navigator,
@@ -623,7 +638,8 @@ fun ModulePager(
                             .scrollEndHaptic()
                             .overScrollVertical()
                             .nestedScroll(scrollBehavior.nestedScrollConnection)
-                            .nestedScroll(nestedScrollConnection),
+                            .nestedScroll(nestedScrollConnection)
+                            .hazeSource(state = hazeState),
                         scope = scope,
                         modules = modules,
                         onInstallModule = {
