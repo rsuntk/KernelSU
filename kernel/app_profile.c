@@ -228,9 +228,12 @@ void disable_seccomp(struct task_struct *tsk)
 	tsk->seccomp.mode = 0;
 	if (tsk->seccomp.filter) {
 		// 5.9+ have filter_count and use seccomp_filter_release
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
-		seccomp_filter_release(tsk);
+#ifdef KSU_OPTIONAL_SECCOMP_FILTER_CNT
 		atomic_set(&tsk->seccomp.filter_count, 0);
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) ||                           \
+	defined(KSU_OPTIONAL_SECCOMP_FILTER_RELEASE)
+		seccomp_filter_release(tsk);
 #else
 		// for 6.11+ kernel support?
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0)
