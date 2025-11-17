@@ -595,26 +595,67 @@ static int add_try_umount(void __user *arg)
 	return 0;
 }
 
+static int do_nuke_ext4_sysfs(void __user *arg)
+{
+	struct ksu_nuke_ext4_sysfs_cmd cmd;
+	char mnt[256];
+	long ret;
+
+	if (copy_from_user(&cmd, arg, sizeof(cmd)))
+		return -EFAULT;
+
+	if (!cmd.arg)
+		return -EINVAL;
+
+	memset(mnt, 0, sizeof(mnt));
+
+	ret = strncpy_from_user(mnt, cmd.arg, sizeof(mnt));
+	if (ret < 0) {
+		pr_err("nuke ext4 copy mnt failed: %ld\\n", ret);
+		return -EFAULT; // 或者 return ret;
+	}
+
+	if (ret == sizeof(mnt)) {
+		pr_err("nuke ext4 mnt path too long\\n");
+		return -ENAMETOOLONG;
+	}
+
+	pr_info("do_nuke_ext4_sysfs: %s\n", mnt);
+
+	return nuke_ext4_sysfs(mnt);
+}
+
 // IOCTL handlers mapping table
 static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
 	KSU_IOCTL(GRANT_ROOT, "GRANT_ROOT", do_grant_root, allowed_for_su),
 	KSU_IOCTL(GET_INFO, "GET_INFO", do_get_info, always_allow),
 	KSU_IOCTL(REPORT_EVENT, "REPORT_EVENT", do_report_event, only_root),
 	KSU_IOCTL(SET_SEPOLICY, "SET_SEPOLICY", do_set_sepolicy, only_root),
-	KSU_IOCTL(CHECK_SAFEMODE, "CHECK_SAFEMODE", do_check_safemode, always_allow),
-	KSU_IOCTL(GET_ALLOW_LIST, "GET_ALLOW_LIST", do_get_allow_list, manager_or_root),
-	KSU_IOCTL(GET_DENY_LIST, "GET_DENY_LIST", do_get_deny_list, manager_or_root),
-	KSU_IOCTL(UID_GRANTED_ROOT, "UID_GRANTED_ROOT", do_uid_granted_root, manager_or_root),
-	KSU_IOCTL(UID_SHOULD_UMOUNT, "UID_SHOULD_UMOUNT", do_uid_should_umount, manager_or_root),
-	KSU_IOCTL(GET_MANAGER_UID, "GET_MANAGER_UID", do_get_manager_uid, manager_or_root),
-	KSU_IOCTL(GET_APP_PROFILE, "GET_APP_PROFILE", do_get_app_profile, only_manager),
-	KSU_IOCTL(SET_APP_PROFILE, "SET_APP_PROFILE", do_set_app_profile, only_manager),
+	KSU_IOCTL(CHECK_SAFEMODE, "CHECK_SAFEMODE", do_check_safemode,
+		  always_allow),
+	KSU_IOCTL(GET_ALLOW_LIST, "GET_ALLOW_LIST", do_get_allow_list,
+		  manager_or_root),
+	KSU_IOCTL(GET_DENY_LIST, "GET_DENY_LIST", do_get_deny_list,
+		  manager_or_root),
+	KSU_IOCTL(UID_GRANTED_ROOT, "UID_GRANTED_ROOT", do_uid_granted_root,
+		  manager_or_root),
+	KSU_IOCTL(UID_SHOULD_UMOUNT, "UID_SHOULD_UMOUNT", do_uid_should_umount,
+		  manager_or_root),
+	KSU_IOCTL(GET_MANAGER_UID, "GET_MANAGER_UID", do_get_manager_uid,
+		  manager_or_root),
+	KSU_IOCTL(GET_APP_PROFILE, "GET_APP_PROFILE", do_get_app_profile,
+		  only_manager),
+	KSU_IOCTL(SET_APP_PROFILE, "SET_APP_PROFILE", do_set_app_profile,
+		  only_manager),
 	KSU_IOCTL(GET_FEATURE, "GET_FEATURE", do_get_feature, manager_or_root),
 	KSU_IOCTL(SET_FEATURE, "SET_FEATURE", do_set_feature, manager_or_root),
-	KSU_IOCTL(GET_WRAPPER_FD, "GET_WRAPPER_FD", do_get_wrapper_fd, manager_or_root),
+	KSU_IOCTL(GET_WRAPPER_FD, "GET_WRAPPER_FD", do_get_wrapper_fd,
+		  manager_or_root),
 	KSU_IOCTL(MANAGE_MARK, "MANAGE_MARK", do_manage_mark, manager_or_root),
-	// KSU_IOCTL(NUKE_EXT4_SYSFS, "NUKE_EXT4_SYSFS", do_nuke_ext4_sysfs, manager_or_root),
-	KSU_IOCTL(ADD_TRY_UMOUNT, "ADD_TRY_UMOUNT", add_try_umount, manager_or_root),
+	KSU_IOCTL(NUKE_EXT4_SYSFS, "NUKE_EXT4_SYSFS", do_nuke_ext4_sysfs,
+		  manager_or_root),
+	KSU_IOCTL(ADD_TRY_UMOUNT, "ADD_TRY_UMOUNT", add_try_umount,
+		  manager_or_root),
 
 	// Sentinel
 	{ .cmd = 0, .name = NULL, .handler = NULL, .perm_check = NULL }
