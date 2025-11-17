@@ -63,7 +63,7 @@ extern struct key *init_session_keyring;
 
 static inline int do_close_fd(unsigned int fd)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
 	return close_fd(fd);
 #else
 	return __close_fd(current->files, fd);
