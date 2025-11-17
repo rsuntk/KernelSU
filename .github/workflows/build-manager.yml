@@ -18,6 +18,8 @@ on:
     branches: [ "main" ]
     paths:
       - 'manager/**'
+      - 'kernel/**'
+      - 'userspace/ksud/**'
   workflow_call:
 
 jobs:
