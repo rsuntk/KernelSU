@@ -4,6 +4,7 @@
 #include <linux/fs.h>
 #include <linux/version.h>
 #include <linux/task_work.h>
+#include <linux/fdtable.h>
 #include "ss/policydb.h"
 #include "linux/key.h"
 
@@ -52,16 +53,21 @@ extern struct key *init_session_keyring;
 
 // Linux >= 5.7
 // task_work_add (struct, struct, enum)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 7, 0)
-#define ksu_task_work_add(tsk, cb, notify) task_work_add(tsk, cb, notify)
-#else
 // Linux pre-5.7
 // task_work_add (struct, struct, bool)
-#define ksu_task_work_add(tsk, cb, notify) task_work_add(tsk, cb, notify)
-// Decoy, so it wouldn't complain.
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 7, 0)
 #ifndef TWA_RESUME
 #define TWA_RESUME	true
 #endif
 #endif
+
+static inline int do_close_fd(unsigned int fd)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+	return close_fd(fd);
+#else
+	return __close_fd(current->files, fd);
+#endif
+}
 
 #endif

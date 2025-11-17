@@ -81,6 +81,7 @@ static long ksu_sys_setns(int fd, int flags)
 	PT_REGS_PARM1(&regs) = fd;
 	PT_REGS_PARM2(&regs) = flags;
 
+	// TODO: arm support
 #if (defined(__aarch64__) || defined(__x86_64__))
 	return SYS_SETNS_SYMBOL(&regs);
 #else
@@ -180,13 +181,7 @@ static void setup_mount_namespace(int32_t ns_mode)
 		if (ret) {
 			pr_warn("sys_setns failed: %ld\n", ret);
 		}
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
-		close_fd(fd);
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
-		ksys_close(fd);
-#else
-		sys_close(fd);
-#endif
+		do_close_fd(fd);
 	}
 
 	if (ns_mode == 2) {

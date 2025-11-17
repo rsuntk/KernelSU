@@ -567,11 +567,7 @@ static void ksu_install_fd_tw_func(struct callback_head *cb)
 
 	if (copy_to_user(tw->outp, &fd, sizeof(fd))) {
 		pr_err("install ksu fd reply err\n");
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
-		close_fd(fd);
-#else
-		ksys_close(fd);
-#endif
+		do_close_fd(fd);
 	}
 
 	kfree(tw);
@@ -597,7 +593,7 @@ static int reboot_handler_pre(struct kprobe *p, struct pt_regs *regs)
 		tw->outp = (int __user *)arg4;
 		tw->cb.func = ksu_install_fd_tw_func;
 
-		if (ksu_task_work_add(current, &tw->cb, TWA_RESUME)) {
+		if (task_work_add(current, &tw->cb, TWA_RESUME)) {
 			kfree(tw);
 			pr_warn("install fd add task_work failed\n");
 		}
@@ -628,13 +624,7 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
 		// downstream: dereference all arg usage!
 		if (copy_to_user((void __user *)*arg, &fd, sizeof(fd))) {
 			pr_err("install ksu fd reply err\n");
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
-			close_fd(fd);
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
-			ksys_close(fd);
-#else
-			sys_close(fd);
-#endif
+			do_close_fd(fd);
 		}
 		return 0;
 	}
@@ -740,8 +730,10 @@ int ksu_install_fd(void)
 	// Install fd
 	fd_install(fd, filp);
 
+#ifdef CONFIG_KSU_DEBUG
 	pr_info("ksu fd[%d] installed for %s/%d\n", fd, current->comm,
 		current->pid);
+#endif
 
 	return fd;
 }

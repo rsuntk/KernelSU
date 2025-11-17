@@ -198,7 +198,7 @@ int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
 	tw->old_cred = get_current_cred();
 	tw->cb.func = umount_tw_func;
 
-	int err = ksu_task_work_add(current, &tw->cb, TWA_RESUME);
+	int err = task_work_add(current, &tw->cb, TWA_RESUME);
 	if (err) {
 		if (tw->old_cred) {
 			put_cred(tw->old_cred);

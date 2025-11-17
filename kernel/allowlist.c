@@ -436,7 +436,7 @@ void persistent_allow_list(void)
 		goto put_task;
 	}
 	cb->func = do_persistent_allow_list;
-	ksu_task_work_add(tsk, cb, TWA_RESUME);
+	task_work_add(tsk, cb, TWA_RESUME);
 
 put_task:
 	put_task_struct(tsk);
