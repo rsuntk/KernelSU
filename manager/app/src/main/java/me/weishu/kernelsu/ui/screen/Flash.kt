@@ -1,34 +1,31 @@
 package me.weishu.kernelsu.ui.screen
 
-import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.os.Parcelable
+import android.widget.Toast
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.captionBar
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,35 +34,43 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.dropUnlessResumed
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import com.ramcosta.composedestinations.navigation.EmptyDestinationsNavigator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.KeyEventBlocker
-import me.weishu.kernelsu.ui.component.rememberConfirmDialog
-import me.weishu.kernelsu.ui.component.ConfirmResult
 import me.weishu.kernelsu.ui.util.FlashResult
 import me.weishu.kernelsu.ui.util.LkmSelection
-import me.weishu.kernelsu.ui.util.LocalSnackbarHost
 import me.weishu.kernelsu.ui.util.flashModule
 import me.weishu.kernelsu.ui.util.installBoot
 import me.weishu.kernelsu.ui.util.reboot
 import me.weishu.kernelsu.ui.util.restoreBoot
 import me.weishu.kernelsu.ui.util.uninstallPermanently
+import top.yukonga.miuix.kmp.basic.FloatingActionButton
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.icons.useful.Back
+import top.yukonga.miuix.kmp.icon.icons.useful.Save
+import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -98,66 +103,30 @@ fun flashModulesSequentially(
     return FlashResult(0, "", true)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Destination<RootGraph>
-fun FlashScreen(navigator: DestinationsNavigator, flashIt: FlashIt, skipConfirmation: Boolean = false) {
-
+fun FlashScreen(
+    navigator: DestinationsNavigator,
+    flashIt: FlashIt
+) {
     var text by rememberSaveable { mutableStateOf("") }
     var tempText: String
     val logContent = rememberSaveable { StringBuilder() }
     var showFloatAction by rememberSaveable { mutableStateOf(false) }
 
-    val snackBarHost = LocalSnackbarHost.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     var flashing by rememberSaveable {
         mutableStateOf(FlashingStatus.FLASHING)
     }
 
-    val context = LocalContext.current
-
-    val confirmDialog = rememberConfirmDialog()
-    var confirmed by rememberSaveable(flashIt, skipConfirmation) { mutableStateOf(skipConfirmation || flashIt !is FlashIt.FlashModules) }
-    var pendingFlashIt by rememberSaveable { mutableStateOf<FlashIt?>(null) }
-
-    LaunchedEffect(flashIt, confirmed) {
-        if (flashIt is FlashIt.FlashModules && !confirmed) {
-            val uris = flashIt.uris
-            val moduleNames =
-                uris.mapIndexed { index, uri -> "\n${index + 1}. ${uri.getFileName(context)}" }
-                    .joinToString("")
-            val confirmContent =
-                context.getString(R.string.module_install_prompt_with_name, moduleNames)
-            val confirmTitle = context.getString(R.string.module)
-            val result = confirmDialog.awaitConfirm(
-                title = confirmTitle,
-                content = confirmContent,
-                markdown = true
-            )
-
-            if (result == ConfirmResult.Confirmed) {
-                confirmed = true
-                pendingFlashIt = flashIt
-            } else {
-                // User cancelled, go back
-                navigator.popBackStack()
-            }
-        } else {
-            pendingFlashIt = flashIt
-        }
-    }
-
-    var flashingStarted by rememberSaveable { mutableStateOf(false) }
-
-    LaunchedEffect(confirmed, pendingFlashIt) {
-        if (!confirmed || pendingFlashIt == null || flashingStarted) {
+    LaunchedEffect(Unit) {
+        if (text.isNotEmpty()) {
             return@LaunchedEffect
         }
-        flashingStarted = true
         withContext(Dispatchers.IO) {
-            flashIt(pendingFlashIt!!, onStdout = {
+            flashIt(flashIt, onStdout = {
                 tempText = "$it\n"
                 if (tempText.startsWith("[H[J")) { // clear command
                     text = tempText.substring(6)
@@ -184,9 +153,7 @@ fun FlashScreen(navigator: DestinationsNavigator, flashIt: FlashIt, skipConfirma
         topBar = {
             TopBar(
                 flashing,
-                onBack = dropUnlessResumed {
-                    navigator.popBackStack()
-                },
+                onBack = dropUnlessResumed { navigator.popBackStack() },
                 onSave = {
                     scope.launch {
                         val format = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.getDefault())
@@ -196,16 +163,22 @@ fun FlashScreen(navigator: DestinationsNavigator, flashIt: FlashIt, skipConfirma
                             "KernelSU_install_log_${date}.log"
                         )
                         file.writeText(logContent.toString())
-                        snackBarHost.showSnackbar("Log saved to ${file.absolutePath}")
+                        Toast.makeText(context, "Log saved to ${file.absolutePath}", Toast.LENGTH_SHORT).show()
                     }
                 },
-                scrollBehavior = scrollBehavior
             )
         },
         floatingActionButton = {
             if (showFloatAction) {
                 val reboot = stringResource(id = R.string.reboot)
-                ExtendedFloatingActionButton(
+                FloatingActionButton(
+                    modifier = Modifier
+                        .padding(
+                            bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
+                                    WindowInsets.captionBar.asPaddingValues().calculateBottomPadding() + 20.dp,
+                            end = 20.dp
+                        )
+                        .border(0.05.dp, colorScheme.outline.copy(alpha = 0.5f), CircleShape),
                     onClick = {
                         scope.launch {
                             withContext(Dispatchers.IO) {
@@ -213,54 +186,59 @@ fun FlashScreen(navigator: DestinationsNavigator, flashIt: FlashIt, skipConfirma
                             }
                         }
                     },
-                    icon = { Icon(Icons.Filled.Refresh, reboot) },
-                    text = { Text(text = reboot) },
+                    shadowElevation = 0.dp,
+                    content = {
+                        Icon(
+                            Icons.Rounded.Refresh,
+                            reboot,
+                            Modifier.size(40.dp),
+                            tint = Color.White
+                        )
+                    },
                 )
             }
         },
-        snackbarHost = { SnackbarHost(hostState = snackBarHost) },
-        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+        popupHost = { },
+        contentWindowInsets = WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal)
     ) { innerPadding ->
+        val layoutDirection = LocalLayoutDirection.current
         KeyEventBlocker {
             it.key == Key.VolumeDown || it.key == Key.VolumeUp
         }
+
         Column(
             modifier = Modifier
                 .fillMaxSize(1f)
-                .padding(innerPadding)
-                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .scrollEndHaptic()
+                .padding(
+                    start = innerPadding.calculateStartPadding(layoutDirection),
+                    end = innerPadding.calculateStartPadding(layoutDirection),
+                )
                 .verticalScroll(scrollState),
         ) {
             LaunchedEffect(text) {
                 scrollState.animateScrollTo(scrollState.maxValue)
             }
+            Spacer(Modifier.height(innerPadding.calculateTopPadding()))
             Text(
                 modifier = Modifier.padding(8.dp),
                 text = text,
-                fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace,
-                lineHeight = MaterialTheme.typography.bodySmall.lineHeight,
+            )
+            Spacer(
+                Modifier.height(
+                    12.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
+                            WindowInsets.captionBar.asPaddingValues().calculateBottomPadding()
+                )
             )
         }
     }
 }
 
-fun Uri.getFileName(context: Context): String {
-    val contentResolver = context.contentResolver
-    val cursor = contentResolver.query(this, null, null, null, null)
-    return cursor?.use {
-        val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-        if (it.moveToFirst() && nameIndex != -1) {
-            it.getString(nameIndex)
-        } else {
-            this.lastPathSegment ?: "unknown.zip"
-        }
-    } ?: (this.lastPathSegment ?: "unknown.zip")
-}
-
 @Parcelize
 sealed class FlashIt : Parcelable {
-    data class FlashBoot(val boot: Uri? = null, val lkm: LkmSelection, val ota: Boolean) :
+    data class FlashBoot(val boot: Uri? = null, val lkm: LkmSelection, val ota: Boolean, val partition: String? = null) :
         FlashIt()
 
     data class FlashModules(val uris: List<Uri>) : FlashIt()
@@ -280,6 +258,7 @@ fun flashIt(
             flashIt.boot,
             flashIt.lkm,
             flashIt.ota,
+            flashIt.partition,
             onStdout,
             onStderr
         )
@@ -294,46 +273,43 @@ fun flashIt(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TopBar(
     status: FlashingStatus,
     onBack: () -> Unit = {},
     onSave: () -> Unit = {},
-    scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
-    TopAppBar(
-        title = {
-            Text(
-                stringResource(
-                    when (status) {
-                        FlashingStatus.FLASHING -> R.string.flashing
-                        FlashingStatus.SUCCESS -> R.string.flash_success
-                        FlashingStatus.FAILED -> R.string.flash_failed
-                    }
-                )
-            )
-        },
+    SmallTopAppBar(
+        title = stringResource(
+            when (status) {
+                FlashingStatus.FLASHING -> R.string.flashing
+                FlashingStatus.SUCCESS -> R.string.flash_success
+                FlashingStatus.FAILED -> R.string.flash_failed
+            }
+        ),
         navigationIcon = {
             IconButton(
+                modifier = Modifier.padding(start = 16.dp),
                 onClick = onBack
-            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
-        },
-        actions = {
-            IconButton(onClick = onSave) {
+            ) {
                 Icon(
-                    imageVector = Icons.Filled.Save,
-                    contentDescription = "Localized description"
+                    MiuixIcons.Useful.Back,
+                    contentDescription = null,
+                    tint = colorScheme.onBackground
                 )
             }
         },
-        windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
-        scrollBehavior = scrollBehavior
+        actions = {
+            IconButton(
+                modifier = Modifier.padding(end = 16.dp),
+                onClick = onSave
+            ) {
+                Icon(
+                    imageVector = MiuixIcons.Useful.Save,
+                    contentDescription = stringResource(id = R.string.save_log),
+                    tint = colorScheme.onBackground
+                )
+            }
+        },
     )
-}
-
-@Preview
-@Composable
-fun InstallPreview() {
-    InstallScreen(EmptyDestinationsNavigator)
 }

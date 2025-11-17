@@ -1,13 +1,12 @@
+use crate::defs;
+use anyhow::Result;
+use jwalk::{Parallelism::Serial, WalkDir};
 use std::path::Path;
 
-use anyhow::Result;
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use anyhow::{Context, Ok};
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use extattr::{Flags as XattrFlags, lsetxattr};
-use jwalk::{Parallelism::Serial, WalkDir};
-
-use crate::defs;
 
 pub const SYSTEM_CON: &str = "u:object_r:system_file:s0";
 pub const ADB_CON: &str = "u:object_r:adb_data_file:s0";
@@ -65,7 +64,7 @@ pub fn restore_syscon<P: AsRef<Path>>(dir: P) -> Result<()> {
 fn restore_modules_con<P: AsRef<Path>>(dir: P) -> Result<()> {
     for dir_entry in WalkDir::new(dir).parallelism(Serial) {
         if let Some(path) = dir_entry.ok().map(|dir_entry| dir_entry.path())
-            && let Result::Ok(con) = lgetfilecon(&path)
+            && let anyhow::Result::Ok(con) = lgetfilecon(&path)
             && (con == ADB_CON || con == UNLABEL_CON || con.is_empty())
         {
             lsetfilecon(&path, SYSTEM_CON)?;

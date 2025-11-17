@@ -44,6 +44,7 @@ sha1 = "0.10"
 tempfile = "3"
 chrono = "0.4"
 regex-lite = "0.1"
+fs4 = "0.13"
 
 [target.'cfg(any(target_os = "android", target_os = "linux"))'.dependencies]
 rustix = { git = "https://github.com/Kernel-SU/rustix.git", branch = "main", features = [
@@ -54,16 +55,10 @@ android-properties = { version = "0.2", features = ["bionic-deprecated"] }
 procfs = "0.17"
 
 [target.'cfg(target_os = "android")'.dependencies]
-android_logger = { version = "0.14", default-features = false }
-
-[profile.dev]
-overflow-checks = false
-opt-level = 3
-strip = true
+android_logger = { version = "0.15", default-features = false }
 
 [profile.release]
-overflow-checks = false
-codegen-units = 1
-lto = "fat"
-opt-level = 3
 strip = true
+opt-level = "z"
+lto = true
+codegen-units = 1

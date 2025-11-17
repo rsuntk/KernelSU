@@ -1,11 +1,16 @@
-use crate::defs::{KSU_MOUNT_SOURCE, NO_MOUNT_PATH, NO_TMPFS_PATH};
-use crate::module::{handle_updated_modules, prune_modules};
-use crate::utils::{find_tmp_path, is_safe_mode};
-use crate::{assets, defs, ksucalls, restorecon, utils};
 use anyhow::{Context, Result};
 use log::{info, warn};
 use rustix::fs::{MountFlags, mount};
 use std::path::Path;
+
+use crate::module::{handle_updated_modules, prune_modules};
+use crate::utils::is_safe_mode;
+use crate::{
+    assets, defs, ksucalls, restorecon,
+    utils::{self, find_tmp_path},
+};
+
+use crate::defs::{KSU_MOUNT_SOURCE, NO_MOUNT_PATH, NO_TMPFS_PATH};
 
 #[cfg(target_os = "android")]
 pub fn mount_modules_systemlessly() -> Result<()> {
@@ -32,7 +37,7 @@ pub fn on_post_data_fs() -> Result<()> {
         return Ok(());
     }
 
-    let safe_mode = utils::is_safe_mode();
+    let safe_mode = crate::utils::is_safe_mode();
 
     if safe_mode {
         warn!("safe mode, skip common post-fs-data.d scripts");

@@ -5,13 +5,14 @@ use crate::{
 use anyhow::{Context, Ok, Result, bail};
 use getopts::Options;
 use libc::c_int;
-use log::{error, info, warn};
+use log::{error, warn};
 use std::env;
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::{ffi::CStr, process::Command};
 
+#[cfg(any(target_os = "linux", target_os = "android"))]
 use crate::ksucalls::get_wrapped_fd;
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use rustix::{
@@ -195,8 +196,6 @@ pub fn root_shell() -> Result<()> {
     let mount_master = matches.opt_present("M");
     let use_fd_wrapper = !matches.opt_present("W");
 
-    info!("use_fd_wrapper={use_fd_wrapper}");
-
     let groups = matches
         .opt_strs("G")
         .into_iter()
@@ -290,9 +289,7 @@ pub fn root_shell() -> Result<()> {
 
             // switch to global mount namespace
             #[cfg(any(target_os = "linux", target_os = "android"))]
-            let global_namespace_enable =
-                std::fs::read_to_string(defs::GLOBAL_NAMESPACE_FILE).unwrap_or("0".to_string());
-            if global_namespace_enable.trim() == "1" || mount_master {
+            if mount_master {
                 let _ = utils::switch_mnt_ns(1);
             }
 
