@@ -137,6 +137,11 @@ enum Commands {
         #[command(subcommand)]
         command: Debug,
     },
+    /// Kernel interface
+    Kernel {
+        #[command(subcommand)]
+        command: Kernel,
+    },
 }
 
 #[derive(clap::Subcommand, Debug)]
