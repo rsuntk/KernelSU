@@ -131,6 +131,9 @@ struct ksu_ioctl_cmd_map {
 	ksu_perm_check_t perm_check; // Permission check function
 };
 
+#define KSU_CMD(CMD, NAME, HANDLER, PERM)                                   \
+	{ .cmd = CMD, .name = NAME, .handler = HANDLER, .perm_check = PERM }
+
 // Install KSU fd to current process
 int ksu_install_fd(void);
 
