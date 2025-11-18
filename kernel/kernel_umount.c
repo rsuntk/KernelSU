@@ -44,28 +44,11 @@ static const struct ksu_feature_handler kernel_umount_handler = {
 	.set_handler = kernel_umount_feature_set,
 };
 
-static bool should_umount(struct path *path)
-{
-	if (!path) {
-		return false;
-	}
-
-	if (current->nsproxy->mnt_ns == init_nsproxy.mnt_ns) {
-		pr_info("ignore global mnt namespace process: %d\n",
-			current_uid().val);
-		return false;
-	}
-
-	if (path->mnt && path->mnt->mnt_sb && path->mnt->mnt_sb->s_type) {
-		const char *fstype = path->mnt->mnt_sb->s_type->name;
-		return strcmp(fstype, "overlay") == 0;
-	}
-	return false;
-}
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) || defined(KSU_HAS_PATH_UMOUNT)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) ||                           \
+	defined(KSU_HAS_PATH_UMOUNT)
 extern int path_umount(struct path *path, int flags);
-static void ksu_umount_mnt(const char *__never_use_mnt, struct path *path, int flags)
+static void ksu_umount_mnt(const char *__never_use_mnt, struct path *path,
+			   int flags)
 {
 	int err = path_umount(path, flags);
 	if (err) {
@@ -91,12 +74,12 @@ static void ksu_sys_umount(const char *mnt, int flags)
 #define ksu_umount_mnt(mnt, __unused, flags)                                   \
 	({                                                                     \
 		path_put(__unused);                                            \
-		ksu_sys_umount(mnt, flags);                              \
+		ksu_sys_umount(mnt, flags);                                    \
 	})
 
 #endif
 
-static void try_umount(const char *mnt, bool check_mnt, int flags)
+static void try_umount(const char *mnt, int flags)
 {
 	struct path path;
 	int err = kern_path(mnt, 0, &path);
@@ -110,25 +93,17 @@ static void try_umount(const char *mnt, bool check_mnt, int flags)
 		return;
 	}
 
-	// we are only interest in some specific mounts
-	if (check_mnt && !should_umount(&path)) {
-		path_put(&path);
-		return;
-	}
-
 	ksu_umount_mnt(mnt, &path, flags);
 }
 
-static inline void do_ksu_umount_lists(void)
+static inline void do_umount_work(void)
 {
-	// fixme: use `collect_mounts` and `iterate_mount` to iterate all mountpoint and
-	// filter the mountpoint whose target is `/data/adb`
-	try_umount("/odm", true, 0);
-	try_umount("/system", true, 0);
-	try_umount("/vendor", true, 0);
-	try_umount("/product", true, 0);
-	try_umount("/system_ext", true, 0);
-	try_umount("/data/adb/modules", false, MNT_DETACH);
+	struct mount_entry *entry;
+	list_for_each_entry (entry, &mount_list, list) {
+		pr_info("%s: unmounting: %s flags 0x%x\n", __func__,
+			entry->umountable, entry->flags);
+		try_umount(entry->umountable, entry->flags);
+	}
 }
 
 #ifdef KSU_SHOULD_USE_NEW_TP
@@ -145,7 +120,9 @@ static void umount_tw_func(struct callback_head *cb)
 		saved = override_creds(tw->old_cred);
 	}
 
-	do_ksu_umount_lists();
+	down_read(&mount_list_lock);
+	do_umount_work();
+	up_read(&mount_list_lock);
 
 	if (saved)
 		revert_creds(saved);
@@ -208,7 +185,9 @@ int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
 	}
 #else
 	// Using task work for non-kp context is expansive?
-	do_ksu_umount_lists();
+	down_read(&mount_list_lock);
+	do_umount_work();
+	up_read(&mount_list_lock);
 #endif
 
 	return 0;

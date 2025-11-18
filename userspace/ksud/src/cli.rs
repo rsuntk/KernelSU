@@ -363,6 +363,36 @@ enum Feature {
     Save,
 }
 
+#[derive(clap::Subcommand, Debug)]
+enum Kernel {
+    /// Manage umount list
+    Umount {
+        #[command(subcommand)]
+        command: UmountOp,
+    },
+    /// Notify that module is mounted
+    NotifyModuleMounted,
+}
+
+#[derive(clap::Subcommand, Debug)]
+enum UmountOp {
+    /// Add mount point to umount list
+    Add {
+        /// mount point path
+        mnt: String,
+        /// umount flags (default: 0, MNT_DETACH: 2)
+        #[arg(short, long, default_value = "0")]
+        flags: u32,
+    },
+    /// Delete mount point from umount list
+    Del {
+        /// mount point path
+        mnt: String,
+    },
+    /// Wipe all entries from umount list
+    Wipe,
+}
+
 pub fn run() -> Result<()> {
     #[cfg(target_os = "android")]
     android_logger::init_once(
@@ -513,6 +543,17 @@ pub fn run() -> Result<()> {
             magiskboot,
             flash,
         } => crate::boot_patch::restore(boot, magiskboot, flash),
+        Commands::Kernel { command } => match command {
+            Kernel::Umount { command } => match command {
+                UmountOp::Add { mnt, flags } => ksucalls::umount_list_add(&mnt, flags),
+                UmountOp::Del { mnt } => ksucalls::umount_list_del(&mnt),
+                UmountOp::Wipe => ksucalls::umount_list_wipe().map_err(Into::into),
+            },
+            Kernel::NotifyModuleMounted => {
+                ksucalls::report_module_mounted();
+                Ok(())
+            }
+        },
     };
 
     if let Err(e) = &result {
