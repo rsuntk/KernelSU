@@ -247,8 +247,10 @@ void disable_seccomp(struct task_struct *tsk)
 void escape_with_root_profile(void)
 {
 	struct cred *cred;
-	// a bit useless, but we just want less ifdefs
+#ifdef KSU_SHOULD_USE_NEW_TP
 	struct task_struct *p = current;
+	struct task_struct *t;
+#endif
 
 	if (current_euid().val == 0) {
 		pr_warn("Already root, don't escape!\n");
@@ -295,15 +297,14 @@ void escape_with_root_profile(void)
 
 	// Refer to kernel/seccomp.c: seccomp_set_mode_strict
 	// When disabling Seccomp, ensure that current->sighand->siglock is held during the operation.
-	spin_lock_irq(&p->sighand->siglock);
-	disable_seccomp(p);
-	spin_unlock_irq(&p->sighand->siglock);
+	spin_lock_irq(&current->sighand->siglock);
+	disable_seccomp(current);
+	spin_unlock_irq(&current->sighand->siglock);
 
 	setup_selinux(profile->selinux_domain);
 	setup_mount_namespace(profile->namespaces);
 
 #ifdef KSU_SHOULD_USE_NEW_TP
-	struct task_struct *t;
 	for_each_thread (p, t) {
 		ksu_set_task_tracepoint_flag(t);
 	}
