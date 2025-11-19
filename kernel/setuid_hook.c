@@ -35,7 +35,7 @@
 #include "klog.h" // IWYU pragma: keep
 #include "manager.h"
 #include "selinux/selinux.h"
-#include "seccomp_cache.h"
+#include "seccomp.h"
 #include "supercalls.h"
 #include "syscall_hook_manager.h"
 #include "kernel_umount.h"
@@ -123,7 +123,6 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 		ksu_set_manager_uid(new_uid);
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	if (ksu_get_manager_uid() == new_uid) {
 		pr_info("install fd for ksu manager(uid=%d)\n", new_uid);
 		ksu_install_fd();
@@ -146,21 +145,6 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 	} else {
 		ksu_clear_task_tracepoint_flag_if_needed(current);
 	}
-#else
-	if (ksu_is_allow_uid_for_current(new_uid)) {
-		spin_lock_irq(&current->sighand->siglock);
-		disable_seccomp(current);
-		spin_unlock_irq(&current->sighand->siglock);
-
-		if (ksu_get_manager_uid() == new_uid) {
-			pr_info("install fd for ksu manager(uid=%d)\n",
-				new_uid);
-			ksu_install_fd();
-		}
-
-		return 0;
-	}
-#endif
 
 	// Handle kernel umount
 	ksu_handle_umount(old_uid, new_uid);

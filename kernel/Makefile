@@ -14,7 +14,7 @@ kernelsu-objs += supercalls.o
 kernelsu-objs += feature.o
 kernelsu-objs += ksud.o
 kernelsu-objs += embed_ksud.o
-kernelsu-objs += seccomp_cache.o
+kernelsu-objs += seccomp.o
 kernelsu-objs += file_wrapper.o
 
 kernelsu-objs += selinux/selinux.o
@@ -164,7 +164,7 @@ ccflags-y += -DKSU_MANAGER_PACKAGE=\"$(KSU_MANAGER_PACKAGE)\"
 $(info -- KernelSU Manager package name: $(KSU_MANAGER_PACKAGE))
 endif
 
-$(info -- Supported KernelSU Manager(s): tiann, rsuntk, 5ec1cff) 
+$(info -- Supported KernelSU Manager(s): tiann, rsuntk, 5ec1cff)
 
 ccflags-y += -Wno-strict-prototypes -Wno-int-conversion -Wno-gcc-compat
 ccflags-y += -Wno-declaration-after-statement -Wno-unused-function -Wno-missing-prototypes
