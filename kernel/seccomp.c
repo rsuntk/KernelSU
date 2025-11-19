@@ -1,9 +1,13 @@
 #include <linux/version.h>
 #include <linux/fs.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
 #include <linux/sched/task.h>
+#endif
+#include <linux/sched.h>
 #include <linux/uaccess.h>
 #include <linux/filter.h>
 #include <linux/seccomp.h>
+
 #include "klog.h" // IWYU pragma: keep
 #include "seccomp_cache.h"
 
