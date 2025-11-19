@@ -206,7 +206,7 @@ try_drop_caps:
 // RKSU: Use it wisely, not static.
 void disable_seccomp(struct task_struct *tsk)
 {
-	if (unlikely(!tsk))
+	if (!tsk)
 		return;
 
 	assert_spin_locked(&tsk->sighand->siglock);
