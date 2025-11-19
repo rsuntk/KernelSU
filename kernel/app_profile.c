@@ -23,6 +23,7 @@
 #include "kernel_compat.h"
 #include "klog.h" // IWYU pragma: keep
 #include "selinux/selinux.h"
+#include "seccomp.h"
 #include "syscall_hook_manager.h"
 
 static struct group_info root_groups = { .usage = ATOMIC_INIT(2) };

@@ -80,7 +80,6 @@ static inline bool is_allow_su(void)
 #define __force_sig(sig) force_sig(sig, current)
 #endif
 
-extern void disable_seccomp(struct task_struct *tsk);
 int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 {
 	// we rely on the fact that zygote always call setresuid(3) with same uids
