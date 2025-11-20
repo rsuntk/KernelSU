@@ -4,7 +4,7 @@
 #include <linux/version.h>
 
 #include "sepolicy.h"
-#include "klog.h" // IWYU pragma: keep
+#include "../klog.h" // IWYU pragma: keep
 #include "ss/symtab.h"
 #include "kernel_compat.h" // Add check Huawei Device
 

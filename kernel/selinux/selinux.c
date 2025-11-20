@@ -3,7 +3,7 @@
 #include "linux/security.h"
 #include "linux/version.h"
 #include "selinux_defs.h"
-#include "klog.h" // IWYU pragma: keep
+#include "../klog.h" // IWYU pragma: keep
 
 #define KERNEL_SU_DOMAIN "u:r:su:s0"
 
@@ -140,10 +140,15 @@ bool is_context(const struct cred *cred, const char *context)
 	return result;
 }
 
+bool is_task_ksu_domain(const struct cred *cred)
+{
+	return is_context(cred, KERNEL_SU_DOMAIN);
+}
+
 bool is_ksu_domain(void)
 {
 	current_sid();
-	return is_context(current_cred(), KERNEL_SU_DOMAIN);
+	return is_task_ksu_domain(current_cred(), KERNEL_SU_DOMAIN);
 }
 
 bool is_zygote(const struct cred *cred)
