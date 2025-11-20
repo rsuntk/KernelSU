@@ -30,7 +30,6 @@ import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.profile.Capabilities
 import me.weishu.kernelsu.profile.Groups
-import me.weishu.kernelsu.ui.component.SuperDropdown
 import me.weishu.kernelsu.ui.component.SuperEditArrow
 import me.weishu.kernelsu.ui.util.isSepolicyValid
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -39,6 +38,7 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.extra.CheckboxLocation
 import top.yukonga.miuix.kmp.extra.SuperArrow
 import top.yukonga.miuix.kmp.extra.SuperCheckbox
+import top.yukonga.miuix.kmp.extra.SuperDropdown
 import top.yukonga.miuix.kmp.extra.SuperDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 
