@@ -137,7 +137,7 @@
     <string name="module_install_prompt_with_name">Modul yg akan diinstal: %1$s</string>
     <string name="confirm">Oke</string>
     <string name="su_not_allowed">Akses SU tidak dapat diberikan ke %s</string>
-    <string name="settings_disable_su">Nonaktifkan kompatibilats SU</string>
+    <string name="settings_disable_su">Nonaktifkan kompatibilitas SU</string>
     <string name="settings_disable_su_summary">Nonaktifkan kemampuan aplikasi apa pun untuk mendapatkan hak akses root melalui perintah `su` (proses root yang sudah ada tidak akan terpengaruh).</string>
     <string name="settings_module_check_update">Periksa pembaruan modul</string>
     <string name="install_upload_lkm_file">Gunakan berkas LKM lokal</string>
