@@ -31,12 +31,8 @@ extern int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid,
 static int ksu_task_fix_setuid(struct cred *new, const struct cred *old,
 			       int flags)
 {
-	uid_t new_uid = new->uid.val;
-	uid_t old_uid = old->uid.val;
-	uid_t new_euid = new->euid.val;
-	uid_t old_euid = old->euid.val;
-
-	return ksu_handle_setuid_common(new_uid, old_uid, new_euid, old_euid);
+	return ksu_handle_setuid_common(new->uid.val, old->uid.val,
+					new->euid.val, old->euid.val);
 }
 
 static struct security_hook_list ksu_hooks[] = {
