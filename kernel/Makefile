@@ -21,8 +21,8 @@ kernelsu-objs += selinux/rules.o
 
 ifneq ($(CONFIG_KSU_MANUAL_HOOK), y)
 kernelsu-objs += gki/syscall_hook_manager.o
-kernelsu-objs += gki/seccomp_cache.o
 endif
+kernelsu-objs += gki/seccomp_cache.o
 
 ccflags-y += -I$(srctree)/$(src)
 ccflags-y += -I$(srctree)/security/selinux -I$(srctree)/security/selinux/include
