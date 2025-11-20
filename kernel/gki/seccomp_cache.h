@@ -17,3 +17,5 @@ static inline void ksu_seccomp_allow_cache(struct seccomp_filter *filter, int nr
 	return;
 }
 #endif
+
+#endif
