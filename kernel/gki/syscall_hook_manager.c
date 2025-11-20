@@ -10,13 +10,13 @@
 #include <linux/slab.h>
 #include <trace/events/syscalls.h>
 
-#include "allowlist.h"
-#include "arch.h"
-#include "klog.h" // IWYU pragma: keep
-#include "syscall_hook_manager.h"
-#include "sucompat.h"
-#include "setuid_hook.h"
-#include "selinux/selinux.h"
+#include "../allowlist.h"
+#include "../arch.h"
+#include "../klog.h" // IWYU pragma: keep
+#include "../syscall_hook_manager.h"
+#include "../sucompat.h"
+#include "../setuid_hook.h"
+#include "../selinux/selinux.h"
 
 // Tracepoint registration count management
 // == 1: just us

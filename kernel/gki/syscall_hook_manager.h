@@ -3,8 +3,7 @@
 
 #include <linux/version.h>
 #include <linux/sched.h>
-#include <linux/thread_info.h>
-#include "kernel_compat.h"
+#include <linux/thread_info.h>z
 
 // Hook manager initialization and cleanup
 void ksu_syscall_hook_manager_init(void);

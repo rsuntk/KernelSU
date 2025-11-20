@@ -7,7 +7,7 @@
 #include <linux/uaccess.h>
 #include <linux/filter.h>
 #include <linux/seccomp.h>
-#include "klog.h" // IWYU pragma: keep
+#include "../klog.h" // IWYU pragma: keep
 
 struct action_cache {
 	DECLARE_BITMAP(allow_native, SECCOMP_ARCH_NATIVE_NR);

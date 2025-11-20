@@ -24,7 +24,6 @@ kernelsu-objs += gki/syscall_hook_manager.o
 endif
 kernelsu-objs += gki/seccomp_cache.o
 
-ccflags-y += -I$(srctree)/$(src)
 ccflags-y += -I$(srctree)/security/selinux -I$(srctree)/security/selinux/include
 ccflags-y += -I$(objtree)/security/selinux -include $(srctree)/include/uapi/asm-generic/errno.h
 
