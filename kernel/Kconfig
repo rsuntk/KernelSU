@@ -8,11 +8,6 @@ config KSU
 	  To compile as a module, choose M here: the
 	  module will be called kernelsu.
 
-# For easier extern ifdef handling
-config RKSU
-	bool "RKSU compat, do not modify"
-	default y
-
 config KSU_DEBUG
 	bool "KernelSU debug mode"
 	depends on KSU
