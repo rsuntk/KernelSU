@@ -8,6 +8,8 @@
 #include <linux/thread_info.h>
 #include <linux/seccomp.h>
 #include <linux/capability.h>
+#include <linux/syscalls.h>
+#include <linux/ptrace.h>
 #include <linux/cred.h>
 #include <linux/dcache.h>
 #include <linux/err.h>
@@ -80,6 +82,14 @@ static inline bool is_allow_su(void)
 #define __force_sig(sig) force_sig(sig, current)
 #endif
 
+static bool check_for_allowed_syscall(int nr)
+{
+	if (unlikely(nr <= 0))
+		return false;
+		
+	return false;
+}
+
 extern void disable_seccomp(struct task_struct *tsk);
 int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 			     uid_t old_euid)
@@ -145,7 +155,6 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 	if (ksu_get_manager_uid() == new_uid) {
 		pr_info("install fd for ksu manager(uid=%d)\n", new_uid);
 		ksu_install_fd();
-		// overkill, but we have no choice for allowing __NR_reboot
 		spin_lock_irq(&current->sighand->siglock);
 		disable_seccomp(current);
 		spin_unlock_irq(&current->sighand->siglock);

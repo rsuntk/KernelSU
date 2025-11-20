@@ -121,7 +121,7 @@ bool is_task_ksu_domain(const struct cred *cred)
 	if (!cred) {
 		return false;
 	}
-	const struct task_security_struct *tsec = __selinux_cred(cred);
+	const struct task_security_struct *tsec = selinux_cred(cred);
 	if (!tsec) {
 		return false;
 	}
