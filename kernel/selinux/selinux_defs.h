@@ -33,7 +33,8 @@
 #define __setenforce(val)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 1, 0) || !defined(KSU_OPTIONAL_SELINUX_CRED)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 1, 0) ||                            \
+	!defined(KSU_OPTIONAL_SELINUX_CRED)
 static inline struct task_security_struct *selinux_cred(const struct cred *cred)
 {
 	return cred->security;

@@ -8,8 +8,6 @@
 #include <linux/thread_info.h>
 #include <linux/seccomp.h>
 #include <linux/capability.h>
-#include <linux/syscalls.h>
-#include <linux/ptrace.h>
 #include <linux/cred.h>
 #include <linux/dcache.h>
 #include <linux/err.h>
@@ -81,14 +79,6 @@ static inline bool is_allow_su(void)
 #else
 #define __force_sig(sig) force_sig(sig, current)
 #endif
-
-static bool check_for_allowed_syscall(int nr)
-{
-	if (unlikely(nr <= 0))
-		return false;
-		
-	return false;
-}
 
 extern void disable_seccomp(struct task_struct *tsk);
 int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
