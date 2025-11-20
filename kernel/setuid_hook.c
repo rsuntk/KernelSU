@@ -89,6 +89,10 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 	if (!new_euid || !old_euid)
 		return 0;
 
+#ifdef CONFIG_KSU_DEBUG
+	pr_info("handle_setresuid from %d to %d\n", old_uid, new_uid);
+#endif
+
 	// if old process is root, ignore it.
 	if (old_uid != 0 && ksu_enhanced_security_enabled) {
 		// disallow any non-ksu domain escalation from non-root to root!
@@ -110,55 +114,56 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 		}
 	}
 	return 0;
-}
 
-// if on private space, see if its possibly the manager
-if (new_uid > PER_USER_RANGE &&
-    new_uid % PER_USER_RANGE == ksu_get_manager_uid()) {
-	ksu_set_manager_uid(new_uid);
-}
+	// if on private space, see if its possibly the manager
+	if (new_uid > PER_USER_RANGE &&
+	    new_uid % PER_USER_RANGE == ksu_get_manager_uid()) {
+		ksu_set_manager_uid(new_uid);
+	}
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
-if (ksu_get_manager_uid() == new_uid) {
-	pr_info("install fd for ksu manager(uid=%d)\n", new_uid);
-	ksu_install_fd();
-	spin_lock_irq(&current->sighand->siglock);
-	ksu_seccomp_allow_cache(current->seccomp.filter, __NR_reboot);
-	ksu_set_task_tracepoint_flag(current);
-	spin_unlock_irq(&current->sighand->siglock);
-	return 0;
-}
-
-if (ksu_is_allow_uid_for_current(new_uid)) {
-	if (current->seccomp.mode == SECCOMP_MODE_FILTER &&
-	    current->seccomp.filter) {
-		spin_lock_irq(&current->sighand->siglock);
-		ksu_seccomp_allow_cache(current->seccomp.filter, __NR_reboot);
-		spin_unlock_irq(&current->sighand->siglock);
-	}
-	ksu_set_task_tracepoint_flag(current);
-} else {
-	ksu_clear_task_tracepoint_flag_if_needed(current);
-}
-#else
-if (ksu_is_allow_uid_for_current(new_uid)) {
-	spin_lock_irq(&current->sighand->siglock);
-	disable_seccomp(current);
-	spin_unlock_irq(&current->sighand->siglock);
-
 	if (ksu_get_manager_uid() == new_uid) {
 		pr_info("install fd for ksu manager(uid=%d)\n", new_uid);
 		ksu_install_fd();
+		spin_lock_irq(&current->sighand->siglock);
+		ksu_seccomp_allow_cache(current->seccomp.filter, __NR_reboot);
+		ksu_set_task_tracepoint_flag(current);
+		spin_unlock_irq(&current->sighand->siglock);
+		return 0;
 	}
 
-	return 0;
-}
+	if (ksu_is_allow_uid_for_current(new_uid)) {
+		if (current->seccomp.mode == SECCOMP_MODE_FILTER &&
+		    current->seccomp.filter) {
+			spin_lock_irq(&current->sighand->siglock);
+			ksu_seccomp_allow_cache(current->seccomp.filter,
+						__NR_reboot);
+			spin_unlock_irq(&current->sighand->siglock);
+		}
+		ksu_set_task_tracepoint_flag(current);
+	} else {
+		ksu_clear_task_tracepoint_flag_if_needed(current);
+	}
+#else
+	if (ksu_is_allow_uid_for_current(new_uid)) {
+		spin_lock_irq(&current->sighand->siglock);
+		disable_seccomp(current);
+		spin_unlock_irq(&current->sighand->siglock);
+
+		if (ksu_get_manager_uid() == new_uid) {
+			pr_info("install fd for ksu manager(uid=%d)\n",
+				new_uid);
+			ksu_install_fd();
+		}
+
+		return 0;
+	}
 #endif
 
-// Handle kernel umount
-ksu_handle_umount(old_uid, new_uid);
+	// Handle kernel umount
+	ksu_handle_umount(old_uid, new_uid);
 
-return 0;
+	return 0;
 }
 
 int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
