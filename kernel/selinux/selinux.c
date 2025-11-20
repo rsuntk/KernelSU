@@ -148,7 +148,7 @@ bool is_task_ksu_domain(const struct cred *cred)
 bool is_ksu_domain(void)
 {
 	current_sid();
-	return is_task_ksu_domain(current_cred(), KERNEL_SU_DOMAIN);
+	return is_task_ksu_domain(current_cred());
 }
 
 bool is_zygote(const struct cred *cred)
