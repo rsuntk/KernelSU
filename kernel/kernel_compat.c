@@ -120,7 +120,7 @@ long ksu_strncpy_from_user_nofault(char *dst, const void __user *unsafe_addr,
 {
 	long ret;
 
-	ret = ksu_strncpy_from_user_nofault(dst, unsafe_addr, count);
+	ret = do_strncpy_user_nofault(dst, unsafe_addr, count);
 	if (likely(ret >= 0))
 		return ret;
 
