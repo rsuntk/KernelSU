@@ -25,9 +25,6 @@ static int ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 	return 0;
 }
 #endif
-
-extern int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid,
-				    uid_t new_euid, uid_t old_euid);
 static int ksu_task_fix_setuid(struct cred *new, const struct cred *old,
 			       int flags)
 {
