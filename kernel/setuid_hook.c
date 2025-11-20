@@ -84,13 +84,8 @@ extern void disable_seccomp(struct task_struct *tsk);
 int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 			     uid_t old_euid)
 {
-	if (!new_uid || !old_uid)
-		return 0;
-	if (!new_euid || !old_euid)
-		return 0;
-
 #ifdef CONFIG_KSU_DEBUG
-	pr_info("handle_setresuid from %d to %d\n", old_uid, new_uid);
+	pr_info("handle_set{res}uid from %d to %d\n", old_uid, new_uid);
 #endif
 
 	// if old process is root, ignore it.
@@ -114,6 +109,9 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 		}
 		return 0;
 	}
+
+	if (old_uid != 0)
+		return 0;
 
 	// if on private space, see if its possibly the manager
 	if (new_uid > PER_USER_RANGE &&
@@ -145,18 +143,23 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 		ksu_clear_task_tracepoint_flag_if_needed(current);
 	}
 #else
-	if (ksu_is_allow_uid_for_current(new_uid)) {
+	if (unlikely(ksu_get_manager_uid() == new_uid)) {
+		pr_info("install fd for ksu manager(uid=%d)\n", new_uid);
+		ksu_install_fd();
 		spin_lock_irq(&current->sighand->siglock);
 		disable_seccomp(current);
 		spin_unlock_irq(&current->sighand->siglock);
-
-		if (ksu_get_manager_uid() == new_uid) {
-			pr_info("install fd for ksu manager(uid=%d)\n",
-				new_uid);
-			ksu_install_fd();
-		}
-
 		return 0;
+	}
+
+	if (ksu_is_allow_uid_for_current(new_uid)) {
+		// FIXME: Should use proper checking!
+		if (current->seccomp.mode != 0 &&
+		    current->seccomp.filter != NULL) {
+			spin_lock_irq(&current->sighand->siglock);
+			disable_seccomp(current);
+			spin_unlock_irq(&current->sighand->siglock);
+		}
 	}
 #endif
 
