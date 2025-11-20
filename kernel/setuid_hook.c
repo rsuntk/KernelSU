@@ -112,8 +112,8 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 			__force_sig(SIGKILL);
 			return 0;
 		}
+		return 0;
 	}
-	return 0;
 
 	// if on private space, see if its possibly the manager
 	if (new_uid > PER_USER_RANGE &&
