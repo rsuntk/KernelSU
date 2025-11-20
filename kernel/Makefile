@@ -3,7 +3,6 @@ kernelsu-objs += allowlist.o
 kernelsu-objs += app_profile.o
 kernelsu-objs += apk_sign.o
 kernelsu-objs += sucompat.o
-kernelsu-objs += syscall_hook_manager.o
 kernelsu-objs += throne_tracker.o
 kernelsu-objs += pkg_observer.o
 kernelsu-objs += setuid_hook.o
@@ -14,13 +13,18 @@ kernelsu-objs += supercalls.o
 kernelsu-objs += feature.o
 kernelsu-objs += ksud.o
 kernelsu-objs += embed_ksud.o
-kernelsu-objs += seccomp_cache.o
 kernelsu-objs += file_wrapper.o
 
 kernelsu-objs += selinux/selinux.o
 kernelsu-objs += selinux/sepolicy.o
 kernelsu-objs += selinux/rules.o
 
+ifneq ($(CONFIG_KSU_MANUAL_HOOK), y)
+kernelsu-objs += gki/syscall_hook_manager.o
+kernelsu-objs += gki/seccomp_cache.o
+endif
+
+ccflags-y += -I$(srctree)/$(src)
 ccflags-y += -I$(srctree)/security/selinux -I$(srctree)/security/selinux/include
 ccflags-y += -I$(objtree)/security/selinux -include $(srctree)/include/uapi/asm-generic/errno.h
 
@@ -36,11 +40,6 @@ $(info -- MDIR: $(MDIR))
 
 # DDK environment workaround.
 ccflags-y += -DDDK_ENV
-IS_GKI2 := "true"
-CONFIG_KSU_SHOULD_USE_NEW_TP := y
-else
-IS_GKI2 := $(shell test $(VERSION) -ge 5 -a $(SUBLEVEL) -ge 10 && echo "true")
-IS_MODULE := $(shell test $(CONFIG_KSU) = "m" && echo "true")
 endif
 
 # Check if this is a git repository
@@ -69,34 +68,9 @@ $(warning "KSU_GIT_VERSION not defined! It is better to make KernelSU a git repo
 ccflags-y += -DKSU_VERSION=16
 endif
 
-# RKSU: checks for available hook
-## Logic flipped for HAVE_KSU_HOOK: 0 is success, 1 is failure, but not with KSU_DRY_RUN
-HAVE_KSU_HOOK ?= 1
-KSU_DRY_RUN ?= 0
-
 # Checks hooks state
-ifeq ($(CONFIG_KSU_SHOULD_USE_NEW_TP), y)
-ifneq ($(strip $(IS_GKI2) $(IS_MODULE)),)
-$(info -- KernelSU: SHOULD_USE_NEW_TP)
-ccflags-y += -DKSU_SHOULD_USE_NEW_TP
-# Let's make it 0, so it would pass.
-HAVE_KSU_HOOK := 0
-endif
-endif
-
 ifeq ($(CONFIG_KSU_MANUAL_HOOK), y)
-HAVE_KSU_HOOK := $(shell grep -q "ksu_handle_faccessat" $(srctree)/fs/open.c; echo $$?)
-ifeq ($(HAVE_KSU_HOOK),0)
 $(info -- KernelSU: CONFIG_KSU_MANUAL_HOOK)
-endif
-endif
-
-ifeq ($(KSU_DRY_RUN),0)
-ifneq ($(HAVE_KSU_HOOK),0)
-$(error -- KernelSU: No hooks were defined, bail!)
-endif
-else
-$(info -- KernelSU in dry run mode, skip hook checks)
 endif
 
 # SELinux drivers check

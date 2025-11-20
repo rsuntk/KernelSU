@@ -29,7 +29,7 @@
 #include "selinux/selinux.h"
 #include "objsec.h"
 #include "file_wrapper.h"
-#include "syscall_hook_manager.h"
+#include "gki/syscall_hook_manager.h"
 
 // Permission check functions
 bool only_manager(void)
@@ -412,7 +412,7 @@ put_orig_file:
 
 static int do_manage_mark(void __user *arg)
 {
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifndef CONFIG_KSU_MANUAL_HOOK
 	struct ksu_manage_mark_cmd cmd;
 	int ret = 0;
 
@@ -630,7 +630,7 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
 	KSU_CMD(0, NULL, NULL, NULL) // Sentinel
 };
 
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifndef CONFIG_KSU_MANUAL_HOOK
 struct ksu_install_fd_tw {
 	struct callback_head cb;
 	int __user *outp;
@@ -720,7 +720,7 @@ void ksu_supercalls_init(void)
 		pr_info("  %-18s = 0x%08x\n", ksu_ioctl_handlers[i].name,
 			ksu_ioctl_handlers[i].cmd);
 	}
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifndef CONFIG_KSU_MANUAL_HOOK
 	int rc = register_kprobe(&reboot_kp);
 	if (rc) {
 		pr_err("reboot kprobe failed: %d\n", rc);
@@ -732,7 +732,7 @@ void ksu_supercalls_init(void)
 
 void ksu_supercalls_exit(void)
 {
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifndef CONFIG_KSU_MANUAL_HOOK
 	unregister_kprobe(&reboot_kp);
 #endif
 }

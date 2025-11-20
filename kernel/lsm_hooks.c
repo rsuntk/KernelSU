@@ -6,7 +6,7 @@
 #include "kernel_compat.h"
 #include "setuid_hook.h"
 
-#ifndef KSU_SHOULD_USE_NEW_TP
+#ifdef CONFIG_KSU_MANUAL_HOOK
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0) ||                           \
 	defined(CONFIG_IS_HW_HISI) || defined(CONFIG_KSU_ALLOWLIST_WORKAROUND)

@@ -13,10 +13,13 @@
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
 #include "throne_tracker.h"
-#include "syscall_hook_manager.h"
+#include "gki/syscall_hook_manager.h"
 #include "ksud.h"
 #include "supercalls.h"
+#include "setuid_hook.h"
+#include "sucompat.h"
 
+extern void ksu_lsm_hook_init(void);
 extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 					void *argv, void *envp, int *flags);
 extern int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
@@ -50,7 +53,13 @@ int __init kernelsu_init(void)
 
 	ksu_supercalls_init();
 
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	ksu_lsm_hook_init();
+	ksu_setuid_hook_init();
+	ksu_sucompat_init();
+#else
 	ksu_syscall_hook_manager_init();
+#endif
 
 	ksu_allowlist_init();
 
@@ -77,7 +86,12 @@ void kernelsu_exit(void)
 
 	ksu_ksud_exit();
 
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	ksu_sucompat_exit();
+	ksu_setuid_hook_exit();
+#else
 	ksu_syscall_hook_manager_exit();
+#endif
 
 	ksu_supercalls_exit();
 

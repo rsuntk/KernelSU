@@ -68,14 +68,14 @@ static void stop_vfs_read_hook(void);
 static void stop_execve_hook(void);
 static void stop_input_hook(void);
 
-#ifdef KSU_SHOULD_USE_NEW_TP
-static struct work_struct stop_vfs_read_work;
-static struct work_struct stop_execve_hook_work;
-static struct work_struct stop_input_hook_work;
-#else
+#ifdef CONFIG_KSU_MANUAL_HOOK
 bool ksu_vfs_read_hook __read_mostly = true;
 bool ksu_execveat_hook __read_mostly = true;
 bool ksu_input_hook __read_mostly = true;
+#else
+static struct work_struct stop_vfs_read_work;
+static struct work_struct stop_execve_hook_work;
+static struct work_struct stop_input_hook_work;
 #endif
 
 u32 ksu_file_sid;
@@ -215,7 +215,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 			     struct user_arg_ptr *argv,
 			     struct user_arg_ptr *envp, int *flags)
 {
-#ifndef KSU_SHOULD_USE_NEW_TP
+#ifdef CONFIG_KSU_MANUAL_HOOK
 	if (!ksu_execveat_hook) {
 		return 0;
 	}
@@ -376,7 +376,7 @@ static ssize_t read_iter_proxy(struct kiocb *iocb, struct iov_iter *to)
 int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
 			       size_t *count_ptr, loff_t **pos)
 {
-#ifndef KSU_SHOULD_USE_NEW_TP
+#ifdef CONFIG_KSU_MANUAL_HOOK
 	if (!ksu_vfs_read_hook) {
 		return 0;
 	}
@@ -489,7 +489,7 @@ static bool is_volumedown_enough(unsigned int count)
 int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
 				  int *value)
 {
-#ifndef KSU_SHOULD_USE_NEW_TP
+#ifdef CONFIG_KSU_MANUAL_HOOK
 	if (!ksu_input_hook) {
 		return 0;
 	}
@@ -531,8 +531,51 @@ bool ksu_is_safe_mode(void)
 	return false;
 }
 
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifdef CONFIG_KSU_MANUAL_HOOK
 
+static int ksu_execve_ksud_common(const char __user *filename_user,
+				  struct user_arg_ptr *argv)
+{
+	struct filename filename_in, *filename_p;
+	char path[32];
+
+	// return early if disabled.
+	if (!ksu_execveat_hook) {
+		return 0;
+	}
+
+	if (!filename_user)
+		return 0;
+
+	ksu_strncpy_from_user_nofault(path, filename_user, 32);
+
+	path[sizeof(path) - 1] = '\0';
+
+	// this is because ksu_handle_execveat_ksud calls it filename->name
+	filename_in.name = path;
+	filename_p = &filename_in;
+
+	return ksu_handle_execveat_ksud(AT_FDCWD, &filename_p, argv, NULL,
+					NULL);
+}
+
+int __maybe_unused
+ksu_handle_execve_ksud(const char __user *filename_user,
+		       const char __user *const __user *__argv)
+{
+	struct user_arg_ptr argv = { .ptr.native = __argv };
+	return ksu_execve_ksud_common(filename_user, &argv);
+}
+
+#if defined(CONFIG_COMPAT) && defined(CONFIG_64BIT)
+int __maybe_unused ksu_handle_compat_execve_ksud(
+	const char __user *filename_user, const compat_uptr_t __user *__argv)
+{
+	struct user_arg_ptr argv = { .ptr.compat = __argv };
+	return ksu_execve_ksud_common(filename_user, &argv);
+}
+#endif /* COMPAT & 64BIT */
+#else
 static int sys_execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
 	struct pt_regs *real_regs = PT_REAL_REGS(regs);
@@ -604,80 +647,39 @@ static void do_stop_input_hook(struct work_struct *work)
 {
 	unregister_kprobe(&input_event_kp);
 }
-#else
-static int ksu_execve_ksud_common(const char __user *filename_user,
-				  struct user_arg_ptr *argv)
-{
-	struct filename filename_in, *filename_p;
-	char path[32];
-	long len;
-
-	// return early if disabled.
-	if (!ksu_execveat_hook) {
-		return 0;
-	}
-
-	if (!filename_user)
-		return 0;
-
-	len = ksu_strncpy_from_user_nofault(path, filename_user, 32);
-	if (len <= 0)
-		return 0;
-
-	path[sizeof(path) - 1] = '\0';
-
-	// this is because ksu_handle_execveat_ksud calls it filename->name
-	filename_in.name = path;
-	filename_p = &filename_in;
-
-	return ksu_handle_execveat_ksud(AT_FDCWD, &filename_p, argv, NULL,
-					NULL);
-}
-
-int __maybe_unused
-ksu_handle_execve_ksud(const char __user *filename_user,
-		       const char __user *const __user *__argv)
-{
-	struct user_arg_ptr argv = { .ptr.native = __argv };
-	return ksu_execve_ksud_common(filename_user, &argv);
-}
-
-#if defined(CONFIG_COMPAT) && defined(CONFIG_64BIT)
-int __maybe_unused ksu_handle_compat_execve_ksud(
-	const char __user *filename_user, const compat_uptr_t __user *__argv)
-{
-	struct user_arg_ptr argv = { .ptr.compat = __argv };
-	return ksu_execve_ksud_common(filename_user, &argv);
-}
-#endif /* COMPAT & 64BIT */
-
 #endif
 
 static void stop_vfs_read_hook(void)
 {
-#ifdef KSU_SHOULD_USE_NEW_TP
-	bool ret = schedule_work(&stop_vfs_read_work);
-	pr_info("unregister vfs_read kprobe: %d!\n", ret);
-#else
+#ifdef CONFIG_KSU_MANUAL_HOOK
 	ksu_vfs_read_hook = false;
 	pr_info("stop vfs_read_hook\n");
+#else
+	bool ret = schedule_work(&stop_vfs_read_work);
+	pr_info("unregister vfs_read kprobe: %d!\n", ret);
 #endif
 }
 
 static void stop_execve_hook(void)
 {
-#ifdef KSU_SHOULD_USE_NEW_TP
-	bool ret = schedule_work(&stop_execve_hook_work);
-	pr_info("unregister execve kprobe: %d!\n", ret);
-#else
+#ifdef CONFIG_KSU_MANUAL_HOOK
 	ksu_execveat_hook = false;
 	pr_info("stop execve_hook\n");
+#else
+	bool ret = schedule_work(&stop_execve_hook_work);
+	pr_info("unregister execve kprobe: %d!\n", ret);
 #endif
 }
 
 static void stop_input_hook(void)
 {
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	if (!ksu_input_hook) {
+		return;
+	}
+	ksu_input_hook = false;
+	pr_info("stop input_hook\n");
+#else
 	static bool input_hook_stopped = false;
 	if (input_hook_stopped) {
 		return;
@@ -685,19 +687,13 @@ static void stop_input_hook(void)
 	input_hook_stopped = true;
 	bool ret = schedule_work(&stop_input_hook_work);
 	pr_info("unregister input kprobe: %d!\n", ret);
-#else
-	if (!ksu_input_hook) {
-		return;
-	}
-	ksu_input_hook = false;
-	pr_info("stop input_hook\n");
 #endif
 }
 
 // ksud: module support
 void ksu_ksud_init(void)
 {
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifndef CONFIG_KSU_MANUAL_HOOK
 	int ret;
 
 	ret = register_kprobe(&execve_kp);
@@ -717,7 +713,7 @@ void ksu_ksud_init(void)
 
 void ksu_ksud_exit(void)
 {
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifndef CONFIG_KSU_MANUAL_HOOK
 	unregister_kprobe(&execve_kp);
 	// this should be done before unregister vfs_read_kp
 	// unregister_kprobe(&vfs_read_kp);

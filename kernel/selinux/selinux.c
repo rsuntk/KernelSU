@@ -3,7 +3,7 @@
 #include "linux/security.h"
 #include "linux/version.h"
 #include "selinux_defs.h"
-#include "../klog.h" // IWYU pragma: keep
+#include "klog.h" // IWYU pragma: keep
 
 #define KERNEL_SU_DOMAIN "u:r:su:s0"
 
@@ -114,22 +114,28 @@ static void __security_release_secctx(struct lsm_context *cp)
 #define __security_release_secctx security_release_secctx
 #endif
 
-bool is_task_ksu_domain(const struct cred *cred)
+bool is_context(const struct cred *cred, const char *context)
 {
-	struct lsm_context ctx;
-	bool result;
+	const struct task_security_struct *tsec;
+	struct lsm_context ctx = {0};
+	bool result = false;
+
 	if (!cred) {
 		return false;
 	}
-	const struct task_security_struct *tsec = selinux_cred(cred);
+
+	tsec = selinux_cred(cred);
 	if (!tsec) {
 		return false;
 	}
+
 	int err = __security_secid_to_secctx(tsec->sid, &ctx);
 	if (err) {
+		pr_err("get context failed %s\n", err);
 		return false;
 	}
-	result = strncmp(KERNEL_SU_DOMAIN, ctx.context, ctx.len) == 0;
+
+	result = strncmp(context, ctx.context, ctx.len) == 0;
 	__security_release_secctx(&ctx);
 	return result;
 }
@@ -137,27 +143,7 @@ bool is_task_ksu_domain(const struct cred *cred)
 bool is_ksu_domain(void)
 {
 	current_sid();
-	return is_task_ksu_domain(current_cred());
-}
-
-bool is_context(const struct cred *cred, const char *context)
-{
-	if (!cred) {
-		return false;
-	}
-	const struct task_security_struct *tsec = selinux_cred(cred);
-	if (!tsec) {
-		return false;
-	}
-	struct lsm_context ctx;
-	bool result;
-	int err = __security_secid_to_secctx(tsec->sid, &ctx);
-	if (err) {
-		return false;
-	}
-	result = strncmp(context, ctx.context, ctx.len) == 0;
-	__security_release_secctx(&ctx);
-	return result;
+	return is_context(current_cred(), KERNEL_SU_DOMAIN);
 }
 
 bool is_zygote(const struct cred *cred)

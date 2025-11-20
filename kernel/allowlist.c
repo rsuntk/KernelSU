@@ -25,7 +25,7 @@
 #include "allowlist.h"
 #include "manager.h"
 #include "kernel_compat.h"
-#include "syscall_hook_manager.h"
+#include "gki/syscall_hook_manager.h"
 
 #define FILE_MAGIC 0x7f4b5355 // ' KSU', u32
 #define FILE_FORMAT_VERSION 3 // u32

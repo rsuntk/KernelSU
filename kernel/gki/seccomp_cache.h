@@ -4,9 +4,16 @@
 #include <linux/fs.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+#ifndef CONFIG_KSU_MANUAL_HOOK
 extern void ksu_seccomp_clear_cache(struct seccomp_filter *filter, int nr);
 extern void ksu_seccomp_allow_cache(struct seccomp_filter *filter, int nr);
-#endif
-
+#else
+static inline void ksu_seccomp_clear_cache(struct seccomp_filter *filter, int nr)
+{
+	return;
+}
+static inline void ksu_seccomp_allow_cache(struct seccomp_filter *filter, int nr)
+{
+	return;
+}
 #endif

@@ -59,7 +59,7 @@
 #endif
 
 #else
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifdef CONFIG_KSU_MANUAL_HOOK
 #error "Unsupported arch"
 #endif
 #endif

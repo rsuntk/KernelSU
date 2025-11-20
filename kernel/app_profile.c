@@ -23,7 +23,7 @@
 #include "kernel_compat.h"
 #include "klog.h" // IWYU pragma: keep
 #include "selinux/selinux.h"
-#include "syscall_hook_manager.h"
+#include "gki/syscall_hook_manager.h"
 
 static struct group_info root_groups = { .usage = ATOMIC_INIT(2) };
 
@@ -246,7 +246,7 @@ void disable_seccomp(struct task_struct *tsk)
 void escape_with_root_profile(void)
 {
 	struct cred *cred;
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifndef CONFIG_KSU_MANUAL_HOOK
 	struct task_struct *p = current;
 	struct task_struct *t;
 #endif
@@ -303,7 +303,7 @@ void escape_with_root_profile(void)
 	setup_selinux(profile->selinux_domain);
 	setup_mount_namespace(profile->namespaces);
 
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifndef CONFIG_KSU_MANUAL_HOOK
 	for_each_thread (p, t) {
 		ksu_set_task_tracepoint_flag(t);
 	}

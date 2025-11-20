@@ -10,7 +10,7 @@
 void ksu_syscall_hook_manager_init(void);
 void ksu_syscall_hook_manager_exit(void);
 
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifndef CONFIG_KSU_MANUAL_HOOK
 // Process marking for tracepoint
 void ksu_mark_all_process(void);
 void ksu_unmark_all_process(void);
