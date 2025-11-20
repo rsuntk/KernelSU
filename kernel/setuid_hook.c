@@ -81,7 +81,8 @@ static inline bool is_allow_su(void)
 #endif
 
 extern void disable_seccomp(struct task_struct *tsk);
-int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid, uid_t old_euid)
+int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
+			     uid_t old_euid)
 {
 	if (!new_uid || !old_uid)
 		return 0;
@@ -168,7 +169,8 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid, uid_t
 
 int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 {
-	return ksu_handle_setuid_common(ruid, current_uid().val, euid, current_euid().val);
+	return ksu_handle_setuid_common(ruid, current_uid().val, euid,
+					current_euid().val);
 }
 
 extern void ksu_lsm_hook_init(void);
