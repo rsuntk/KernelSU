@@ -264,6 +264,12 @@ int ksu_handle_init_mark_tracker(const char __user **filename_user)
 	return 0;
 }
 
+static int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
+{
+	return ksu_handle_setuid_common(ruid, current_uid().val, euid,
+					current_euid().val);
+}
+
 // Generic sys_enter handler that dispatches to specific handlers
 static void ksu_sys_enter_handler(void *data, struct pt_regs *regs, long id)
 {

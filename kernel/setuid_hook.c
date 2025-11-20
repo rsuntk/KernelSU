@@ -166,12 +166,6 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 	return 0;
 }
 
-int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
-{
-	return ksu_handle_setuid_common(ruid, current_uid().val, euid,
-					current_euid().val);
-}
-
 extern void ksu_lsm_hook_init(void);
 void ksu_setuid_hook_init(void)
 {
