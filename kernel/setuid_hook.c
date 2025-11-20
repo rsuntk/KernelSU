@@ -81,20 +81,18 @@ static inline bool is_allow_su(void)
 #endif
 
 extern void disable_seccomp(struct task_struct *tsk);
-int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
+int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid, uid_t old_euid)
 {
-	// we rely on the fact that zygote always call setresuid(3) with same uids
-	uid_t new_uid = ruid;
-	uid_t old_uid = current_uid().val;
-
-	if (old_uid != new_uid)
-		pr_info("handle_setresuid from %d to %d\n", old_uid, new_uid);
+	if (!new_uid || !old_uid)
+		return 0;
+	if (!new_euid || !old_euid)
+		return 0;
 
 	// if old process is root, ignore it.
 	if (old_uid != 0 && ksu_enhanced_security_enabled) {
 		// disallow any non-ksu domain escalation from non-root to root!
 		// euid is what we care about here as it controls permission
-		if (unlikely(euid == 0)) {
+		if (unlikely(new_euid == 0)) {
 			if (!is_ksu_domain()) {
 				pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
 					current->pid, current->comm, old_uid,
@@ -105,7 +103,7 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 		}
 		// disallow appuid decrease to any other uid if it is not allowed to su
 		if (is_appuid(old_uid)) {
-			if (euid < current_euid().val &&
+			if (new_euid < old_euid &&
 			    !ksu_is_allow_uid_for_current(old_uid)) {
 				pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
 					current->pid, current->comm, old_uid,
@@ -166,6 +164,11 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 	ksu_handle_umount(old_uid, new_uid);
 
 	return 0;
+}
+
+int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
+{
+	return ksu_handle_setuid_common(ruid, current_uid().val, euid, current_euid().val);
 }
 
 extern void ksu_lsm_hook_init(void);

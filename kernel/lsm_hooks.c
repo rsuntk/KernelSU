@@ -26,14 +26,16 @@ static int ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 }
 #endif
 
+extern int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid, uid_t old_euid);
 static int ksu_task_fix_setuid(struct cred *new, const struct cred *old,
 			       int flags)
 {
-	kuid_t new_uid = new->uid;
-	kuid_t new_euid = new->euid;
+	uid_t new_uid = new->uid.val;
+	uid_t old_uid = old->uid.val;
+	uid_t new_euid = new->euid.val;
+	uid_t old_euid = old->euid.val;
 
-	return ksu_handle_setresuid((uid_t)new_uid.val, (uid_t)new_euid.val,
-				    (uid_t)new_uid.val);
+	return ksu_handle_setuid_common(new_uid, old_uid, new_euid, old_euid);
 }
 
 static struct security_hook_list ksu_hooks[] = {
