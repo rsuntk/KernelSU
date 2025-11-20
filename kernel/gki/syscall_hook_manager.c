@@ -12,7 +12,8 @@
 #include "../allowlist.h"
 #include "../arch.h"
 #include "../klog.h" // IWYU pragma: keep
-#include "../syscall_hook_manager.h"
+#include "../kernel_compat.h"
+#include "syscall_hook_manager.h"
 #include "../sucompat.h"
 #include "../setuid_hook.h"
 #include "../selinux/selinux.h"
