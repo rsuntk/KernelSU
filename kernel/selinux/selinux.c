@@ -131,7 +131,7 @@ bool is_context(const struct cred *cred, const char *context)
 
 	int err = __security_secid_to_secctx(tsec->sid, &ctx);
 	if (err) {
-		pr_err("get context failed %s\n", err);
+		pr_err("get context failed %d\n", err);
 		return false;
 	}
 
