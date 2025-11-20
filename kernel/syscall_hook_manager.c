@@ -371,9 +371,11 @@ void ksu_syscall_hook_manager_exit(void)
 #include "sucompat.h"
 #include "setuid_hook.h"
 
+extern void ksu_lsm_hook_init(void);
 void ksu_syscall_hook_manager_init(void)
 {
 	pr_info("hook_manager: initializing..\n");
+	ksu_lsm_hook_init(); // <4.11
 	ksu_setuid_hook_init();
 	ksu_sucompat_init();
 }
