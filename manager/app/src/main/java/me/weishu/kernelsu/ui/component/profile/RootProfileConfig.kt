@@ -30,7 +30,6 @@ import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.profile.Capabilities
 import me.weishu.kernelsu.profile.Groups
-import me.weishu.kernelsu.ui.component.SuperDropdown
 import me.weishu.kernelsu.ui.component.SuperEditArrow
 import me.weishu.kernelsu.ui.util.isSepolicyValid
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -109,15 +108,6 @@ fun RootProfileConfig(
             onProfileChange(
                 profile.copy(
                     capabilities = it.map { cap -> cap.cap },
-                    rootUseDefault = false
-                )
-            )
-        }
-
-        MountNameSpacePanel(profile = profile) {
-            onProfileChange(
-                profile.copy(
-                    namespace = it,
                     rootUseDefault = false
                 )
             )
@@ -224,24 +214,6 @@ fun GroupsPanel(selected: List<Groups>, closeSelection: (selection: Set<Groups>)
             showDialog.value = true
         },
     )
-
-}
-
-@Composable
-fun MountNameSpacePanel(profile: Natives.Profile, onMntNamespaceChange: (namespaceType: Int) -> Unit) {
-    SuperDropdown(
-        title = stringResource(id = R.string.profile_namespace),
-        items = listOf(
-            stringResource(id = R.string.profile_namespace_inherited),
-            stringResource(id = R.string.profile_namespace_global),
-            stringResource(id = R.string.profile_namespace_individual),
-        ),
-        selectedIndex = profile.namespace,
-        onSelectedIndexChange = { index ->
-            onMntNamespaceChange(index)
-        }
-    )
-
 
 }
 

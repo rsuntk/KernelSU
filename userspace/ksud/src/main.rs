@@ -7,9 +7,9 @@ mod defs;
 mod feature;
 mod init_event;
 mod ksucalls;
-#[cfg(target_os = "android")]
-mod magic_mount;
+mod metamodule;
 mod module;
+mod module_config;
 mod profile;
 mod restorecon;
 mod sepolicy;

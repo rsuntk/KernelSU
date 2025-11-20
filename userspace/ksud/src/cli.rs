@@ -1,13 +1,12 @@
 use anyhow::{Ok, Result};
 use clap::Parser;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[cfg(target_os = "android")]
 use android_logger::Config;
 #[cfg(target_os = "android")]
 use log::LevelFilter;
 
-use crate::defs::KSUD_VERBOSE_LOG_FILE;
 use crate::{apk_sign, assets, debug, defs, init_event, ksucalls, module, utils};
 
 /// KernelSU userspace cli
@@ -16,9 +15,6 @@ use crate::{apk_sign, assets, debug, defs, init_event, ksucalls, module, utils};
 struct Args {
     #[command(subcommand)]
     command: Commands,
-
-    #[arg(short, long, default_value_t = cfg!(debug_assertions))]
-    verbose: bool,
 }
 
 #[derive(clap::Subcommand, Debug)]
@@ -194,8 +190,6 @@ enum Debug {
     /// Get kernel version
     Version,
 
-    Mount,
-
     /// For testing
     Test,
 
@@ -262,14 +256,14 @@ enum Module {
         zip: String,
     },
 
-    /// Uninstall module <id>
-    Uninstall {
+    /// Undo module uninstall mark <id>
+    UndoUninstall {
         /// module id
         id: String,
     },
 
-    /// Restore module <id>
-    Restore {
+    /// Uninstall module <id>
+    Uninstall {
         /// module id
         id: String,
     },
@@ -294,6 +288,51 @@ enum Module {
 
     /// list all modules
     List,
+
+    /// manage module configuration
+    Config {
+        #[command(subcommand)]
+        command: ModuleConfigCmd,
+    },
+}
+
+#[derive(clap::Subcommand, Debug)]
+enum ModuleConfigCmd {
+    /// Get a config value
+    Get {
+        /// config key
+        key: String,
+    },
+
+    /// Set a config value
+    Set {
+        /// config key
+        key: String,
+        /// config value
+        value: String,
+        /// use temporary config (cleared on reboot)
+        #[arg(short, long)]
+        temp: bool,
+    },
+
+    /// List all config entries
+    List,
+
+    /// Delete a config entry
+    Delete {
+        /// config key
+        key: String,
+        /// delete from temporary config
+        #[arg(short, long)]
+        temp: bool,
+    },
+
+    /// Clear all config entries
+    Clear {
+        /// clear temporary config
+        #[arg(short, long)]
+        temp: bool,
+    },
 }
 
 #[derive(clap::Subcommand, Debug)]
@@ -370,6 +409,11 @@ enum Feature {
 
 #[derive(clap::Subcommand, Debug)]
 enum Kernel {
+    /// Nuke ext4 sysfs
+    NukeExt4Sysfs {
+        /// mount point
+        mnt: String,
+    },
     /// Manage umount list
     Umount {
         #[command(subcommand)]
@@ -417,10 +461,6 @@ pub fn run() -> Result<()> {
 
     let cli = Args::parse();
 
-    if !cli.verbose && !Path::new(KSUD_VERBOSE_LOG_FILE).exists() {
-        log::set_max_level(LevelFilter::Info);
-    }
-
     log::info!("command: {:?}", cli.command);
 
     let result = match cli.command {
@@ -434,12 +474,72 @@ pub fn run() -> Result<()> {
             }
             match command {
                 Module::Install { zip } => module::install_module(&zip),
+                Module::UndoUninstall { id } => module::undo_uninstall_module(&id),
                 Module::Uninstall { id } => module::uninstall_module(&id),
-                Module::Restore { id } => module::restore_uninstall_module(&id),
                 Module::Enable { id } => module::enable_module(&id),
                 Module::Disable { id } => module::disable_module(&id),
                 Module::Action { id } => module::run_action(&id),
                 Module::List => module::list_modules(),
+                Module::Config { command } => {
+                    // Get module ID from environment variable
+                    let module_id = std::env::var("KSU_MODULE").map_err(|_| {
+                        anyhow::anyhow!("This command must be run in the context of a module")
+                    })?;
+
+                    use crate::module_config;
+                    match command {
+                        ModuleConfigCmd::Get { key } => {
+                            // Use merge_configs to respect priority (temp overrides persist)
+                            let config = module_config::merge_configs(&module_id)?;
+                            match config.get(&key) {
+                                Some(value) => {
+                                    println!("{}", value);
+                                    Ok(())
+                                }
+                                None => anyhow::bail!("Key '{}' not found", key),
+                            }
+                        }
+                        ModuleConfigCmd::Set { key, value, temp } => {
+                            // Validate input at CLI layer for better user experience
+                            module_config::validate_config_key(&key)?;
+                            module_config::validate_config_value(&value)?;
+
+                            let config_type = if temp {
+                                module_config::ConfigType::Temp
+                            } else {
+                                module_config::ConfigType::Persist
+                            };
+                            module_config::set_config_value(&module_id, &key, &value, config_type)
+                        }
+                        ModuleConfigCmd::List => {
+                            let config = module_config::merge_configs(&module_id)?;
+                            if config.is_empty() {
+                                println!("No config entries found");
+                            } else {
+                                for (key, value) in config {
+                                    println!("{}={}", key, value);
+                                }
+                            }
+                            Ok(())
+                        }
+                        ModuleConfigCmd::Delete { key, temp } => {
+                            let config_type = if temp {
+                                module_config::ConfigType::Temp
+                            } else {
+                                module_config::ConfigType::Persist
+                            };
+                            module_config::delete_config_value(&module_id, &key, config_type)
+                        }
+                        ModuleConfigCmd::Clear { temp } => {
+                            let config_type = if temp {
+                                module_config::ConfigType::Temp
+                            } else {
+                                module_config::ConfigType::Persist
+                            };
+                            module_config::clear_config(&module_id, config_type)
+                        }
+                    }
+                }
             }
         }
         Commands::Install { magiskboot } => utils::install(magiskboot),
@@ -482,7 +582,6 @@ pub fn run() -> Result<()> {
                 Ok(())
             }
             Debug::Su { global_mnt } => crate::su::grant_root(global_mnt),
-            Debug::Mount => init_event::mount_modules_systemlessly(),
             Debug::Test => assets::ensure_binaries(false),
             Debug::Mark { command } => match command {
                 MarkCommand::Get { pid } => debug::mark_get(pid),
@@ -549,6 +648,7 @@ pub fn run() -> Result<()> {
             flash,
         } => crate::boot_patch::restore(boot, magiskboot, flash),
         Commands::Kernel { command } => match command {
+            Kernel::NukeExt4Sysfs { mnt } => ksucalls::nuke_ext4_sysfs(&mnt),
             Kernel::Umount { command } => match command {
                 UmountOp::Add { mnt, flags } => ksucalls::umount_list_add(&mnt, flags),
                 UmountOp::Del { mnt } => ksucalls::umount_list_del(&mnt),

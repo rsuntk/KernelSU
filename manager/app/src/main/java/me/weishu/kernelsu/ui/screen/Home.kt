@@ -2,7 +2,6 @@ package me.weishu.kernelsu.ui.screen
 
 import android.content.Context
 import android.os.Build
-import android.os.PowerManager
 import android.system.Os
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
@@ -40,10 +39,12 @@ import androidx.compose.material.icons.rounded.Link
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -58,6 +59,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.pm.PackageInfoCompat
 import com.ramcosta.composedestinations.generated.destinations.InstallScreenDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -66,7 +72,7 @@ import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.getKernelVersion
 import me.weishu.kernelsu.ui.component.DropdownItem
-import me.weishu.kernelsu.ui.component.KsuIsValid
+import me.weishu.kernelsu.ui.component.RebootListPopup
 import me.weishu.kernelsu.ui.component.rememberConfirmDialog
 import me.weishu.kernelsu.ui.util.checkNewVersion
 import me.weishu.kernelsu.ui.util.getModuleCount
@@ -80,20 +86,16 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.ListPopup
-import top.yukonga.miuix.kmp.basic.ListPopupColumn
-import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.icons.useful.Reboot
 import top.yukonga.miuix.kmp.icon.icons.useful.Save
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
+import top.yukonga.miuix.kmp.theme.MiuixTheme.isDynamicColor
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.utils.getWindowSize
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -107,10 +109,16 @@ fun HomePager(
 ) {
     val kernelVersion = getKernelVersion()
     val scrollBehavior = MiuixScrollBehavior()
+    val hazeState = remember { HazeState() }
+    val hazeStyle = HazeStyle(
+        backgroundColor = colorScheme.surface,
+        tint = HazeTint(colorScheme.surface.copy(0.8f))
+    )
 
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
     val checkUpdate = prefs.getBoolean("check_update", true)
+    val themeMode = prefs.getInt("color_mode", 0)
 
     Scaffold(
         topBar = {
@@ -125,6 +133,8 @@ fun HomePager(
                     }
                 },
                 scrollBehavior = scrollBehavior,
+                hazeState = hazeState,
+                hazeStyle = hazeStyle,
             )
         },
         popupHost = { },
@@ -136,7 +146,8 @@ fun HomePager(
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 12.dp)
+                .hazeSource(state = hazeState),
             contentPadding = innerPadding,
             overscrollEffect = null,
         ) {
@@ -155,14 +166,15 @@ fun HomePager(
                 ) {
                     if (isManager && Natives.requireNewKernel()) {
                         WarningCard(
-                            stringResource(id = R.string.require_kernel_version).format(
-                                ksuVersion, Natives.MINIMAL_SUPPORTED_KERNEL
-                            )
+                            stringResource(id = R.string.require_kernel_version)
+                                .format(ksuVersion, Natives.MINIMAL_SUPPORTED_KERNEL),
+                            themeMode
                         )
                     }
                     if (ksuVersion != null && !rootAvailable()) {
                         WarningCard(
-                            stringResource(id = R.string.grant_root_failed)
+                            stringResource(id = R.string.grant_root_failed),
+                            themeMode
                         )
                     }
                     StatusCard(
@@ -181,11 +193,12 @@ fun HomePager(
                             coroutineScope.launch {
                                 pagerState.animateScrollToPage(2)
                             }
-                        }
+                        },
+                        themeMode = themeMode
                     )
 
                     if (checkUpdate) {
-                        UpdateCard()
+                        UpdateCard(themeMode)
                     }
                     InfoCard()
                     DonateCard()
@@ -198,7 +211,9 @@ fun HomePager(
 }
 
 @Composable
-fun UpdateCard() {
+fun UpdateCard(
+    themeMode: Int,
+) {
     val context = LocalContext.current
     val latestVersionInfo = LatestVersionInfo()
     val newVersion by produceState(initialValue = latestVersionInfo) {
@@ -224,7 +239,7 @@ fun UpdateCard() {
         val updateDialog = rememberConfirmDialog(onConfirm = { uriHandler.openUri(newVersionUrl) })
         WarningCard(
             message = stringResource(id = R.string.new_version_available).format(newVersionCode),
-            colorScheme.outline
+            themeMode, colorScheme.outline
         ) {
             if (changelog.isEmpty()) {
                 uriHandler.openUri(newVersionUrl)
@@ -263,13 +278,21 @@ private fun TopBar(
     kernelVersion: KernelVersion,
     onInstallClick: () -> Unit,
     scrollBehavior: ScrollBehavior,
+    hazeState: HazeState,
+    hazeStyle: HazeStyle,
 ) {
     TopAppBar(
+        modifier = Modifier.hazeEffect(hazeState) {
+            style = hazeStyle
+            blurRadius = 30.dp
+            noiseFactor = 0f
+        },
+        color = Color.Transparent,
         title = stringResource(R.string.app_name),
         actions = {
             if (kernelVersion.isGKI()) {
                 IconButton(
-                    modifier = Modifier.padding(end = 16.dp),
+                    modifier = Modifier.padding(end = 8.dp),
                     onClick = onInstallClick,
                 ) {
                     Icon(
@@ -279,56 +302,9 @@ private fun TopBar(
                     )
                 }
             }
-            val showTopPopup = remember { mutableStateOf(false) }
-            KsuIsValid {
-                IconButton(
-                    modifier = Modifier.padding(end = 16.dp),
-                    onClick = { showTopPopup.value = true },
-                    holdDownState = showTopPopup.value
-                ) {
-                    Icon(
-                        imageVector = MiuixIcons.Useful.Reboot,
-                        contentDescription = stringResource(id = R.string.reboot),
-                        tint = colorScheme.onBackground
-                    )
-                }
-                ListPopup(
-                    show = showTopPopup,
-                    popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
-                    alignment = PopupPositionProvider.Align.TopRight,
-                    onDismissRequest = {
-                        showTopPopup.value = false
-                    }
-                ) {
-                    val pm = LocalContext.current.getSystemService(Context.POWER_SERVICE) as PowerManager?
-
-                    @Suppress("DEPRECATION")
-                    val isRebootingUserspaceSupported =
-                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && pm?.isRebootingUserspaceSupported == true
-
-                    ListPopupColumn {
-                        val rebootOptions = mutableListOf(
-                            Pair(R.string.reboot, ""),
-                            Pair(R.string.reboot_recovery, "recovery"),
-                            Pair(R.string.reboot_bootloader, "bootloader"),
-                            Pair(R.string.reboot_download, "download"),
-                            Pair(R.string.reboot_edl, "edl")
-                        )
-                        if (isRebootingUserspaceSupported) {
-                            rebootOptions.add(1, Pair(R.string.reboot_userspace, "userspace"))
-                        }
-                        rebootOptions.forEachIndexed { idx, (id, reason) ->
-                            RebootDropdownItem(
-                                id = id,
-                                reason = reason,
-                                showTopPopup = showTopPopup,
-                                optionSize = rebootOptions.size,
-                                index = idx
-                            )
-                        }
-                    }
-                }
-            }
+            RebootListPopup(
+                modifier = Modifier.padding(end = 16.dp),
+            )
         },
         scrollBehavior = scrollBehavior
     )
@@ -342,6 +318,7 @@ private fun StatusCard(
     onClickInstall: () -> Unit = {},
     onClickSuperuser: () -> Unit = {},
     onclickModule: () -> Unit = {},
+    themeMode: Int,
 ) {
     Column(
         modifier = Modifier
@@ -373,7 +350,11 @@ private fun StatusCard(
                             .weight(1f)
                             .fillMaxHeight(),
                         colors = CardDefaults.defaultColors(
-                            color = if (isSystemInDarkTheme()) Color(0xFF1A3825) else Color(0xFFDFFAE4)
+                            color = when {
+                                isDynamicColor -> colorScheme.secondaryContainer
+                                isSystemInDarkTheme() || themeMode == 2 -> Color(0xFF1A3825)
+                                else -> Color(0xFFDFFAE4)
+                            }
                         ),
                         onClick = {
                             if (kernelVersion.isGKI()) onClickInstall()
@@ -393,7 +374,11 @@ private fun StatusCard(
                                 Icon(
                                     modifier = Modifier.size(170.dp),
                                     imageVector = Icons.Rounded.CheckCircleOutline,
-                                    tint = Color(0xFF36D167),
+                                    tint = if (isDynamicColor) {
+                                        colorScheme.primary.copy(alpha = 0.8f)
+                                    } else {
+                                        Color(0xFF36D167)
+                                    },
                                     contentDescription = null
                                 )
                             }
@@ -540,15 +525,20 @@ private fun StatusCard(
 @Composable
 fun WarningCard(
     message: String,
-    color: Color = if (isSystemInDarkTheme()) Color(0XFF310808) else Color(0xFFF8E2E2),
-    onClick: (() -> Unit)? = null
+    themeMode: Int,
+    color: Color? = null,
+    onClick: (() -> Unit)? = null,
 ) {
     Card(
         onClick = {
             onClick?.invoke()
         },
         colors = CardDefaults.defaultColors(
-            color = color
+            color = color ?: when {
+                isDynamicColor -> colorScheme.errorContainer
+                isSystemInDarkTheme() || themeMode == 2 -> Color(0XFF310808)
+                else -> Color(0xFFF8E2E2)
+            }
         ),
         showIndication = onClick != null,
         pressFeedbackType = PressFeedbackType.Tilt
@@ -560,7 +550,7 @@ fun WarningCard(
         ) {
             Text(
                 text = message,
-                color = Color(0xFFF72727),
+                color = if (isDynamicColor) colorScheme.onErrorContainer else Color(0xFFF72727),
                 fontSize = 14.sp
             )
         }
