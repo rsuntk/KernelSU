@@ -335,7 +335,7 @@ int ksu_handle_execveat_ksud(int *__never_use_fd,
 	struct user_arg_ptr argv = { .ptr.native = __argv };
 	struct user_arg_ptr envp = { .ptr.native = __envp };
 
-	return __ksu_handle_execveat_ksud(filename_ptr, argv, envp);
+	return __ksu_handle_execveat_ksud(filename_ptr, &argv, &envp);
 }
 
 static ssize_t (*orig_read)(struct file *, char __user *, size_t, loff_t *);
