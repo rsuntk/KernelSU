@@ -10,7 +10,6 @@
 void ksu_syscall_hook_manager_init(void);
 void ksu_syscall_hook_manager_exit(void);
 
-#ifdef KSU_SHOULD_USE_NEW_TP
 // Process marking for tracepoint
 void ksu_mark_all_process(void);
 void ksu_unmark_all_process(void);
@@ -39,47 +38,4 @@ static inline void ksu_clear_task_tracepoint_flag(struct task_struct *t)
 }
 
 void ksu_clear_task_tracepoint_flag_if_needed(struct task_struct *t);
-#else
-// Process marking for tracepoint
-static inline void ksu_mark_all_process(void)
-{
-	return;
-}
-
-static inline void ksu_unmark_all_process(void)
-{
-	return;
-}
-
-static inline void ksu_mark_running_process(void)
-{
-	return;
-}
-
-// Per-task mark operations
-static inline int ksu_get_task_mark(pid_t pid)
-{
-	return 0;
-}
-
-static inline int ksu_set_task_mark(pid_t pid, bool mark)
-{
-	return 0;
-}
-
-static inline void ksu_set_task_tracepoint_flag(struct task_struct *t)
-{
-	return;
-}
-
-static inline void ksu_clear_task_tracepoint_flag(struct task_struct *t)
-{
-	return;
-}
-static inline void ksu_clear_task_tracepoint_flag_if_needed(struct task_struct *t)
-{
-	return;
-}
-#endif
-
 #endif

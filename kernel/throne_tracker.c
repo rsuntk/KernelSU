@@ -14,7 +14,11 @@
 
 uid_t ksu_manager_uid = KSU_INVALID_UID;
 
+#ifdef CONFIG_KSU_MANUAL_HOOK
+#define SYSTEM_PACKAGES_LIST_PATH "/data/system/packages.list.tmp"
+#else
 #define SYSTEM_PACKAGES_LIST_PATH "/data/system/packages.list"
+#endif
 
 struct uid_data {
 	struct list_head list;
@@ -91,17 +95,6 @@ static void crown_manager(const char *apk, struct list_head *uid_data)
 	}
 }
 
-static inline void print_iter(bool is_manager, char *path)
-{
-#ifdef CONFIG_KSU_DEBUG
-	pr_info("Found new base.apk at path: %s, is_manager: %d\n", path,
-		is_manager);
-#else
-	if (is_manager)
-		pr_info("Found KernelSU base.apk at %s\n", path);
-#endif
-}
-
 #define DATA_PATH_LEN 384 // 384 is enough for /data/app/<package>/base.apk
 
 struct data_path {
@@ -138,6 +131,18 @@ struct my_dir_context {
 #define FILLDIR_ACTOR_STOP -EINVAL
 #endif
 extern bool is_manager_apk(char *path);
+
+static inline void print_iter(bool is_manager, char *path)
+{
+#ifdef CONFIG_KSU_DEBUG
+	pr_info("Found new base.apk at path: %s, is_manager: %d\n", path,
+		is_manager);
+#else
+	if (is_manager)
+		pr_info("Found KernelSU base.apk at %s\n", path);
+#endif
+}
+
 FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 			     int namelen, loff_t off, u64 ino,
 			     unsigned int d_type)
@@ -214,7 +219,8 @@ FILLDIR_RETURN_TYPE my_actor(struct dir_context *ctx, const char *name,
 	return FILLDIR_ACTOR_CONTINUE;
 }
 
-static void search_manager(const char *path, int depth, struct list_head *uid_data)
+static void search_manager(const char *path, int depth,
+			   struct list_head *uid_data)
 {
 	int i, stop = 0;
 	struct list_head data_path_list;

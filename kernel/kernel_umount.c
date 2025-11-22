@@ -106,7 +106,7 @@ static inline void do_umount_work(void)
 	}
 }
 
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 struct umount_tw {
 	struct callback_head cb;
 	const struct cred *old_cred;
@@ -166,7 +166,7 @@ int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
 	// umount the target mnt
 	pr_info("handle umount for uid: %d, pid: %d\n", new_uid, current->pid);
 
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 	struct umount_tw *tw;
 	tw = kzalloc(sizeof(*tw), GFP_ATOMIC);
 	if (!tw)

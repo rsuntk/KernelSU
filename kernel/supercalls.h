@@ -84,6 +84,10 @@ struct ksu_manage_mark_cmd {
 	__u32 result; // Output: for get operation - mark status or reg_count
 };
 
+struct ksu_nuke_ext4_sysfs_cmd {
+	__aligned_u64 arg; // Input: mnt pointer
+};
+
 #define KSU_MARK_GET 1
 #define KSU_MARK_MARK 2
 #define KSU_MARK_UNMARK 3
@@ -116,7 +120,7 @@ struct ksu_add_try_umount_cmd {
 #define KSU_IOCTL_SET_FEATURE _IOC(_IOC_WRITE, 'K', 14, 0)
 #define KSU_IOCTL_GET_WRAPPER_FD _IOC(_IOC_WRITE, 'K', 15, 0)
 #define KSU_IOCTL_MANAGE_MARK _IOC(_IOC_READ | _IOC_WRITE, 'K', 16, 0)
-//#define KSU_IOCTL_NUKE_EXT4_SYSFS _IOC(_IOC_WRITE, 'K', 17, 0)
+#define KSU_IOCTL_NUKE_EXT4_SYSFS _IOC(_IOC_WRITE, 'K', 17, 0)
 #define KSU_IOCTL_ADD_TRY_UMOUNT _IOC(_IOC_WRITE, 'K', 18, 0)
 
 // IOCTL handler types
@@ -131,8 +135,11 @@ struct ksu_ioctl_cmd_map {
 	ksu_perm_check_t perm_check; // Permission check function
 };
 
-#define KSU_CMD(CMD, NAME, HANDLER, PERM)                                   \
-	{ .cmd = CMD, .name = NAME, .handler = HANDLER, .perm_check = PERM }
+#define KSU_IOCTL(CMD, NAME, HANDLER, PERM)                                    \
+	{ .cmd = KSU_IOCTL_##CMD,                                              \
+	  .name = NAME,                                                        \
+	  .handler = HANDLER,                                                  \
+	  .perm_check = PERM }
 
 // Install KSU fd to current process
 int ksu_install_fd(void);

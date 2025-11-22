@@ -3,6 +3,7 @@
 #include <linux/printk.h>
 #include <linux/kobject.h>
 #include <linux/module.h>
+#include <linux/kconfig.h>
 #include <generated/utsrelease.h>
 #include <generated/compile.h>
 #include <linux/version.h> /* LINUX_VERSION_CODE, KERNEL_VERSION macros */
@@ -13,21 +14,22 @@
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
 #include "throne_tracker.h"
-#include "syscall_hook_manager.h"
+#ifdef CONFIG_KSU_SYSCALL_HOOK
+#include "syscall_handler.h"
+#endif
+#ifdef CONFIG_KSU_MANUAL_HOOK
+#include "setuid_hook.h"
+#include "sucompat.h"
+#endif
 #include "ksud.h"
 #include "supercalls.h"
 
-extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
-					void *argv, void *envp, int *flags);
-extern int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
-				    void *argv, void *envp, int *flags);
-int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
-			void *envp, int *flags)
-{
-	ksu_handle_execveat_ksud(fd, filename_ptr, argv, envp, flags);
-	return ksu_handle_execveat_sucompat(fd, filename_ptr, argv, envp,
-					    flags);
-}
+#ifdef CONFIG_KSU_MANUAL_HOOK
+extern void ksu_lsm_hook_init(void);
+#endif
+#ifdef CONFIG_KSU_SYSCALL_HOOK
+extern void ksu_observer_exit(void);
+#endif
 
 int __init kernelsu_init(void)
 {
@@ -50,7 +52,14 @@ int __init kernelsu_init(void)
 
 	ksu_supercalls_init();
 
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 	ksu_syscall_hook_manager_init();
+#endif
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	ksu_lsm_hook_init();
+	ksu_setuid_hook_init();
+	ksu_sucompat_init();
+#endif
 
 	ksu_allowlist_init();
 
@@ -58,7 +67,7 @@ int __init kernelsu_init(void)
 
 	ksu_ksud_init();
 
-#ifdef MODULE
+#if IS_MODULE(CONFIG_KSU)
 #ifndef CONFIG_KSU_DEBUG
 	kobject_del(&THIS_MODULE->mkobj.kobj);
 #endif
@@ -66,18 +75,25 @@ int __init kernelsu_init(void)
 	return 0;
 }
 
-extern void ksu_observer_exit(void);
 void kernelsu_exit(void)
 {
 	ksu_allowlist_exit();
 
 	ksu_throne_tracker_exit();
 
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 	ksu_observer_exit();
+#endif
 
 	ksu_ksud_exit();
 
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 	ksu_syscall_hook_manager_exit();
+#endif
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	ksu_sucompat_exit();
+	ksu_setuid_hook_exit();
+#endif
 
 	ksu_supercalls_exit();
 
