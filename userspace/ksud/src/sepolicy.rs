@@ -659,34 +659,36 @@ impl<'a> TryFrom<&'a PolicyStatement<'a>> for Vec<AtomicStatement> {
 struct FfiPolicy {
     cmd: u32,
     subcmd: u32,
-    sepol1: *const ffi::c_char,
-    sepol2: *const ffi::c_char,
-    sepol3: *const ffi::c_char,
-    sepol4: *const ffi::c_char,
-    sepol5: *const ffi::c_char,
-    sepol6: *const ffi::c_char,
-    sepol7: *const ffi::c_char,
+    sepol1: u64,
+    sepol2: u64,
+    sepol3: u64,
+    sepol4: u64,
+    sepol5: u64,
+    sepol6: u64,
+    sepol7: u64,
 }
 
-const fn to_c_ptr(pol: &PolicyObject) -> *const ffi::c_char {
-    match pol {
+fn to_u64_addr(pol: &PolicyObject) -> u64 {
+    let raw_ptr: *const ffi::c_char = match pol {
         PolicyObject::None | PolicyObject::All => std::ptr::null(),
         PolicyObject::One(s) => s.as_ptr().cast::<ffi::c_char>(),
-    }
+    };
+
+    raw_ptr as usize as u64
 }
 
 impl From<AtomicStatement> for FfiPolicy {
-    fn from(policy: AtomicStatement) -> Self {
-        Self {
+    fn from(policy: AtomicStatement) -> FfiPolicy {
+        FfiPolicy {
             cmd: policy.cmd,
             subcmd: policy.subcmd,
-            sepol1: to_c_ptr(&policy.sepol1),
-            sepol2: to_c_ptr(&policy.sepol2),
-            sepol3: to_c_ptr(&policy.sepol3),
-            sepol4: to_c_ptr(&policy.sepol4),
-            sepol5: to_c_ptr(&policy.sepol5),
-            sepol6: to_c_ptr(&policy.sepol6),
-            sepol7: to_c_ptr(&policy.sepol7),
+            sepol1: to_u64_addr(&policy.sepol1),
+            sepol2: to_u64_addr(&policy.sepol2),
+            sepol3: to_u64_addr(&policy.sepol3),
+            sepol4: to_u64_addr(&policy.sepol4),
+            sepol5: to_u64_addr(&policy.sepol5),
+            sepol6: to_u64_addr(&policy.sepol6),
+            sepol7: to_u64_addr(&policy.sepol7),
         }
     }
 }
