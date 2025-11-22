@@ -6,6 +6,7 @@
 #include <linux/sched.h>
 #endif
 #include <linux/uaccess.h>
+#include <linux/fdtable.h>
 #include "klog.h" // IWYU pragma: keep
 #include "kernel_compat.h"
 
@@ -83,8 +84,8 @@ ssize_t ksu_kernel_write_compat(struct file *p, const void *buf, size_t count,
 #endif
 }
 
-static long do_strncpy_user_nofault(char *dst, const void __user *unsafe_addr,
-				   long count)
+static inline long
+do_strncpy_user_nofault(char *dst, const void __user *unsafe_addr, long count)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0) ||                           \
 	defined(KSU_OPTIONAL_STRNCPY)
@@ -137,4 +138,13 @@ long ksu_strncpy_from_user_nofault(char *dst, const void __user *unsafe_addr,
 	}
 
 	return ret;
+}
+
+int do_close_fd(unsigned int fd)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
+	return close_fd(fd);
+#else
+	return __close_fd(current->files, fd);
+#endif
 }

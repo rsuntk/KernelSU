@@ -22,7 +22,6 @@
 #include "kernel_compat.h"
 #include "sucompat.h"
 #include "app_profile.h"
-#include "gki/syscall_hook_manager.h"
 
 #define SU_PATH "/system/bin/su"
 #define SH_PATH "/system/bin/sh"
@@ -76,7 +75,7 @@ static char __user *ksud_user_path(void)
 
 static inline bool __is_su_allowed(const void *ptr_to_check)
 {
-#ifdef CONFIG_KSU_MANUAL_HOOK
+#ifndef CONFIG_KSU_SYSCALL_HOOK
 	if (!ksu_su_compat_enabled)
 		return false;
 #endif

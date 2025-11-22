@@ -1,6 +1,7 @@
 #include "linux/compiler.h"
 #include "linux/cred.h"
 #include "linux/printk.h"
+#include "selinux/selinux.h"
 #include <linux/spinlock.h>
 #include <linux/kprobes.h>
 #include <linux/tracepoint.h>
@@ -9,14 +10,13 @@
 #include <linux/slab.h>
 #include <trace/events/syscalls.h>
 
-#include "../allowlist.h"
-#include "../arch.h"
-#include "../klog.h" // IWYU pragma: keep
-#include "../kernel_compat.h"
-#include "syscall_hook_manager.h"
-#include "../sucompat.h"
-#include "../setuid_hook.h"
-#include "../selinux/selinux.h"
+#include "allowlist.h"
+#include "arch.h"
+#include "klog.h" // IWYU pragma: keep
+#include "syscall_handler.h"
+#include "sucompat.h"
+#include "setuid_hook.h"
+#include "selinux/selinux.h"
 
 // Tracepoint registration count management
 // == 1: just us
@@ -160,6 +160,8 @@ int ksu_set_task_mark(pid_t pid, bool mark)
 	return ret;
 }
 
+#ifdef CONFIG_KRETPROBES
+
 static struct kretprobe *init_kretprobe(const char *name,
 					kretprobe_handler_t handler)
 {
@@ -228,6 +230,7 @@ static int syscall_unregfunc_handler(struct kretprobe_instance *ri,
 
 static struct kretprobe *syscall_regfunc_rp = NULL;
 static struct kretprobe *syscall_unregfunc_rp = NULL;
+#endif
 
 static inline bool check_syscall_fastpath(int nr)
 {
@@ -263,10 +266,11 @@ int ksu_handle_init_mark_tracker(const char __user **filename_user)
 	return 0;
 }
 
+#ifdef CONFIG_HAVE_SYSCALL_TRACEPOINTS
 static int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 {
-	return ksu_handle_setuid_common(ruid, current_uid().val, euid,
-					current_euid().val);
+       return ksu_handle_setuid_common(ruid, current_uid().val, euid,
+                                       current_euid().val);
 }
 
 // Generic sys_enter handler that dispatches to specific handlers
@@ -309,8 +313,8 @@ static void ksu_sys_enter_handler(void *data, struct pt_regs *regs, long id)
 						filename_user);
 				} else {
 					ksu_handle_execve_sucompat(
-						NULL, filename_user, NULL,
-						NULL, NULL);
+						NULL, filename_user, NULL, NULL,
+						NULL);
 				}
 				return;
 			}
@@ -326,26 +330,34 @@ static void ksu_sys_enter_handler(void *data, struct pt_regs *regs, long id)
 		}
 	}
 }
+#endif
 
 void ksu_syscall_hook_manager_init(void)
 {
 	int ret;
 	pr_info("hook_manager: ksu_hook_manager_init called\n");
 
+#ifdef CONFIG_KRETPROBES
 	// Register kretprobe for syscall_regfunc
 	syscall_regfunc_rp =
 		init_kretprobe("syscall_regfunc", syscall_regfunc_handler);
 	// Register kretprobe for syscall_unregfunc
 	syscall_unregfunc_rp =
 		init_kretprobe("syscall_unregfunc", syscall_unregfunc_handler);
+#endif
 
+#ifdef CONFIG_HAVE_SYSCALL_TRACEPOINTS
 	ret = register_trace_sys_enter(ksu_sys_enter_handler, NULL);
+#ifndef CONFIG_KRETPROBES
+	ksu_mark_running_process_locked();
+#endif
 	if (ret) {
 		pr_err("hook_manager: failed to register sys_enter tracepoint: %d\n",
 		       ret);
 	} else {
 		pr_info("hook_manager: sys_enter tracepoint registered\n");
 	}
+#endif
 
 	ksu_setuid_hook_init();
 	ksu_sucompat_init();
@@ -354,12 +366,16 @@ void ksu_syscall_hook_manager_init(void)
 void ksu_syscall_hook_manager_exit(void)
 {
 	pr_info("hook_manager: ksu_hook_manager_exit called\n");
+#ifdef CONFIG_HAVE_SYSCALL_TRACEPOINTS
 	unregister_trace_sys_enter(ksu_sys_enter_handler, NULL);
 	tracepoint_synchronize_unregister();
 	pr_info("hook_manager: sys_enter tracepoint unregistered\n");
+#endif
 
+#ifdef CONFIG_KRETPROBES
 	destroy_kretprobe(&syscall_regfunc_rp);
 	destroy_kretprobe(&syscall_unregfunc_rp);
+#endif
 
 	ksu_sucompat_exit();
 	ksu_setuid_hook_exit();

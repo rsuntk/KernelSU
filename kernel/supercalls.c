@@ -10,6 +10,7 @@
 #include <linux/uaccess.h>
 #include <linux/version.h>
 #include <linux/kprobes.h>
+#include <linux/kconfig.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 #include <linux/sched/task.h>
 #else
@@ -23,13 +24,16 @@
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
 #include "ksud.h"
+#ifdef CONFIG_KSU_SYSCALL_HOOK
+#include "kp_hook.h"
+#include "syscall_handler.h"
+#endif
 #include "kernel_compat.h"
 #include "kernel_umount.h"
 #include "manager.h"
 #include "selinux/selinux.h"
 #include "objsec.h"
 #include "file_wrapper.h"
-#include "gki/syscall_hook_manager.h"
 
 // Permission check functions
 bool only_manager(void)
@@ -74,7 +78,7 @@ static int do_get_info(void __user *arg)
 	struct ksu_get_info_cmd cmd = { .version = KERNEL_SU_VERSION,
 					.flags = 0 };
 
-#ifdef MODULE
+#if IS_MODULE(CONFIG_KSU)
 	cmd.flags |= 0x1;
 #endif
 
@@ -412,7 +416,7 @@ put_orig_file:
 
 static int do_manage_mark(void __user *arg)
 {
-#ifndef CONFIG_KSU_MANUAL_HOOK
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 	struct ksu_manage_mark_cmd cmd;
 	int ret = 0;
 
@@ -476,7 +480,7 @@ static int do_manage_mark(void __user *arg)
 	return 0;
 #else
 	// We don't care, just return -ENOTSUPP
-	pr_warn("%s: supercalls not implemented for non-tp usage\n", __func__);
+	pr_warn("manage_mark: this supercalls is not implemented for manual hook.\n");
 	return -ENOTSUPP;
 #endif
 }
@@ -591,100 +595,72 @@ static int add_try_umount(void __user *arg)
 	return 0;
 }
 
+static int do_nuke_ext4_sysfs(void __user *arg)
+{
+	struct ksu_nuke_ext4_sysfs_cmd cmd;
+	char mnt[256];
+	long ret;
+
+	if (copy_from_user(&cmd, arg, sizeof(cmd)))
+		return -EFAULT;
+
+	if (!cmd.arg)
+		return -EINVAL;
+
+	memset(mnt, 0, sizeof(mnt));
+
+	ret = strncpy_from_user(mnt, cmd.arg, sizeof(mnt));
+	if (ret < 0) {
+		pr_err("nuke ext4 copy mnt failed: %ld\\n", ret);
+		return -EFAULT; // 或者 return ret;
+	}
+
+	if (ret == sizeof(mnt)) {
+		pr_err("nuke ext4 mnt path too long\\n");
+		return -ENAMETOOLONG;
+	}
+
+	pr_info("do_nuke_ext4_sysfs: %s\n", mnt);
+
+	return nuke_ext4_sysfs(mnt);
+}
+
 // IOCTL handlers mapping table
 static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
-    KSU_CMD(KSU_IOCTL_GRANT_ROOT, "GRANT_ROOT", do_grant_root,
-		allowed_for_su),
-	KSU_CMD(KSU_IOCTL_GET_INFO, "GET_INFO", do_get_info, always_allow),
-	KSU_CMD(KSU_IOCTL_REPORT_EVENT, "REPORT_EVENT", do_report_event,
-		only_root),
-	KSU_CMD(KSU_IOCTL_SET_SEPOLICY, "SET_SEPOLICY", do_set_sepolicy,
-		only_root),
-	KSU_CMD(KSU_IOCTL_CHECK_SAFEMODE, "CHECK_SAFEMODE", do_check_safemode,
-		always_allow),
-	KSU_CMD(KSU_IOCTL_GET_ALLOW_LIST, "GET_ALLOW_LIST", do_get_allow_list,
-		manager_or_root),
-	KSU_CMD(KSU_IOCTL_GET_DENY_LIST, "GET_DENY_LIST", do_get_deny_list,
-		manager_or_root),
-	KSU_CMD(KSU_IOCTL_UID_GRANTED_ROOT, "UID_GRANTED_ROOT",
-		do_uid_granted_root, manager_or_root),
-	KSU_CMD(KSU_IOCTL_UID_SHOULD_UMOUNT, "UID_SHOULD_UMOUNT",
-		do_uid_should_umount, manager_or_root),
-	KSU_CMD(KSU_IOCTL_GET_MANAGER_UID, "GET_MANAGER_UID",
-		do_get_manager_uid, manager_or_root),
-	KSU_CMD(KSU_IOCTL_GET_APP_PROFILE, "GET_APP_PROFILE",
-		do_get_app_profile, only_manager),
-	KSU_CMD(KSU_IOCTL_SET_APP_PROFILE, "SET_APP_PROFILE",
-		do_set_app_profile, only_manager),
-	KSU_CMD(KSU_IOCTL_GET_FEATURE, "GET_FEATURE", do_get_feature,
-		manager_or_root),
-	KSU_CMD(KSU_IOCTL_SET_FEATURE, "SET_FEATURE", do_set_feature,
-		manager_or_root),
-	KSU_CMD(KSU_IOCTL_GET_WRAPPER_FD, "GET_WRAPPER_FD", do_get_wrapper_fd,
-		manager_or_root),
-	KSU_CMD(KSU_IOCTL_MANAGE_MARK, "MANAGE_MARK", do_manage_mark,
-		manager_or_root),
-	// KSU_CMD(KSU_IOCTL_NUKE_EXT4_SYSFS, "NUKE_EXT4_SYSFS", do_nuke_ext4_sysfs, manager_or_root),
-	KSU_CMD(KSU_IOCTL_ADD_TRY_UMOUNT, "ADD_TRY_UMOUNT", add_try_umount,
-		manager_or_root),
-	KSU_CMD(0, NULL, NULL, NULL) // Sentinel
+	KSU_IOCTL(GRANT_ROOT, "GRANT_ROOT", do_grant_root, allowed_for_su),
+	KSU_IOCTL(GET_INFO, "GET_INFO", do_get_info, always_allow),
+	KSU_IOCTL(REPORT_EVENT, "REPORT_EVENT", do_report_event, only_root),
+	KSU_IOCTL(SET_SEPOLICY, "SET_SEPOLICY", do_set_sepolicy, only_root),
+	KSU_IOCTL(CHECK_SAFEMODE, "CHECK_SAFEMODE", do_check_safemode,
+		  always_allow),
+	KSU_IOCTL(GET_ALLOW_LIST, "GET_ALLOW_LIST", do_get_allow_list,
+		  manager_or_root),
+	KSU_IOCTL(GET_DENY_LIST, "GET_DENY_LIST", do_get_deny_list,
+		  manager_or_root),
+	KSU_IOCTL(UID_GRANTED_ROOT, "UID_GRANTED_ROOT", do_uid_granted_root,
+		  manager_or_root),
+	KSU_IOCTL(UID_SHOULD_UMOUNT, "UID_SHOULD_UMOUNT", do_uid_should_umount,
+		  manager_or_root),
+	KSU_IOCTL(GET_MANAGER_UID, "GET_MANAGER_UID", do_get_manager_uid,
+		  manager_or_root),
+	KSU_IOCTL(GET_APP_PROFILE, "GET_APP_PROFILE", do_get_app_profile,
+		  only_manager),
+	KSU_IOCTL(SET_APP_PROFILE, "SET_APP_PROFILE", do_set_app_profile,
+		  only_manager),
+	KSU_IOCTL(GET_FEATURE, "GET_FEATURE", do_get_feature, manager_or_root),
+	KSU_IOCTL(SET_FEATURE, "SET_FEATURE", do_set_feature, manager_or_root),
+	KSU_IOCTL(GET_WRAPPER_FD, "GET_WRAPPER_FD", do_get_wrapper_fd,
+		  manager_or_root),
+	KSU_IOCTL(MANAGE_MARK, "MANAGE_MARK", do_manage_mark, manager_or_root),
+	KSU_IOCTL(NUKE_EXT4_SYSFS, "NUKE_EXT4_SYSFS", do_nuke_ext4_sysfs,
+		  manager_or_root),
+	KSU_IOCTL(ADD_TRY_UMOUNT, "ADD_TRY_UMOUNT", add_try_umount,
+		  manager_or_root),
+
+	// Sentinel
+	{ .cmd = 0, .name = NULL, .handler = NULL, .perm_check = NULL }
 };
 
-#ifndef CONFIG_KSU_MANUAL_HOOK
-struct ksu_install_fd_tw {
-	struct callback_head cb;
-	int __user *outp;
-};
-
-static void ksu_install_fd_tw_func(struct callback_head *cb)
-{
-	struct ksu_install_fd_tw *tw =
-		container_of(cb, struct ksu_install_fd_tw, cb);
-	int fd = ksu_install_fd();
-	pr_info("[%d] install ksu fd: %d\n", current->pid, fd);
-
-	if (copy_to_user(tw->outp, &fd, sizeof(fd))) {
-		pr_err("install ksu fd reply err\n");
-		do_close_fd(fd);
-	}
-
-	kfree(tw);
-}
-
-static int reboot_handler_pre(struct kprobe *p, struct pt_regs *regs)
-{
-	struct pt_regs *real_regs = PT_REAL_REGS(regs);
-	int magic1 = (int)PT_REGS_PARM1(real_regs);
-	int magic2 = (int)PT_REGS_PARM2(real_regs);
-	unsigned long arg4;
-
-	// Check if this is a request to install KSU fd
-	if (magic1 == KSU_INSTALL_MAGIC1 && magic2 == KSU_INSTALL_MAGIC2) {
-		struct ksu_install_fd_tw *tw;
-
-		arg4 = (unsigned long)PT_REGS_SYSCALL_PARM4(real_regs);
-
-		tw = kzalloc(sizeof(*tw), GFP_ATOMIC);
-		if (!tw)
-			return 0;
-
-		tw->outp = (int __user *)arg4;
-		tw->cb.func = ksu_install_fd_tw_func;
-
-		if (task_work_add(current, &tw->cb, TWA_RESUME)) {
-			kfree(tw);
-			pr_warn("install fd add task_work failed\n");
-		}
-	}
-
-	return 0;
-}
-
-static struct kprobe reboot_kp = {
-	.symbol_name = REBOOT_SYMBOL,
-	.pre_handler = reboot_handler_pre,
-};
-#else
 int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
 			  void __user **arg)
 {
@@ -709,7 +685,6 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
 
 	return 0;
 }
-#endif
 
 void ksu_supercalls_init(void)
 {
@@ -720,20 +695,15 @@ void ksu_supercalls_init(void)
 		pr_info("  %-18s = 0x%08x\n", ksu_ioctl_handlers[i].name,
 			ksu_ioctl_handlers[i].cmd);
 	}
-#ifndef CONFIG_KSU_MANUAL_HOOK
-	int rc = register_kprobe(&reboot_kp);
-	if (rc) {
-		pr_err("reboot kprobe failed: %d\n", rc);
-	} else {
-		pr_info("reboot kprobe registered successfully\n");
-	}
+#ifdef CONFIG_KSU_SYSCALL_HOOK
+	kp_handle_supercalls_init();
 #endif
 }
 
 void ksu_supercalls_exit(void)
 {
-#ifndef CONFIG_KSU_MANUAL_HOOK
-	unregister_kprobe(&reboot_kp);
+#ifdef CONFIG_KSU_SYSCALL_HOOK
+	kp_handle_supercalls_exit();
 #endif
 }
 

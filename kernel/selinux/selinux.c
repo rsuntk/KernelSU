@@ -43,12 +43,15 @@ is_ksu_transition(const struct task_security_struct *old_tsec,
 {
 	static u32 ksu_sid;
 	char *secdata;
+	int err;
 	u32 seclen;
 	bool allowed = false;
 
-	if (!ksu_sid)
-		security_secctx_to_secid(KERNEL_SU_DOMAIN,
+	if (!ksu_sid) {
+		err = security_secctx_to_secid(KERNEL_SU_DOMAIN,
 					 strlen(KERNEL_SU_DOMAIN), &ksu_sid);
+		pr_err("failed to get ksu_sid: %d\n", err);
+	}
 
 	if (security_secid_to_secctx(old_tsec->sid, &secdata, &seclen))
 		return false;
@@ -58,7 +61,6 @@ is_ksu_transition(const struct task_security_struct *old_tsec,
 	return allowed;
 }
 #endif
-
 
 void setup_selinux(const char *domain)
 {
@@ -119,20 +121,20 @@ bool is_context(const struct cred *cred, const char *context)
 	const struct task_security_struct *tsec;
 	struct lsm_context ctx = {0};
 	bool result = false;
+	int err;
 
 	if (!cred) {
-		return false;
+		return result;
 	}
-
+	
 	tsec = selinux_cred(cred);
 	if (!tsec) {
-		return false;
+		return result;
 	}
 
-	int err = __security_secid_to_secctx(tsec->sid, &ctx);
+	err = __security_secid_to_secctx(tsec->sid, &ctx);
 	if (err) {
-		pr_err("get context failed %d\n", err);
-		return false;
+		return result;
 	}
 
 	result = strncmp(context, ctx.context, ctx.len) == 0;
@@ -166,10 +168,12 @@ bool is_init(const struct cred *cred)
 u32 ksu_get_ksu_file_sid(void)
 {
 	u32 ksu_file_sid = 0;
-	int err = security_secctx_to_secid(
-		KSU_FILE_DOMAIN, strlen(KSU_FILE_DOMAIN), &ksu_file_sid);
+	int err = security_secctx_to_secid(KSU_FILE_DOMAIN,
+		strlen(KSU_FILE_DOMAIN), &ksu_file_sid);
+
 	if (err) {
 		pr_info("get ksufile sid err %d\n", err);
 	}
+
 	return ksu_file_sid;
 }

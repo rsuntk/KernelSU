@@ -7,15 +7,6 @@
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 extern void ksu_seccomp_clear_cache(struct seccomp_filter *filter, int nr);
 extern void ksu_seccomp_allow_cache(struct seccomp_filter *filter, int nr);
-#else
-static inline void ksu_seccomp_clear_cache(struct seccomp_filter *filter, int nr)
-{
-	return;
-}
-static inline void ksu_seccomp_allow_cache(struct seccomp_filter *filter, int nr)
-{
-	return;
-}
 #endif
 
 #endif

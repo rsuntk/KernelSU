@@ -35,9 +35,11 @@
 #include "klog.h" // IWYU pragma: keep
 #include "manager.h"
 #include "selinux/selinux.h"
-#include "gki/seccomp_cache.h"
+#include "seccomp_cache.h"
 #include "supercalls.h"
-#include "gki/syscall_hook_manager.h"
+#ifdef CONFIG_KSU_SYSCALL_HOOK
+#include "syscall_handler.h"
+#endif
 #include "kernel_umount.h"
 
 static bool ksu_enhanced_security_enabled = false;
@@ -95,7 +97,8 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 			// euid is what we care about here as it controls permission
 			if (unlikely(new_euid == 0) && !is_ksu_domain()) {
 				pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
-					current->pid, current->comm, old_uid, new_uid);
+					current->pid, current->comm, old_uid,
+					new_uid);
 				__force_sig(SIGKILL);
 				return 0;
 			}
@@ -124,7 +127,9 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 		ksu_install_fd();
 		spin_lock_irq(&current->sighand->siglock);
 		ksu_seccomp_allow_cache(current->seccomp.filter, __NR_reboot);
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 		ksu_set_task_tracepoint_flag(current);
+#endif
 		spin_unlock_irq(&current->sighand->siglock);
 		return 0;
 	}
@@ -137,9 +142,11 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 						__NR_reboot);
 			spin_unlock_irq(&current->sighand->siglock);
 		}
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 		ksu_set_task_tracepoint_flag(current);
 	} else {
 		ksu_clear_task_tracepoint_flag_if_needed(current);
+#endif
 	}
 #else
 	if (ksu_get_manager_uid() == new_uid) {
