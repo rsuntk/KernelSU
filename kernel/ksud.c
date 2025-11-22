@@ -185,6 +185,9 @@ static int __maybe_unused count(struct user_arg_ptr argv, int max)
 
 			if (fatal_signal_pending(current))
 				return -ERESTARTNOHAND;
+#ifdef CONFIG_KSU_MANUAL_HOOK
+			cond_resched();
+#endif
 		}
 	}
 	return i;
@@ -200,9 +203,9 @@ static struct callback_head on_post_fs_data_cb = {
 };
 
 // IMPORTANT NOTE: the call from execve_handler_pre WON'T provided correct value for envp and flags in GKI version
-static int __ksu_handle_execveat_ksud(struct filename **filename_ptr,
-				      struct user_arg_ptr *argv,
-				      struct user_arg_ptr *envp)
+int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+			     struct user_arg_ptr *argv,
+			     struct user_arg_ptr *envp, int *flags)
 {
 #ifdef CONFIG_KSU_MANUAL_HOOK
 	if (!ksu_execveat_hook) {
@@ -331,14 +334,17 @@ static int __ksu_handle_execveat_ksud(struct filename **filename_ptr,
 	return 0;
 }
 
-int ksu_handle_execveat_ksud(int *__never_use_fd,
-			     struct filename **filename_ptr, void *__argv,
-			     void *__envp, int *__never_use_flags)
-{
-	struct user_arg_ptr argv = { .ptr.native = __argv };
-	struct user_arg_ptr envp = { .ptr.native = __envp };
+extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
+					void *__never_use_argv,
+					void *__never_use_envp,
+					int *__never_use_flags);
 
-	return __ksu_handle_execveat_ksud(filename_ptr, &argv, &envp);
+int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
+			void *envp, int *flags)
+{
+	ksu_handle_execveat_ksud(fd, filename_ptr, argv, envp, flags);
+	return ksu_handle_execveat_sucompat(fd, filename_ptr, argv, envp,
+					    flags);
 }
 
 static ssize_t (*orig_read)(struct file *, char __user *, size_t, loff_t *);

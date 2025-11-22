@@ -25,19 +25,6 @@
 #include "supercalls.h"
 
 #ifdef CONFIG_KSU_MANUAL_HOOK
-extern int ksu_handle_execveat_ksud(int *__never_use_fd,
-			     struct filename **filename_ptr, void *__argv,
-			     void *__envp, int *__never_use_flags);
-extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
-				 void *__never_use_argv, void *__never_use_envp,
-				 int *__never_use_flags);
-int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
-			void *envp, int *flags)
-{
-	ksu_handle_execveat_ksud(fd, filename_ptr, argv, envp, flags);
-	return ksu_handle_execveat_sucompat(fd, filename_ptr, argv, envp,
-					    flags);
-}
 extern void ksu_lsm_hook_init(void);
 #endif
 #ifdef CONFIG_KSU_SYSCALL_HOOK

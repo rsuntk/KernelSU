@@ -17,6 +17,9 @@
 	}
 
 // ksud.c
+extern int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+			     struct user_arg_ptr *argv,
+			     struct user_arg_ptr *envp, int *flags);
 
 static struct work_struct stop_vfs_read_work, stop_execve_hook_work,
 	stop_input_hook_work;
