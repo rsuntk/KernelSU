@@ -62,7 +62,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v6
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           path: KernelSU
           fetch-depth: 0
