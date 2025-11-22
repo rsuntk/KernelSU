@@ -1,14 +1,25 @@
 #ifndef __KSU_H_KP_HOOK
 #define __KSU_H_KP_HOOK
 
+struct user_arg_ptr {
+#ifdef CONFIG_COMPAT
+	bool is_compat;
+#endif
+	union {
+		const char __user *const __user *native;
+#ifdef CONFIG_COMPAT
+		const compat_uptr_t __user *compat;
+#endif
+	} ptr;
+};
+
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 // ksud.c
 enum ksud_stop_code {
 	VFS_READ_HOOK_KP = 0,
 	EXECVE_HOOK_KP,
 	INPUT_EVENT_HOOK_KP,
 };
-
-extern struct user_arg_ptr;
 
 int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 			     struct user_arg_ptr *argv,
@@ -27,5 +38,6 @@ void kp_handle_ksud_exit(void);
 // supercalls.c
 void kp_handle_supercalls_init(void);
 void kp_handler_supercalls_exit(void);
+#endif
 
 #endif
