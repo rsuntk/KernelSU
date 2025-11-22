@@ -3,7 +3,10 @@
 
 #include "arch.h"
 #include "kp_hook.h"
+#include "ksu.h"
+#include "ksud.h"
 #include "kernel_compat.h"
+#include "supercalls.h"
 
 #define DECL_KP(name, sym, pre)                                                \
 	struct kprobe name = {                                                 \
@@ -75,10 +78,10 @@ static void do_stop_input_hook(struct work_struct *work)
 	unregister_kprobe(&input_event_kp);
 }
 
-void kp_handle_ksud_stop(enum ksud_stop_code)
+void kp_handle_ksud_stop(enum ksud_stop_code stop_code)
 {
 	bool ret;
-	switch (ksud_stop_code) {
+	switch (stop_code) {
 	case VFS_READ_HOOK_KP: {
 		ret = schedule_work(&stop_vfs_read_work);
 		pr_info("unregister vfs_read kprobe: %d!\n", ret);
@@ -195,6 +198,5 @@ void kp_handle_supercalls_init(void)
 
 void kp_handler_supercalls_exit(void)
 {
-	bool ret = unregister_kprobe(&reboot_kp);
-	pr_info("unregisted reboot_kp: %d!\n", ret);
+	unregister_kprobe(&reboot_kp);
 }
