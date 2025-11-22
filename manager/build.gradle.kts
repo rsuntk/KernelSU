@@ -17,7 +17,7 @@ cmaker {
                 "-DANDROID_STL=none",
             )
         )
-        abiFilters("arm64-v8a", "armeabi-v7a", "x86_64")
+        abiFilters("arm64-v8a", "x86_64", "armeabi-v7a")
     }
     buildTypes {
         if (it.name == "release") {
@@ -72,7 +72,7 @@ subprojects {
                     versionName = managerVersionName
                 }
                 ndk {
-                    abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+                    abiFilters += listOf("arm64-v8a", "x86_64", "armeabi-v7a")
                 }
             }
 

@@ -50,7 +50,7 @@ class ModuleViewModel : ViewModel() {
         val updateJson: String,
         val hasWebUi: Boolean,
         val hasActionScript: Boolean,
-        val dirId: String,
+        val metamodule: Boolean,
     )
 
     @Immutable
@@ -97,11 +97,7 @@ class ModuleViewModel : ViewModel() {
     val searchResults: State<List<ModuleInfo>> = _searchResults
 
     val moduleList by derivedStateOf {
-        val comparator =
-            compareBy<ModuleInfo>(
-                { if (sortEnabledFirst) !it.enabled else 0 },
-                { if (sortActionFirst) !it.hasWebUi && !it.hasActionScript else 0 },
-            ).thenBy(Collator.getInstance(Locale.getDefault()), ModuleInfo::id)
+        val comparator = moduleComparator()
         modules.filter {
             it.id.contains(searchStatus.value.searchText, true) || it.name.contains(
                 searchStatus.value.searchText,
@@ -136,10 +132,7 @@ class ModuleViewModel : ViewModel() {
                         it.description.contains(text, true) || it.author.contains(text, true) ||
                         HanziToPinyin.getInstance().toPinyinString(it.name).contains(text, true)
             }.let { filteredModules ->
-                val comparator = compareBy<ModuleInfo>(
-                    { if (sortEnabledFirst) !it.enabled else 0 },
-                    { if (sortActionFirst) !it.hasWebUi && !it.hasActionScript else 0 },
-                ).thenBy(Collator.getInstance(Locale.getDefault()), ModuleInfo::id)
+                val comparator = moduleComparator()
                 filteredModules.sortedWith(comparator)
             }
         }
@@ -152,12 +145,35 @@ class ModuleViewModel : ViewModel() {
         }
     }
 
+    private fun moduleComparator(): Comparator<ModuleInfo> {
+        return compareBy<ModuleInfo>(
+            {
+                val executable = it.hasWebUi || it.hasActionScript
+                when {
+                    it.metamodule && it.enabled -> 0
+                    sortEnabledFirst && sortActionFirst -> when {
+                        it.enabled && executable -> 1
+                        it.enabled -> 2
+                        executable -> 3
+                        else -> 4
+                    }
+                    sortEnabledFirst && !sortActionFirst -> if (it.enabled) 1 else 2
+                    !sortEnabledFirst && sortActionFirst -> if (executable) 1 else 2
+                    else -> 1
+                }
+            },
+            { if (sortEnabledFirst) !it.enabled else 0 },
+            { if (sortActionFirst) !(it.hasWebUi || it.hasActionScript) else 0 },
+        ).thenBy(Collator.getInstance(Locale.getDefault()), ModuleInfo::id)
+    }
+
     fun fetchModuleList() {
         viewModelScope.launch {
             withContext(Dispatchers.Main) { isRefreshing = true }
 
             val oldModuleList = modules
             val start = SystemClock.elapsedRealtime()
+
 
             val parsedModules = withContext(Dispatchers.IO) {
                 kotlin.runCatching {
@@ -176,12 +192,12 @@ class ModuleViewModel : ViewModel() {
                                 obj.optInt("versionCode", 0),
                                 obj.optString("description"),
                                 obj.getBoolean("enabled"),
-                                obj.getBoolean("update"),
+                                obj.optBoolean("update"),
                                 obj.getBoolean("remove"),
                                 obj.optString("updateJson"),
                                 obj.optBoolean("web"),
                                 obj.optBoolean("action"),
-                                obj.getString("dir_id")
+                                (obj.optInt("metamodule") != 0) or obj.optBoolean("metamodule")
                             )
                         }.toList()
                 }.getOrElse {

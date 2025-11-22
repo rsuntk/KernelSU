@@ -1,36 +1,28 @@
 use anyhow::{Context, Result};
 use log::{info, warn};
-use rustix::fs::{MountFlags, mount};
 use std::path::Path;
 
 use crate::module::{handle_updated_modules, prune_modules};
 use crate::utils::is_safe_mode;
 use crate::{
-    assets, defs, ksucalls, restorecon,
-    utils::{self, find_tmp_path},
+    assets, defs, ksucalls, metamodule, restorecon,
+    utils::{self},
 };
-
-use crate::defs::{KSU_MOUNT_SOURCE, NO_MOUNT_PATH, NO_TMPFS_PATH};
-
-#[cfg(target_os = "android")]
-pub fn mount_modules_systemlessly() -> Result<()> {
-    crate::magic_mount::magic_mount(&find_tmp_path())
-}
-
-#[cfg(not(target_os = "android"))]
-pub fn mount_modules_systemlessly() -> Result<()> {
-    Ok(())
-}
 
 pub fn on_post_data_fs() -> Result<()> {
     ksucalls::report_post_fs_data();
 
     utils::umask(0);
 
+    // Clear all temporary module configs early
+    if let Err(e) = crate::module_config::clear_all_temp_configs() {
+        warn!("clear temp configs failed: {e}");
+    }
+
     #[cfg(unix)]
-    let _ = catch_bootlog("logcat", vec!["logcat"]);
+    let _ = catch_bootlog("logcat", &["logcat"]);
     #[cfg(unix)]
-    let _ = catch_bootlog("dmesg", vec!["dmesg", "-w"]);
+    let _ = catch_bootlog("dmesg", &["dmesg", "-w"]);
 
     if utils::has_magisk() {
         warn!("Magisk detected, skip post-fs-data!");
@@ -40,6 +32,8 @@ pub fn on_post_data_fs() -> Result<()> {
     let safe_mode = crate::utils::is_safe_mode();
 
     if safe_mode {
+        // we should still ensure module directory exists in safe mode
+        // because we may need to operate the module dir in safe mode
         warn!("safe mode, skip common post-fs-data.d scripts");
     } else {
         // Then exec common post-fs-data scripts
@@ -48,10 +42,9 @@ pub fn on_post_data_fs() -> Result<()> {
         }
     }
 
-    assets::ensure_binaries(true).with_context(|| "Failed to extract bin assets")?;
+    let module_dir = defs::MODULE_DIR;
 
-    // tell kernel that we've mount the module, so that it can do some optimization
-    ksucalls::report_module_mounted();
+    assets::ensure_binaries(true).with_context(|| "Failed to extract bin assets")?;
 
     // if we are in safe mode, we should disable all modules
     if safe_mode {
@@ -62,12 +55,12 @@ pub fn on_post_data_fs() -> Result<()> {
         return Ok(());
     }
 
-    if let Err(e) = prune_modules() {
-        warn!("prune modules failed: {e}");
-    }
-
     if let Err(e) = handle_updated_modules() {
         warn!("handle updated modules failed: {e}");
+    }
+
+    if let Err(e) = prune_modules() {
+        warn!("prune modules failed: {e}");
     }
 
     if let Err(e) = restorecon::restorecon() {
@@ -90,23 +83,9 @@ pub fn on_post_data_fs() -> Result<()> {
         warn!("init features failed: {e}");
     }
 
-    let tmpfs_path = find_tmp_path();
-    // for compatibility
-    let no_mount = Path::new(NO_TMPFS_PATH).exists() || Path::new(NO_MOUNT_PATH).exists();
-
-    // mount temp dir
-    if !no_mount {
-        if let Err(e) = mount(
-            KSU_MOUNT_SOURCE,
-            &tmpfs_path,
-            "tmpfs",
-            MountFlags::empty(),
-            "",
-        ) {
-            warn!("do temp dir mount failed: {}", e);
-        }
-    } else {
-        info!("no tmpfs requested");
+    // execute metamodule post-fs-data script first (priority)
+    if let Err(e) = metamodule::exec_stage_script("post-fs-data", true) {
+        warn!("exec metamodule post-fs-data script failed: {e}");
     }
 
     // exec modules post-fs-data scripts
@@ -120,17 +99,14 @@ pub fn on_post_data_fs() -> Result<()> {
         warn!("load system.prop failed: {e}");
     }
 
-    // mount module systemlessly by magic mount
-    #[cfg(target_os = "android")]
-    if !no_mount {
-        if let Err(e) = crate::magic_mount::magic_mount(&tmpfs_path) {
-            warn!("do systemless mount failed: {e}");
-        }
-    } else {
-        info!("no mount requested");
+    // execute metamodule mount script
+    if let Err(e) = metamodule::exec_mount_script(module_dir) {
+        warn!("execute metamodule mount failed: {e}");
     }
 
     run_stage("post-mount", true);
+
+    std::env::set_current_dir("/").with_context(|| "failed to chdir to /")?;
 
     Ok(())
 }
@@ -151,29 +127,32 @@ fn run_stage(stage: &str, block: bool) {
     if let Err(e) = crate::module::exec_common_scripts(&format!("{stage}.d"), block) {
         warn!("Failed to exec common {stage} scripts: {e}");
     }
+
+    // execute metamodule stage script first (priority)
+    if let Err(e) = metamodule::exec_stage_script(stage, block) {
+        warn!("Failed to exec metamodule {stage} script: {e}");
+    }
+
+    // execute regular modules stage scripts
     if let Err(e) = crate::module::exec_stage_script(stage, block) {
         warn!("Failed to exec {stage} scripts: {e}");
     }
 }
 
-pub fn on_services() -> Result<()> {
+pub fn on_services() {
     info!("on_services triggered!");
     run_stage("service", false);
-
-    Ok(())
 }
 
-pub fn on_boot_completed() -> Result<()> {
+pub fn on_boot_completed() {
     ksucalls::report_boot_complete();
     info!("on_boot_completed triggered!");
 
     run_stage("boot-completed", false);
-
-    Ok(())
 }
 
 #[cfg(unix)]
-fn catch_bootlog(logname: &str, command: Vec<&str>) -> Result<()> {
+fn catch_bootlog(logname: &str, command: &[&str]) -> Result<()> {
     use std::os::unix::process::CommandExt;
     use std::process::Stdio;
 
@@ -189,7 +168,7 @@ fn catch_bootlog(logname: &str, command: Vec<&str>) -> Result<()> {
     let bootlog = std::fs::File::create(bootlog)?;
 
     let mut args = vec!["-s", "9", "30s"];
-    args.extend_from_slice(&command);
+    args.extend_from_slice(command);
     // timeout -s 9 30s logcat > boot.log
     let result = unsafe {
         std::process::Command::new("timeout")

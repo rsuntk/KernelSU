@@ -102,6 +102,13 @@ fun execKsud(args: String, newShell: Boolean = false): Boolean {
     }
 }
 
+suspend fun getFeatureStatus(feature: String): String = withContext(Dispatchers.IO) {
+    val shell = getRootShell()
+    val out = shell.newJob()
+        .add("${getKsuDaemonPath()} feature check $feature").to(ArrayList<String>(), null).exec().out
+    out.firstOrNull()?.trim().orEmpty()
+}
+
 fun install() {
     val start = SystemClock.elapsedRealtime()
     val magiskboot = File(ksuApp.applicationInfo.nativeLibraryDir, "libmagiskboot.so").absolutePath
@@ -112,8 +119,8 @@ fun install() {
 fun listModules(): String {
     val shell = getRootShell()
 
-    val out =
-        shell.newJob().add("${getKsuDaemonPath()} module list").to(ArrayList(), null).exec().out
+    val out = shell.newJob()
+        .add("${getKsuDaemonPath()} module list").to(ArrayList(), null).exec().out
     return out.joinToString("\n").ifBlank { "[]" }
 }
 
@@ -140,17 +147,17 @@ fun toggleModule(id: String, enable: Boolean): Boolean {
     return result
 }
 
+fun undoUninstallModule(id: String): Boolean {
+    val cmd = "module undo-uninstall $id"
+    val result = execKsud(cmd, true)
+    Log.i(TAG, "undo uninstall module $id result: $result")
+    return result
+}
+
 fun uninstallModule(id: String): Boolean {
     val cmd = "module uninstall $id"
     val result = execKsud(cmd, true)
     Log.i(TAG, "uninstall module $id result: $result")
-    return result
-}
-
-fun restoreModule(id: String): Boolean {
-    val cmd = "module restore $id"
-    val result = execKsud(cmd, true)
-    Log.i(TAG, "restore module $id result: $result")
     return result
 }
 
