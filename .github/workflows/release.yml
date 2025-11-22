@@ -18,9 +18,6 @@ jobs:
   build-arcvm-kernel:
     uses: ./.github/workflows/build-kernel-arcvm.yml
     secrets: inherit
-  build-meta-overlayfs:
-    uses: ./.github/workflows/meta-overlay.yml
-    secrets: inherit
   release:
     needs:
       - build-manager
@@ -87,4 +84,3 @@ jobs:
             kernel-WSA*.zip
             kernel-ARCVM*.zip
             ksud/ksud-*
-            meta-overlayfs/meta-overlayfs-*.zip

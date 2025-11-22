@@ -174,6 +174,7 @@ class ModuleViewModel : ViewModel() {
             val oldModuleList = modules
             val start = SystemClock.elapsedRealtime()
 
+
             val parsedModules = withContext(Dispatchers.IO) {
                 kotlin.runCatching {
                     val result = listModules()
