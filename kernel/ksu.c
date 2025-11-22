@@ -36,6 +36,8 @@ int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
 					    flags);
 }
 extern void ksu_lsm_hook_init(void);
+#elif defiend(CONFIG_KSU_SYSCALL_HOOK)
+extern void ksu_observer_exit(void);
 #endif
 
 int __init kernelsu_init(void)
@@ -82,14 +84,15 @@ int __init kernelsu_init(void)
 	return 0;
 }
 
-extern void ksu_observer_exit(void);
 void kernelsu_exit(void)
 {
 	ksu_allowlist_exit();
 
 	ksu_throne_tracker_exit();
 
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 	ksu_observer_exit();
+#endif
 
 	ksu_ksud_exit();
 

@@ -35,6 +35,7 @@
 #include "ksud.h"
 #ifdef CONFIG_KSU_SYSCALL_HOOK
 #include "kp_hook.h"
+extern int ksu_observer_init(void);
 #endif
 #include "selinux/selinux.h"
 #include "throne_tracker.h"
@@ -86,7 +87,9 @@ void on_post_fs_data(void)
 	done = true;
 	pr_info("on_post_fs_data!\n");
 	ksu_load_allow_list();
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 	ksu_observer_init();
+#endif
 	// sanity check, this may influence the performance
 	stop_input_hook();
 

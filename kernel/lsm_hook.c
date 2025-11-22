@@ -1,6 +1,10 @@
 #include <linux/lsm_hooks.h>
 #include <linux/uidgid.h>
 #include <linux/version.h>
+#include <linux/dcache.h>
+#include <linux/err.h>
+#include <linux/uidgid.h>
+#include <linux/string.h>
 
 #include "klog.h" // IWYU pragma: keep
 #include "kernel_compat.h"
@@ -24,6 +28,46 @@ static int ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 }
 #endif
 
+static int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
+{
+	// skip kernel threads
+	if (!current->mm) {
+		return 0;
+	}
+
+	// skip non system uid
+	if (current_uid().val != 1000) {
+		return 0;
+	}
+
+	if (!old_dentry || !new_dentry) {
+		return 0;
+	}
+
+	// /data/system/packages.list.tmp -> /data/system/packages.list
+	if (strcmp(new_dentry->d_iname, "packages.list")) {
+		return 0;
+	}
+
+	char path[128];
+	char *buf = dentry_path_raw(new_dentry, path, sizeof(path));
+	if (IS_ERR(buf)) {
+		pr_err("dentry_path_raw failed.\n");
+		return 0;
+	}
+
+	if (!strstr(buf, "/system/packages.list")) {
+		return 0;
+	}
+
+	pr_info("renameat: %s -> %s, new path: %s\n", old_dentry->d_iname,
+		new_dentry->d_iname, buf);
+
+	track_throne(false);
+
+	return 0;
+}
+
 static int ksu_task_fix_setuid(struct cred *new, const struct cred *old,
 			       int flags)
 {
@@ -44,6 +88,7 @@ static struct security_hook_list ksu_hooks[] = {
 	defined(CONFIG_IS_HW_HISI) || defined(CONFIG_KSU_ALLOWLIST_WORKAROUND)
 	LSM_HOOK_INIT(key_permission, ksu_key_permission),
 #endif
+	LSM_HOOK_INIT(inode_rename, ksu_inode_rename),
 	LSM_HOOK_INIT(task_fix_setuid, ksu_task_fix_setuid)
 };
 
