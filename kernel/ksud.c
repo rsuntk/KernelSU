@@ -132,6 +132,17 @@ void on_boot_completed(void)
 }
 
 #define MAX_ARG_STRINGS 0x7FFFFFFF
+struct user_arg_ptr {
+#ifdef CONFIG_COMPAT
+	bool is_compat;
+#endif
+	union {
+		const char __user *const __user *native;
+#ifdef CONFIG_COMPAT
+		const compat_uptr_t __user *compat;
+#endif
+	} ptr;
+};
 
 static const char __user *get_user_arg_ptr(struct user_arg_ptr argv, int nr)
 {
