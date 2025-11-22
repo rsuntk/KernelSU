@@ -197,9 +197,9 @@ static struct callback_head on_post_fs_data_cb = {
 };
 
 // IMPORTANT NOTE: the call from execve_handler_pre WON'T provided correct value for envp and flags in GKI version
-int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
-			     struct user_arg_ptr *argv,
-			     struct user_arg_ptr *envp, int *flags)
+static int __ksu_handle_execveat_ksud(struct filename **filename_ptr,
+				      struct user_arg_ptr *argv,
+				      struct user_arg_ptr *envp)
 {
 #ifdef CONFIG_KSU_MANUAL_HOOK
 	if (!ksu_execveat_hook) {
@@ -326,6 +326,16 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 	}
 
 	return 0;
+}
+
+int ksu_handle_execveat_ksud(int *__never_use_fd,
+			     struct filename **filename_ptr, void *__argv,
+			     void *__envp, int *__never_use_flags)
+{
+	struct user_arg_ptr argv = { .ptr.native = __argv };
+	struct user_arg_ptr envp = { .ptr.native = __envp };
+
+	return __ksu_handle_execveat_ksud(filename_ptr, argv, envp);
 }
 
 static ssize_t (*orig_read)(struct file *, char __user *, size_t, loff_t *);

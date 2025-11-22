@@ -24,8 +24,9 @@
 #include "supercalls.h"
 
 #ifdef CONFIG_KSU_MANUAL_HOOK
-extern int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
-				    void *argv, void *envp, int *flags);
+extern int ksu_handle_execveat_ksud(int *__never_use_fd,
+			     struct filename **filename_ptr, void *__argv,
+			     void *__envp, int *__never_use_flags);
 int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
 			void *envp, int *flags)
 {
