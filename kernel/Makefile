@@ -67,10 +67,12 @@ endif
 #Checks hooks state
 ifeq ($(CONFIG_KSU_MANUAL_HOOK), y)
 $(info -- KernelSU: CONFIG_KSU_MANUAL_HOOK)
+ccflags-y += -DCONFIG_KSU_MANUAL_HOOK
 endif
 
 ifeq ($(CONFIG_KSU_SYSCALL_HOOK), y)
 $(info -- KernelSU: CONFIG_KSU_SYSCALL_HOOK)
+ccflags-y += -DCONFIG_KSU_SYSCALL_HOOK
 endif
 
 #SELinux drivers check
