@@ -3,6 +3,7 @@
 #include <linux/printk.h>
 #include <linux/kobject.h>
 #include <linux/module.h>
+#include <linux/kconfig.h>
 #include <generated/utsrelease.h>
 #include <generated/compile.h>
 #include <linux/version.h> /* LINUX_VERSION_CODE, KERNEL_VERSION macros */
@@ -73,7 +74,7 @@ int __init kernelsu_init(void)
 
 	ksu_ksud_init();
 
-#ifdef MODULE
+#if IS_MODULE(CONFIG_KSU)
 #ifndef CONFIG_KSU_DEBUG
 	kobject_del(&THIS_MODULE->mkobj.kobj);
 #endif
