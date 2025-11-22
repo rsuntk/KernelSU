@@ -1,4 +1,3 @@
-#ifdef KSU_SHOULD_USE_NEW_TP
 #include "linux/compiler.h"
 #include "linux/cred.h"
 #include "linux/printk.h"
@@ -14,7 +13,7 @@
 #include "allowlist.h"
 #include "arch.h"
 #include "klog.h" // IWYU pragma: keep
-#include "syscall_hook_manager.h"
+#include "syscall_handler.h"
 #include "sucompat.h"
 #include "setuid_hook.h"
 #include "selinux/selinux.h"
@@ -310,8 +309,8 @@ static void ksu_sys_enter_handler(void *data, struct pt_regs *regs, long id)
 						filename_user);
 				} else {
 					ksu_handle_execve_sucompat(
-						NULL, filename_user, NULL,
-						NULL, NULL);
+						NULL, filename_user, NULL, NULL,
+						NULL);
 				}
 				return;
 			}
@@ -365,25 +364,3 @@ void ksu_syscall_hook_manager_exit(void)
 	ksu_sucompat_exit();
 	ksu_setuid_hook_exit();
 }
-#else
-#include "klog.h" // IWYU pragma: keep
-#include "syscall_hook_manager.h"
-#include "sucompat.h"
-#include "setuid_hook.h"
-
-extern void ksu_lsm_hook_init(void);
-void ksu_syscall_hook_manager_init(void)
-{
-	pr_info("hook_manager: initializing..\n");
-	ksu_lsm_hook_init(); // <4.11
-	ksu_setuid_hook_init();
-	ksu_sucompat_init();
-}
-
-void ksu_syscall_hook_manager_exit(void)
-{
-	pr_info("hook_manager: exiting..\n");
-	ksu_sucompat_exit();
-	ksu_setuid_hook_exit();
-}
-#endif

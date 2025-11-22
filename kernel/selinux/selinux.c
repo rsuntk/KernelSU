@@ -59,7 +59,6 @@ is_ksu_transition(const struct task_security_struct *old_tsec,
 }
 #endif
 
-
 void setup_selinux(const char *domain)
 {
 	if (transive_to_domain(domain)) {

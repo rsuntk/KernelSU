@@ -13,12 +13,17 @@
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
 #include "throne_tracker.h"
-#include "syscall_hook_manager.h"
+#ifdef CONFIG_KSU_SYSCALL_HOOK
+#include "syscall_handler.h"
+#endif
+#ifdef CONFIG_KSU_MANUAL_HOOK
+#include "setuid_hook.h"
+#include "sucompat.h"
+#endif
 #include "ksud.h"
 #include "supercalls.h"
 
-extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
-					void *argv, void *envp, int *flags);
+#ifdef CONFIG_KSU_MANUAL_HOOK
 extern int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 				    void *argv, void *envp, int *flags);
 int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
@@ -28,6 +33,8 @@ int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
 	return ksu_handle_execveat_sucompat(fd, filename_ptr, argv, envp,
 					    flags);
 }
+extern void ksu_lsm_hook_init(void);
+#endif
 
 int __init kernelsu_init(void)
 {
@@ -50,7 +57,14 @@ int __init kernelsu_init(void)
 
 	ksu_supercalls_init();
 
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 	ksu_syscall_hook_manager_init();
+#endif
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	ksu_lsm_hook_init();
+	ksu_setuid_hook_init();
+	ksu_sucompat_init();
+#endif
 
 	ksu_allowlist_init();
 
@@ -77,7 +91,13 @@ void kernelsu_exit(void)
 
 	ksu_ksud_exit();
 
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 	ksu_syscall_hook_manager_exit();
+#endif
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	ksu_sucompat_exit();
+	ksu_setuid_hook_exit();
+#endif
 
 	ksu_supercalls_exit();
 

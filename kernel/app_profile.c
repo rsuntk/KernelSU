@@ -5,8 +5,6 @@
 #include <linux/fdtable.h>
 #include <linux/file.h>
 #include <linux/fs.h>
-#include <linux/proc_ns.h>
-#include <linux/pid.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 #include <linux/sched/signal.h> // signal_struct
 #include <linux/sched/task.h>
@@ -15,7 +13,6 @@
 #include <linux/seccomp.h>
 #include <linux/thread_info.h>
 #include <linux/uidgid.h>
-#include <linux/syscalls.h>
 
 #include "allowlist.h"
 #include "app_profile.h"
@@ -23,7 +20,9 @@
 #include "kernel_compat.h"
 #include "klog.h" // IWYU pragma: keep
 #include "selinux/selinux.h"
-#include "syscall_hook_manager.h"
+#ifdef CONFIG_KSU_SYSCALL_HOOK
+#include "syscall_handler.h"
+#endif
 
 static struct group_info root_groups = { .usage = ATOMIC_INIT(2) };
 
@@ -71,138 +70,6 @@ void setup_groups(struct root_profile *profile, struct cred *cred)
 	put_group_info(group_info);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
-extern long SYS_SETNS_SYMBOL(const struct pt_regs *regs);
-static long ksu_sys_setns(int fd, int flags)
-{
-	struct pt_regs regs;
-	memset(&regs, 0, sizeof(regs));
-
-	PT_REGS_PARM1(&regs) = fd;
-	PT_REGS_PARM2(&regs) = flags;
-
-	// TODO: arm support
-#if (defined(__aarch64__) || defined(__x86_64__))
-	return SYS_SETNS_SYMBOL(&regs);
-#else
-	return -ENOSYS;
-#endif
-}
-#else
-static long ksu_sys_setns(int fd, int flags)
-{
-	return sys_setns(fd, flags);
-}
-
-__weak int ksys_unshare(unsigned long unshare_flags)
-{
-	return sys_unshare(unshare_flags);
-}
-#endif
-
-static void setup_mount_namespace(int32_t ns_mode)
-{
-	pr_info("setup mount namespace for pid: %d\n", current->pid);
-
-	if (ns_mode == 0) {
-		pr_info("mount namespace mode: inherit\n");
-		// do nothing
-		return;
-	}
-
-	if (ns_mode > 2) {
-		pr_warn("unknown mount namespace mode: %d\n", ns_mode);
-		return;
-	}
-
-	const struct cred *old_cred = NULL;
-	struct cred *new_cred = NULL;
-	if (!(capable(CAP_SYS_ADMIN) && capable(CAP_SYS_CHROOT))) {
-		pr_info("process dont have CAP_SYS_ADMIN or CAP_SYS_CHROOT, adding it temporarily.\n");
-		new_cred = prepare_creds();
-		if (!new_cred) {
-			pr_warn("failed to prepare new credentials\n");
-			return;
-		}
-		cap_raise(new_cred->cap_effective, CAP_SYS_ADMIN);
-		cap_raise(new_cred->cap_effective, CAP_SYS_CHROOT);
-		old_cred = override_creds(new_cred);
-	}
-
-	if (ns_mode == 1) {
-		pr_info("mount namespace mode: global\n");
-		struct file *ns_file;
-		struct path ns_path;
-		struct task_struct *pid1_task = NULL;
-		struct pid *pid_struct = NULL;
-		rcu_read_lock();
-		// find init
-		pid_struct = find_pid_ns(1, &init_pid_ns);
-		if (unlikely(!pid_struct)) {
-			rcu_read_unlock();
-			pr_warn("failed to find pid_struct for PID 1\n");
-			goto try_drop_caps;
-		}
-
-		pid1_task = get_pid_task(pid_struct, PIDTYPE_PID);
-		rcu_read_unlock();
-		if (unlikely(!pid1_task)) {
-			pr_warn("failed to get task_struct for PID 1\n");
-			goto try_drop_caps;
-		}
-		// mabe you can use &init_task for first stage init?
-		long ret = ns_get_path(&ns_path, pid1_task, &mntns_operations);
-		put_task_struct(pid1_task);
-		if (ret) {
-			pr_warn("failed to get path for init's mount namespace: %ld\n",
-				ret);
-			goto try_drop_caps;
-		}
-		ns_file = dentry_open(&ns_path, O_RDONLY, current_cred());
-
-		path_put(&ns_path);
-		if (IS_ERR(ns_file)) {
-			pr_warn("failed to open file for init's mount namespace: %ld\n",
-				PTR_ERR(ns_file));
-			goto try_drop_caps;
-		}
-
-		int fd = get_unused_fd_flags(O_CLOEXEC);
-		if (fd < 0) {
-			pr_warn("failed to get an unused fd: %d\n", fd);
-			fput(ns_file);
-			goto try_drop_caps;
-		}
-
-		fd_install(fd, ns_file);
-		pr_info("calling sys_setns with fd : %d\n", fd);
-
-		ret = ksu_sys_setns(fd, CLONE_NEWNS);
-		if (ret) {
-			pr_warn("sys_setns failed: %ld\n", ret);
-		}
-		do_close_fd(fd);
-	}
-
-	if (ns_mode == 2) {
-		long ret;
-		pr_info("mount namespace mode: independent\n");
-
-		ret = ksys_unshare(CLONE_NEWNS);
-		if (ret) {
-			pr_warn("call ksys_unshare failed: %ld\n", ret);
-		}
-	}
-
-try_drop_caps:
-	if (old_cred) {
-		pr_info("dropping temporarily capability.\n");
-		revert_creds(old_cred);
-		put_cred(new_cred);
-	}
-	return;
-}
-
 // RKSU: Use it wisely, not static.
 void disable_seccomp(struct task_struct *tsk)
 {
@@ -220,6 +87,10 @@ void disable_seccomp(struct task_struct *tsk)
 #endif
 
 #ifdef CONFIG_SECCOMP
+	// Skip releasing filter ref when its already NULL.
+	if (tsk->seccomp.filter == NULL)
+		return;
+
 	tsk->seccomp.mode = 0;
 	// 5.9+ have filter_count, but optional.
 #ifdef KSU_OPTIONAL_SECCOMP_FILTER_CNT
@@ -246,9 +117,9 @@ void disable_seccomp(struct task_struct *tsk)
 void escape_with_root_profile(void)
 {
 	struct cred *cred;
-#ifdef KSU_SHOULD_USE_NEW_TP
-	struct task_struct *p = current;
-	struct task_struct *t;
+#ifdef CONFIG_KSU_SYSCALL_HOOK
+	struct task_struct *p, *t;
+	p = current;
 #endif
 
 	if (current_euid().val == 0) {
@@ -301,9 +172,8 @@ void escape_with_root_profile(void)
 	spin_unlock_irq(&current->sighand->siglock);
 
 	setup_selinux(profile->selinux_domain);
-	setup_mount_namespace(profile->namespaces);
 
-#ifdef KSU_SHOULD_USE_NEW_TP
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 	for_each_thread (p, t) {
 		ksu_set_task_tracepoint_flag(t);
 	}

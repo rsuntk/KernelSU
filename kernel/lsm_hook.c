@@ -6,8 +6,6 @@
 #include "kernel_compat.h"
 #include "setuid_hook.h"
 
-#ifndef KSU_SHOULD_USE_NEW_TP
-
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0) ||                           \
 	defined(CONFIG_IS_HW_HISI) || defined(CONFIG_KSU_ALLOWLIST_WORKAROUND)
 static int ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
@@ -25,11 +23,20 @@ static int ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 	return 0;
 }
 #endif
+
 static int ksu_task_fix_setuid(struct cred *new, const struct cred *old,
 			       int flags)
 {
-	return ksu_handle_setuid_common(new->uid.val, old->uid.val,
-					new->euid.val, old->euid.val);
+	if (!new || !old)
+		return 0;
+
+	kuid_t old_uid = old->uid;
+	kuid_t old_euid = old->euid;
+	kuid_t new_uid = new->uid;
+	kuid_t new_euid = new->euid;
+
+	return ksu_handle_setuid_common(new_uid.val, old_uid.val, new_euid.val,
+					old_euid.val);
 }
 
 static struct security_hook_list ksu_hooks[] = {
@@ -59,9 +66,3 @@ void ksu_lsm_hook_init(void)
 #endif
 	pr_info("LSM hooks initialized.\n");
 }
-#else
-void ksu_lsm_hook_init(void)
-{
-	return;
-}
-#endif

@@ -182,6 +182,7 @@ static int get_object(char *buf, char __user *user_object, size_t buf_sz,
 
 	return 0;
 }
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0) ||                           \
 	!defined(KSU_COMPAT_USE_SELINUX_STATE)
 extern int avc_ss_reset(u32 seqno);
