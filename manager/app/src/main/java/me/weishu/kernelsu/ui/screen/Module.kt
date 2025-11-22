@@ -1107,12 +1107,8 @@ fun ModuleItem(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        modifier = Modifier.size(20.dp),
-                        imageVector = if (module.remove) {
-                            MiuixIcons.Useful.Undo
-                        } else {
-                            Icons.Outlined.Delete
-                        },
+                        modifier = Modifier.size(20.dp).apply { if (module.remove) rotate(180f) },
+                        imageVector = if (!module.remove) Icons.Outlined.Delete else MiuixIcons.Useful.Undo,
                         tint = actionIconTint,
                         contentDescription = null
                     )
