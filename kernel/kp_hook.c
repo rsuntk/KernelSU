@@ -200,7 +200,7 @@ void kp_handle_supercalls_init(void)
 	pr_info("reboot kprobe registered successfully\n");
 }
 
-void kp_handler_supercalls_exit(void)
+void kp_handle_supercalls_exit(void)
 {
 	unregister_kprobe(&reboot_kp);
 }

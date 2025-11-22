@@ -23,6 +23,6 @@ void kp_handle_ksud_exit(void);
 
 // supercalls.c
 void kp_handle_supercalls_init(void);
-void kp_handler_supercalls_exit(void);
+void kp_handle_supercalls_exit(void);
 
 #endif
