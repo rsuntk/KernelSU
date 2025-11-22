@@ -1,5 +1,6 @@
 package me.weishu.kernelsu.ui.screen
 
+import android.annotation.SuppressLint
 import android.app.Activity.RESULT_OK
 import android.content.Context
 import android.content.Intent
@@ -87,6 +88,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ramcosta.composedestinations.generated.destinations.ExecuteModuleActionScreenDestination
 import com.ramcosta.composedestinations.generated.destinations.FlashScreenDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -96,7 +101,7 @@ import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.ui.component.ConfirmResult
-import me.weishu.kernelsu.ui.component.DropdownImpl
+import me.weishu.kernelsu.ui.component.RebootListPopup
 import me.weishu.kernelsu.ui.component.SearchBox
 import me.weishu.kernelsu.ui.component.SearchPager
 import me.weishu.kernelsu.ui.component.rememberConfirmDialog
@@ -126,13 +131,16 @@ import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
+import top.yukonga.miuix.kmp.extra.DropdownImpl
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.icons.useful.ImmersionMore
+import top.yukonga.miuix.kmp.icon.icons.useful.Undo
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.getWindowSize
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
+@SuppressLint("StringFormatInvalid")
 @Composable
 fun ModulePager(
     navigator: DestinationsNavigator,
@@ -357,10 +365,17 @@ fun ModulePager(
         animationSpec = tween(durationMillis = 350)
     )
 
+    val hazeState = remember { HazeState() }
+    val hazeStyle = HazeStyle(
+        backgroundColor = colorScheme.surface,
+        tint = HazeTint(colorScheme.surface.copy(0.8f))
+    )
+
     Scaffold(
         topBar = {
-            searchStatus.TopAppBarAnim {
+            searchStatus.TopAppBarAnim(hazeState = hazeState, hazeStyle = hazeStyle) {
                 TopAppBar(
+                    color = Color.Transparent,
                     title = stringResource(R.string.module),
                     actions = {
                         val showTopPopup = remember { mutableStateOf(false) }
@@ -408,7 +423,7 @@ fun ModulePager(
                             }
                         }
                         IconButton(
-                            modifier = Modifier.padding(end = 16.dp),
+                            modifier = Modifier.padding(end = 8.dp),
                             onClick = { showTopPopup.value = true },
                             holdDownState = showTopPopup.value
                         ) {
@@ -418,6 +433,10 @@ fun ModulePager(
                                 contentDescription = stringResource(id = R.string.settings)
                             )
                         }
+                        RebootListPopup(
+                            modifier = Modifier.padding(end = 16.dp),
+                            alignment = PopupPositionProvider.Align.TopRight
+                        )
                     },
                     scrollBehavior = scrollBehavior
                 )
@@ -436,12 +455,10 @@ fun ModulePager(
                         viewModel.markNeedRefresh()
                     }
                 )
-                val uris = mutableListOf<Uri>()
-                val moduleNames = uris.mapIndexed { index, uri -> "\n${index + 1}. ${uri.getFileName(context)}" }.joinToString("")
-                val confirmContent = stringResource(R.string.module_install_prompt_with_name, moduleNames)
                 val selectZipLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) {
+                    val uris = mutableListOf<Uri>()
                     if (it.resultCode != RESULT_OK) {
                         return@rememberLauncherForActivityResult
                     }
@@ -463,6 +480,8 @@ fun ModulePager(
                     } else if (uris.size > 1) {
                         // multiple files selected
                         zipUris = uris
+                        val moduleNames = uris.mapIndexed { index, uri -> "\n${index + 1}. ${uri.getFileName(context)}" }.joinToString("")
+                        val confirmContent = context.getString(R.string.module_install_prompt_with_name, moduleNames)
                         confirmDialog.showConfirm(
                             title = confirmTitle,
                             content = confirmContent
@@ -499,7 +518,9 @@ fun ModulePager(
                 defaultResult = {},
                 searchBarTopPadding = dynamicTopPadding,
             ) {
-                val updateInfoMap = viewModel.updateInfo
+                item {
+                    Spacer(Modifier.height(6.dp))
+                }
                 items(
                     viewModel.searchResults.value,
                     key = { it.id },
@@ -511,6 +532,7 @@ fun ModulePager(
                         exit = fadeOut() + shrinkVertically()
                     ) {
                         val itemScope = rememberCoroutineScope()
+                        val updateInfoMap = viewModel.updateInfo
                         val currentModuleState = rememberUpdatedState(module)
                         val moduleUpdateInfo = updateInfoMap[module.id] ?: ModuleViewModel.ModuleUpdateInfo.Empty
 
@@ -565,7 +587,6 @@ fun ModulePager(
                                 )
                             }
                         }
-
                         ModuleItem(
                             module = module,
                             updateUrl = moduleUpdateInfo.downloadUrl,
@@ -609,6 +630,8 @@ fun ModulePager(
                         start = innerPadding.calculateStartPadding(layoutDirection),
                         end = innerPadding.calculateEndPadding(layoutDirection)
                     ),
+                    hazeState = hazeState,
+                    hazeStyle = hazeStyle
                 ) { boxHeight ->
                     ModuleList(
                         navigator,
@@ -618,7 +641,8 @@ fun ModulePager(
                             .scrollEndHaptic()
                             .overScrollVertical()
                             .nestedScroll(scrollBehavior.nestedScrollConnection)
-                            .nestedScroll(nestedScrollConnection),
+                            .nestedScroll(nestedScrollConnection)
+                            .hazeSource(state = hazeState),
                         scope = scope,
                         modules = modules,
                         onInstallModule = {
@@ -824,16 +848,18 @@ fun ModuleItem(
     onExecuteAction: () -> Unit,
     onOpenWebUi: () -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
+    val context = LocalContext.current
+    val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    val isDark = isSystemInDarkTheme() || prefs.getInt("color_mode", 0) == 2 || prefs.getInt("color_mode", 0) == 5
+    val colorScheme = colorScheme
+    val secondaryContainer = colorScheme.secondaryContainer.copy(alpha = 0.8f)
+    val actionIconTint = remember(isDark) { colorScheme.onSurface.copy(alpha = if (isDark) 0.7f else 0.9f) }
+    val updateBg = remember(colorScheme) { colorScheme.tertiaryContainer.copy(alpha = 0.6f) }
+    val updateTint = remember(colorScheme) { colorScheme.onTertiaryContainer.copy(alpha = 0.8f) }
     val hasUpdate by remember(updateUrl) { derivedStateOf { updateUrl.isNotEmpty() } }
     val textDecoration by remember(module.remove) {
         mutableStateOf(if (module.remove) TextDecoration.LineThrough else null)
     }
-    val onSurface = colorScheme.onSurface
-    val secondaryContainer = colorScheme.secondaryContainer.copy(alpha = 0.8f)
-    val actionIconTint = remember(isDark) { onSurface.copy(alpha = if (isDark) 0.7f else 0.9f) }
-    val updateBg = remember(isDark) { Color(if (isDark) 0xFF25354E else 0xFFEAF2FF) }
-    val updateTint = remember { Color(0xFF0D84FF) }
 
     Card(
         modifier = Modifier
@@ -994,7 +1020,7 @@ fun ModuleItem(
                 ) {
                     Icon(
                         modifier = Modifier.size(20.dp).apply { if (module.remove) rotate(180f) },
-                        imageVector = if (!module.remove) Icons.Outlined.Delete else Icons.Outlined.Refresh,
+                        imageVector = if (!module.remove) Icons.Outlined.Delete else MiuixIcons.Useful.Undo,
                         tint = actionIconTint,
                         contentDescription = null
                     )

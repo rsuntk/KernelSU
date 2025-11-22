@@ -1,6 +1,7 @@
 package me.weishu.kernelsu.ui.screen
 
 import android.content.Context
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -27,14 +28,17 @@ import androidx.compose.material.icons.rounded.RemoveModerator
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Update
 import androidx.compose.material.icons.rounded.UploadFile
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -47,15 +51,16 @@ import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.AboutScreenDestination
 import com.ramcosta.composedestinations.generated.destinations.AppProfileTemplateScreenDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import kotlinx.coroutines.launch
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
-import me.weishu.kernelsu.ui.component.ConfirmResult
 import me.weishu.kernelsu.ui.component.KsuIsValid
 import me.weishu.kernelsu.ui.component.SendLogDialog
-import me.weishu.kernelsu.ui.component.SuperDropdown
 import me.weishu.kernelsu.ui.component.UninstallDialog
-import me.weishu.kernelsu.ui.component.rememberConfirmDialog
 import me.weishu.kernelsu.ui.component.rememberLoadingDialog
 import me.weishu.kernelsu.ui.util.execKsud
 import top.yukonga.miuix.kmp.basic.Card
@@ -64,6 +69,7 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.extra.SuperArrow
+import top.yukonga.miuix.kmp.extra.SuperDropdown
 import top.yukonga.miuix.kmp.extra.SuperSwitch
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.getWindowSize
@@ -81,10 +87,21 @@ fun SettingPager(
     bottomInnerPadding: Dp
 ) {
     val scrollBehavior = MiuixScrollBehavior()
+    val hazeState = remember { HazeState() }
+    val hazeStyle = HazeStyle(
+        backgroundColor = colorScheme.surface,
+        tint = HazeTint(colorScheme.surface.copy(0.8f))
+    )
 
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.hazeEffect(hazeState) {
+                    style = hazeStyle
+                    blurRadius = 30.dp
+                    noiseFactor = 0f
+                },
+                color = Color.Transparent,
                 title = stringResource(R.string.settings),
                 scrollBehavior = scrollBehavior
             )
@@ -105,13 +122,13 @@ fun SettingPager(
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .hazeSource(state = hazeState)
                 .padding(horizontal = 12.dp),
             contentPadding = innerPadding,
             overscrollEffect = null,
         ) {
             item {
                 val context = LocalContext.current
-                val scope = rememberCoroutineScope()
                 val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
                 var checkUpdate by rememberSaveable {
                     mutableStateOf(prefs.getBoolean("check_update", true))
@@ -167,6 +184,92 @@ fun SettingPager(
                     }
                 }
 
+                Card(
+                    modifier = Modifier
+                        .padding(top = 12.dp)
+                        .fillMaxWidth(),
+                ) {
+                    val themeItems = listOf(
+                        stringResource(id = R.string.settings_theme_mode_system),
+                        stringResource(id = R.string.settings_theme_mode_light),
+                        stringResource(id = R.string.settings_theme_mode_dark),
+                        stringResource(id = R.string.settings_theme_mode_monet_system),
+                        stringResource(id = R.string.settings_theme_mode_monet_light),
+                        stringResource(id = R.string.settings_theme_mode_monet_dark),
+                    )
+                    var themeMode by rememberSaveable {
+                        mutableIntStateOf(prefs.getInt("color_mode", 0))
+                    }
+                    SuperDropdown(
+                        title = stringResource(id = R.string.settings_theme),
+                        summary = stringResource(id = R.string.settings_theme_summary),
+                        items = themeItems,
+                        leftAction = {
+                            Icon(
+                                Icons.Rounded.Palette,
+                                modifier = Modifier.padding(end = 16.dp),
+                                contentDescription = stringResource(id = R.string.settings_theme),
+                                tint = colorScheme.onBackground
+                            )
+                        },
+                        selectedIndex = themeMode,
+                        onSelectedIndexChange = { index ->
+                            prefs.edit { putInt("color_mode", index) }
+                            themeMode = index
+                        }
+                    )
+
+                    AnimatedVisibility(
+                        visible = themeMode in 3..5
+                    ) {
+                        val colorItems = listOf(
+                            stringResource(id = R.string.settings_key_color_default),
+                            stringResource(id = R.string.color_blue),
+                            stringResource(id = R.string.color_red),
+                            stringResource(id = R.string.color_green),
+                            stringResource(id = R.string.color_purple),
+                            stringResource(id = R.string.color_orange),
+                            stringResource(id = R.string.color_teal),
+                            stringResource(id = R.string.color_pink),
+                            stringResource(id = R.string.color_brown),
+                        )
+                        val colorValues = listOf(
+                            0,
+                            Color(0xFF1A73E8).toArgb(),
+                            Color(0xFFEA4335).toArgb(),
+                            Color(0xFF34A853).toArgb(),
+                            Color(0xFF9333EA).toArgb(),
+                            Color(0xFFFB8C00).toArgb(),
+                            Color(0xFF009688).toArgb(),
+                            Color(0xFFE91E63).toArgb(),
+                            Color(0xFF795548).toArgb(),
+                        )
+                        var keyColorIndex by rememberSaveable {
+                            mutableIntStateOf(
+                                colorValues.indexOf(prefs.getInt("key_color", 0)).takeIf { it >= 0 } ?: 0
+                            )
+                        }
+                        SuperDropdown(
+                            title = stringResource(id = R.string.settings_key_color),
+                            summary = stringResource(id = R.string.settings_key_color_summary),
+                            items = colorItems,
+                            leftAction = {
+                                Icon(
+                                    Icons.Rounded.Palette,
+                                    modifier = Modifier.padding(end = 16.dp),
+                                    contentDescription = stringResource(id = R.string.settings_key_color),
+                                    tint = colorScheme.onBackground
+                                )
+                            },
+                            selectedIndex = keyColorIndex,
+                            onSelectedIndexChange = { index ->
+                                prefs.edit { putInt("key_color", colorValues[index]) }
+                                keyColorIndex = index
+                            }
+                        )
+                    }
+                }
+
                 KsuIsValid {
                     Card(
                         modifier = Modifier
@@ -195,7 +298,6 @@ fun SettingPager(
                 }
 
                 KsuIsValid {
-
                     Card(
                         modifier = Modifier
                             .padding(top = 12.dp)
