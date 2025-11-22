@@ -38,3 +38,4 @@ static inline void ksu_clear_task_tracepoint_flag(struct task_struct *t)
 }
 
 void ksu_clear_task_tracepoint_flag_if_needed(struct task_struct *t);
+#endif
