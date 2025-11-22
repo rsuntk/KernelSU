@@ -1,5 +1,7 @@
 #include <linux/kprobes.h>
 #include <linux/task_work.h>
+#include <linux/compat.h>
+#include <linux/workqueue.h>
 
 #include "arch.h"
 #include "kp_hook.h"
