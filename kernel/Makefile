@@ -29,12 +29,12 @@ obj-$(CONFIG_KSU) += kernelsu.o
 KDIR := $(KDIR)
 MDIR := $(realpath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
-#Stop printing unless ddk environment
+# Stop printing unless ddk environment
 ifneq ($(KDIR),)
 $(info -- KDIR: $(KDIR))
 $(info -- MDIR: $(MDIR))
 
-#DDK environment workaround.
+# DDK environment workaround.
 ccflags-y += -DDDK_ENV
 endif
 
