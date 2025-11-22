@@ -28,7 +28,8 @@ static int ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 }
 #endif
 
-static int ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
+static int ksu_inode_rename(struct inode *old_inode, struct dentry *old_dentry,
+			    struct inode *new_inode, struct dentry *new_dentry)
 {
 	// skip kernel threads
 	if (!current->mm) {
