@@ -1,4 +1,4 @@
-#include <linux/kprobe.h>
+#include <linux/kprobes.h>
 #include <linux/task_work.h>
 
 #include "arch.h"
