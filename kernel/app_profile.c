@@ -100,14 +100,13 @@ void disable_seccomp(struct task_struct *tsk)
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) &&                           \
      defined(KSU_OPTIONAL_SECCOMP_FILTER_RELEASE))
 	seccomp_filter_release(tsk);
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0)
+	put_seccomp_filter(tsk);
 #endif
 	// never, ever call seccomp_filter_release on 6.10+ (no effect)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) &&                          \
      LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 0))
 	seccomp_filter_release(tsk);
-#endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0)
-	put_seccomp_filter(tsk);
 #endif
 	// finally, we freed the filter to avoid UAF.
 	tsk->seccomp.filter = NULL;
