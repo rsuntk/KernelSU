@@ -24,7 +24,6 @@ jobs:
       - build-gki-image
       - build-wsa-kernel
       - build-arcvm-kernel
-      - build-meta-overlayfs
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
