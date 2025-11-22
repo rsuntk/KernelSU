@@ -6,6 +6,7 @@
 #include <linux/sched.h>
 #endif
 #include <linux/uaccess.h>
+#include <linux/fdtable.h>
 #include "klog.h" // IWYU pragma: keep
 #include "kernel_compat.h"
 
@@ -14,7 +15,6 @@
 #include <linux/key.h>
 #include <linux/errno.h>
 #include <linux/cred.h>
-#include <linux/fdtable.h>
 #include <linux/lsm_hooks.h>
 
 extern int install_session_keyring_to_cred(struct cred *, struct key *);
