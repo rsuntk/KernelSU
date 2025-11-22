@@ -36,7 +36,7 @@ int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
 					    flags);
 }
 extern void ksu_lsm_hook_init(void);
-#elif defiend(CONFIG_KSU_SYSCALL_HOOK)
+#elif defined(CONFIG_KSU_SYSCALL_HOOK)
 extern void ksu_observer_exit(void);
 #endif
 
