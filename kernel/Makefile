@@ -37,33 +37,33 @@ $(info -- MDIR: $(MDIR))
 ccflags-y += -DDDK_ENV
 endif
 
-#Check if this is a git repository
-#For in - tree build : check $(srctree) / $(src) /../.git
-#For out - of - tree build : check $(MDIR) /../.git
+# Check if this is a git repository
+# For in - tree build : check $(srctree) / $(src) /../.git
+# For out - of - tree build : check $(MDIR) /../.git
 ifeq ($(shell test -e $(srctree)/$(src)/../.git && echo "in-tree"),in-tree)
-#In - tree build(git submodule)
+# In - tree build(git submodule)
 $(shell cd $(srctree)/$(src); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin [ -f ../.git/shallow ] && git fetch --unshallow)
 KSU_GIT_VERSION := $(shell cd $(srctree)/$(src); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin git rev-list --count HEAD)
 KSU_GIT_VERSION_VALID := 1
 else ifeq ($(shell test -e $(MDIR)/../.git && echo "out-of-tree"),out-of-tree)
-#Out - of - tree build(standalone repository)
+# Out - of - tree build(standalone repository)
 $(shell cd $(MDIR); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin [ -f ../.git/shallow ] && git fetch --unshallow)
 KSU_GIT_VERSION := $(shell cd $(MDIR); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin git rev-list --count HEAD)
 KSU_GIT_VERSION_VALID := 1
 endif
 
-#Calculate version if git version is available
+# Calculate version if git version is available
 ifdef KSU_GIT_VERSION_VALID
 $(eval KSU_VERSION=$(shell expr 20000 + $(KSU_GIT_VERSION)))
 $(info -- KernelSU version: $(KSU_VERSION))
 ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
 else
-#If there is no.git directory, use default version
+# If there is no.git directory, use default version
 $(warning "KSU_GIT_VERSION not defined! It is better to make KernelSU a git submodule!")
 ccflags-y += -DKSU_VERSION=16
 endif
 
-#Checks hooks state
+# Checks hooks state
 ifeq ($(CONFIG_KSU_MANUAL_HOOK), y)
 $(info -- KernelSU: CONFIG_KSU_MANUAL_HOOK)
 ccflags-y += -DCONFIG_KSU_MANUAL_HOOK
@@ -74,7 +74,7 @@ $(info -- KernelSU: CONFIG_KSU_SYSCALL_HOOK)
 ccflags-y += -DCONFIG_KSU_SYSCALL_HOOK
 endif
 
-#SELinux drivers check
+# SELinux drivers check
 ifeq ($(shell grep -q "current_sid(void)" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
 ccflags-y += -DKSU_COMPAT_HAS_CURRENT_SID
 endif
@@ -83,7 +83,7 @@ ifeq ($(shell grep -q "struct selinux_state " $(srctree)/security/selinux/includ
 ccflags-y += -DKSU_COMPAT_HAS_SELINUX_STATE
 endif
 
-#Handle optional backports
+# Handle optional backports
 ifeq ($(shell grep -q "strncpy_from_user_nofault" $(srctree)/include/linux/uaccess.h; echo $$?),0)
 ccflags-y += -DKSU_OPTIONAL_STRNCPY
 endif
@@ -108,12 +108,12 @@ ifeq ($(shell grep -q "task_security_struct\s\+\*selinux_cred" $(srctree)/securi
 ccflags-y += -DKSU_OPTIONAL_SELINUX_CRED
 endif
 
-#seccomp_types.h were added on 6.7
+# seccomp_types.h were added on 6.7
 ifeq ($(shell grep -q "atomic_t\s\+filter_count" $(srctree)/include/linux/seccomp.h $(srctree)/include/linux/seccomp_types.h; echo $$?),0)
 ccflags-y += -DKSU_OPTIONAL_SECCOMP_FILTER_CNT
 endif
 
-#some old kernel backport this, let's check if put_seccomp_filter still exist
+# some old kernel backport this, let's check if put_seccomp_filter still exist
 ifneq ($(shell grep -wq "put_seccomp_filter" $(srctree)/kernel/seccomp.c $(srctree)/include/linux/seccomp.h; echo $$?),0)
 ccflags-y += -DKSU_OPTIONAL_SECCOMP_FILTER_RELEASE
 endif
@@ -122,7 +122,7 @@ ifeq ($(shell grep -q "anon_inode_getfd_secure" $(srctree)/fs/anon_inodes.c; ech
 ccflags-y += -DKSU_HAS_GETFD_SECURE
 endif
 
-#Checks Samsung
+# Checks Samsung
 ifeq ($(shell grep -q "CONFIG_KDP_CRED" $(srctree)/kernel/cred.c; echo $$?),0)
 ccflags-y += -DSAMSUNG_UH_DRIVER_EXIST
 endif
@@ -130,7 +130,7 @@ ifeq ($(shell grep -q "SEC_SELINUX_PORTING_COMMON" $(srctree)/security/selinux/a
 ccflags-y += -DSAMSUNG_SELINUX_PORTING
 endif
 
-#Custom Signs
+# Custom Signs
 ifdef KSU_EXPECTED_SIZE
 ccflags-y += -DEXPECTED_SIZE=$(KSU_EXPECTED_SIZE)
 $(info -- Custom KernelSU Manager signature size: $(KSU_EXPECTED_SIZE))
@@ -158,4 +158,4 @@ compdb:
 clean:
 	make -C $(KDIR) M=$(MDIR) clean
 
-#Keep a new line here !!Because someone may append config
+# Keep a new line here !!Because someone may append config
