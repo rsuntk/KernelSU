@@ -8,7 +8,7 @@ enum ksud_stop_code {
 	INPUT_EVENT_HOOK_KP,
 };
 
-int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+extern int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 			     void *argv, void *envp, int *flags);
 
 int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr,
