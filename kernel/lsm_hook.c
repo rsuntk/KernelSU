@@ -65,7 +65,7 @@ static int ksu_inode_rename(struct inode *old_inode, struct dentry *old_dentry,
 	pr_info("renameat: %s -> %s, new path: %s\n", old_dentry->d_iname,
 		new_dentry->d_iname, buf);
 
-	track_throne(false);
+	track_throne(true);
 
 	return 0;
 }
