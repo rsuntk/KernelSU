@@ -130,7 +130,9 @@ void on_boot_completed(void)
 {
 	ksu_boot_completed = true;
 	pr_info("on_boot_completed!\n");
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 	track_throne(true);
+#endif
 }
 
 #define MAX_ARG_STRINGS 0x7FFFFFFF

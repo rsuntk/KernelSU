@@ -8,6 +8,7 @@
 
 #include "klog.h" // IWYU pragma: keep
 #include "kernel_compat.h"
+#include "ksud.h"
 #include "setuid_hook.h"
 #include "throne_tracker.h"
 
@@ -64,6 +65,17 @@ static int ksu_inode_rename(struct inode *old_inode, struct dentry *old_dentry,
 
 	pr_info("renameat: %s -> %s, new path: %s\n", old_dentry->d_iname,
 		new_dentry->d_iname, buf);
+
+	/*
+	 * RKSU: track_throne(true) only occurs when
+	 * on_boot_completed. So let's make it once-lock.
+	 */
+	static bool do_once = false;
+	if (ksu_boot_completed && !do_once) {
+		do_once = true;
+		track_throne(true);
+		return 0;
+	}
 
 	track_throne(false);
 

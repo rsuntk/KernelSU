@@ -299,7 +299,7 @@ static void search_manager(const char *path, int depth,
 	}
 
 	// clear apk_path_hash_list unconditionally
-	pr_info("search manager: cleanup!\n");
+	pr_info("Search manager: cleanup!\n");
 	list_for_each_entry_safe (pos, n, &apk_path_hash_list, list) {
 		list_del(&pos->list);
 		kfree(pos);
@@ -379,11 +379,13 @@ void track_throne(bool prune_only)
 	}
 	filp_close(fp, 0);
 
+	if (prune_only) {
+		pr_info("throne_tracker: prune allowlist only!\n");
+		goto prune;
+	}
+
 	// now update uid list
 	struct uid_data *np, *n;
-
-	if (prune_only)
-		goto prune;
 
 	// first, check if manager_uid exist!
 	bool manager_exist = false;
@@ -405,7 +407,7 @@ void track_throne(bool prune_only)
 		}
 		pr_info("Searching manager...\n");
 		search_manager("/data/app", 2, &uid_list);
-		pr_info("Search manager finished\n");
+		pr_info("Search manager finished.\n");
 	}
 
 prune:
