@@ -13,10 +13,6 @@ on:
         required: false
         type: boolean
         default: true
-      pack_ksuinit:
-        required: true
-        type: boolean
-        default: true
       use_cache:
         required: false
         type: boolean
@@ -36,18 +32,6 @@ jobs:
       if: ${{ inputs.pack_lkm }}
       run: |
         cp android*-lkm/*_kernelsu.ko ./userspace/ksud/bin/aarch64/
-
-    # TODO: Do not hardcode
-    - name: Prepare ksuinit files
-      if: ${{ inputs.pack_ksuinit }}
-      run: |
-        cp ksuinit-aarch64/ksuinit ./userspace/ksud/bin/aarch64/
-        cp ksuinit-x86_64/ksuinit ./userspace/ksud/bin/x86_64/
-        echo "-- aarch64 --"
-        file ./userspace/ksud/bin/aarch64/*
-        echo ""
-        echo "-- x86_64 --"
-        file ./userspace/ksud/bin/x86_64/*
 
     - name: Setup rustup
       run: |
