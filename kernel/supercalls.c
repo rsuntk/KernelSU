@@ -10,7 +10,6 @@
 #include <linux/uaccess.h>
 #include <linux/version.h>
 #include <linux/kprobes.h>
-#include <linux/kconfig.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 #include <linux/sched/task.h>
 #else
@@ -78,7 +77,7 @@ static int do_get_info(void __user *arg)
 	struct ksu_get_info_cmd cmd = { .version = KERNEL_SU_VERSION,
 					.flags = 0 };
 
-#if IS_MODULE(CONFIG_KSU)
+#ifdef MODULE
 	cmd.flags |= 0x1;
 #endif
 
