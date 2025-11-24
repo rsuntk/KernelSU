@@ -30,6 +30,7 @@ bool ksu_su_compat_enabled __read_mostly = true;
 
 static const char su[] = SU_PATH;
 static const char ksud_path[] = KSUD_PATH;
+static const char sh_path[] = SH_PATH;
 
 static int su_compat_feature_get(u64 *value)
 {
@@ -63,8 +64,6 @@ static void __user *userspace_stack_buffer(const void *d, size_t len)
 
 static char __user *sh_user_path(void)
 {
-	static const char sh_path[] = "/system/bin/sh";
-
 	return userspace_stack_buffer(sh_path, sizeof(sh_path));
 }
 
@@ -162,6 +161,16 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 	escape_with_root_profile();
 
 	return 0;
+}
+
+int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
+			void *envp, int *flags)
+{
+	if (ksu_handle_execveat_ksud(fd, filename_ptr, argv, envp, flags)) {
+		return 0;
+	}
+	return ksu_handle_execveat_sucompat(fd, filename_ptr, argv, envp,
+					    flags);
 }
 
 // dead code: devpts handling

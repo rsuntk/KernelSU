@@ -336,19 +336,6 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 	return 0;
 }
 
-extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
-					void *__never_use_argv,
-					void *__never_use_envp,
-					int *__never_use_flags);
-
-int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
-			void *envp, int *flags)
-{
-	ksu_handle_execveat_ksud(fd, filename_ptr, argv, envp, flags);
-	return ksu_handle_execveat_sucompat(fd, filename_ptr, argv, envp,
-					    flags);
-}
-
 static ssize_t (*orig_read)(struct file *, char __user *, size_t, loff_t *);
 static ssize_t (*orig_read_iter)(struct kiocb *, struct iov_iter *);
 static struct file_operations fops_proxy;

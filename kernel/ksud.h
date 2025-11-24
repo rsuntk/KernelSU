@@ -32,4 +32,8 @@ struct user_arg_ptr {
 	} ptr;
 };
 
+int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
+			     struct user_arg_ptr *argv,
+			     struct user_arg_ptr *envp, int *flags);
+
 #endif
