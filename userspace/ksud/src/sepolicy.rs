@@ -678,8 +678,8 @@ fn to_u64_addr(pol: &PolicyObject) -> u64 {
 }
 
 impl From<AtomicStatement> for FfiPolicy {
-    fn from(policy: AtomicStatement) -> FfiPolicy {
-        FfiPolicy {
+    fn from(policy: AtomicStatement) -> Self {
+        Self {
             cmd: policy.cmd,
             subcmd: policy.subcmd,
             sepol1: to_u64_addr(&policy.sepol1),
