@@ -1,6 +1,6 @@
 <img src="https://kernelsu.org/logo.png" style="width: 96px;" alt="logo">
 
-# KernelSU
+# KernelSU (Rissu's fork)
 
 ### A Kernel-based root solution for Android devices.
 
@@ -29,38 +29,33 @@ curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.s
 > This branch is not always updated.
 >
 
-- `susfs-main`: Synced with latest https://gitlab.com/simonpunk/susfs4ksu.git commit(s), for GKI or non-GKI kernel (backport required).
-- `susfs-legacy`: Synced with `kernel-4.19` of https://gitlab.com/simonpunk/susfs4ksu.git, for non-GKI kernel (stuck in susfs-v1.5.5).
+- `susfs-rksu-master`: Synced with latest https://gitlab.com/simonpunk/susfs4ksu.git commit(s), for GKI or non-GKI kernel (backport required).
 
 ## Hook method
 
-1. **KPROBES hook:**
+1. **Syscall hook:**
     - Used for Loadable Kernel Module (LKM)
     - Default hook method on GKI kernels.
-    - Need `# CONFIG_KSU_MANUAL_HOOK is not set` & `CONFIG_KPROBES=y`
-    - Require CONFIG_KPROBES to work properly.
+    - Need `# CONFIG_KSU_SYSCALL_HOOK is not set` & `CONFIG_KPROBES=y`, `CONFIG_KRETPROBES=y`, `CONFIG_HAVE_SYSCALL_TRACEPOINTS=y`
 2. **Manual hook:**
-    - Require: https://kernelsu.org/guide/how-to-integrate-for-non-gki.html#manually-modify-the-kernel-source
+    - [See this repository for more information](https://github.com/rksuorg/kernel_patches)
     - Default hook method on Non-GKI kernels.
     - Need `CONFIG_KSU_MANUAL_HOOK=y`
 
 ## Features
 
 1. Kernel-based `su` and root access management.
-2. Module system based on [5ec1cff's Magic Mount API on KernelSU](https://github.com/5ec1cff/KernelSU)
+2. Module system based on [Metamodule](https://kernelsu.org/guide/metamodule.html)
 3. [App Profile](https://kernelsu.org/guide/app-profile.html): Lock up the root power in a cage.
-4. Bringing back non-GKI/GKI 1.0 support
-5. Added armeabi-v7a/arm32 support.
 
 ## Compatibility State
 
-KernelSU (before v1.0.0) officially supports Android GKI 2.0 devices (kernel 5.10+).
-
-Older kernels (4.4+) are also compatible, but the kernel will have to be built manually.
-
-With more backports, KernelSU can supports 3.x kernel (3.4-3.18).
-
-Currently, only `arm64-v8a`, `x86_64` and `armeabi-v7a` are supported.
+- **Kernel compatibility:**
+    - Android GKI 2.0 (5.10+): aarch64, armv8l, x86_64
+    - Android GKI 1.0 (5.4): aarch64, armv8l, armv7l
+    - Non-GKI (4.4-4.19): aarch64, armv8l, armv7l
+- **Application compaibility:**
+    - arm64-v8a, armeabi-v7a, x86_64
 
 ## Usage
 
@@ -71,7 +66,7 @@ Currently, only `arm64-v8a`, `x86_64` and `armeabi-v7a` are supported.
 ## Discussion
 
 - Official KernelSU Telegram: [@KernelSU](https://t.me/KernelSU)
-- Unofficial RKSU Telegram: [@rsukrnlsu_grp](https://t.me/rsukrnlsu_grp)
+- RKSU Telegram: [@rsukrnlsu_grp](https://t.me/rsukrnlsu_grp)
 
 ## Security
 
@@ -88,5 +83,4 @@ For information on reporting security vulnerabilities in KernelSU, see [SECURITY
 - [Magisk](https://github.com/topjohnwu/Magisk): the powerful root tool.
 - [genuine](https://github.com/brevent/genuine/): apk v2 signature validation.
 - [Diamorphine](https://github.com/m0nad/Diamorphine): some rootkit skills.
-- [5ec1cff](https://github.com/5ec1cff): magic mount api implementation.
-- [simonpunk](https://gitlab.com/simonpunk/susfs4ksu): susfs add-on.
+- [simonpunk](https://gitlab.com/simonpunk): susfs add-on.
