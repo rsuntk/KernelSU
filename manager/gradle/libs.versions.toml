@@ -17,7 +17,7 @@ libsu = "6.0.0"
 apksign = "1.4"
 cmaker = "1.2"
 miuix = "0.7.1"
-haze = "1.7.0"
+haze = "1.7.1"
 capsule = "2.1.1"
 
 [plugins]
