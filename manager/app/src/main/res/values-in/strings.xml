@@ -50,6 +50,8 @@
     <string name="home_click_to_learn_kernelsu">Pelajari cara menginstal KernelSU dan menggunakan modul.</string>
     <string name="home_support_title">Dukung Kami</string>
     <string name="home_support_content">KernelSU akan selalu menjadi aplikasi gratis dan terbuka. Anda dapat memberikan donasi sebagai bentuk dukungan.</string>
+    <string name="home_unofficial_kernelsu_title">Cabang tidak-resmi KernelSU oleh Rissu</string>
+    <string name="home_unofficial_kernelsu_summary">Ketuk kartu ini untuk sumber kode dari RKSU.</string>
     <string name="about_source_code"><![CDATA[Lihat kode sumber di %1$s<br/>Gabung kanal %2$s kami]]></string>
     <string name="profile">Profil Apl</string>
     <string name="profile_default">Bawaan</string>

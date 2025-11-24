@@ -203,6 +203,7 @@ fun HomePager(
                     InfoCard()
                     DonateCard()
                     LearnMoreCard()
+                    UnofficialCard()
                 }
                 Spacer(Modifier.height(bottomInnerPadding))
             }
@@ -556,6 +557,32 @@ fun WarningCard(
         }
     }
 }
+@Composable
+fun UnofficialCard() {
+    val uriHandler = LocalUriHandler.current
+    val url = "https://github.com/rsuntk/KernelSU"
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth(),
+    ) {
+        BasicComponent(
+            title = stringResource(R.string.home_unofficial_kernelsu_title),
+            summary = stringResource(R.string.home_unofficial_kernelsu_summary),
+            rightActions = {
+                Icon(
+                    modifier = Modifier.size(28.dp),
+                    imageVector = Icons.Rounded.Link,
+                    tint = colorScheme.onSurface,
+                    contentDescription = null
+                )
+            },
+            onClick = {
+                uriHandler.openUri(url)
+            }
+        )
+    }
+}
 
 @Composable
 fun LearnMoreCard() {
@@ -642,8 +669,8 @@ private fun InfoCard() {
                 .padding(16.dp)
         ) {
             InfoText(
-                title = stringResource(R.string.home_kernel),
-                content = uname.release
+                stringResource(R.string.home_kernel),
+                content = "${uname.release} (${uname.machine})"
             )
             InfoText(
                 title = stringResource(R.string.home_manager_version),
