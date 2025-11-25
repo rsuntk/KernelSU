@@ -24,7 +24,7 @@
 #include "supercalls.h"
 
 #ifdef CONFIG_KSU_MANUAL_HOOK
-extern void ksu_lsm_hook_init(void);
+extern void __init ksu_lsm_hook_init(void);
 #endif
 #ifdef CONFIG_KSU_SYSCALL_HOOK
 extern void ksu_observer_exit(void);
