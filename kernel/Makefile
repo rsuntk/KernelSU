@@ -24,7 +24,7 @@ ccflags-y += -I$(srctree)/security/selinux -I$(srctree)/security/selinux/include
 ccflags-y += -I$(objtree)/security/selinux -include $(srctree)/include/uapi/asm-generic/errno.h
 
 obj-$(CONFIG_KSU) += kernelsu.o
-ccflags-y += -DKSU_VERSION=22217
+ccflags-y += -DKSU_VERSION=22228
 
 # Checks hooks state
 ifeq ($(CONFIG_KSU_MANUAL_HOOK), y)
