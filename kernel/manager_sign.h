@@ -1,6 +1,8 @@
 #ifndef __KSU_H_MANAGER_SIGN
 #define __KSU_H_MANAGER_SIGN
 
+#include <linux/types.h>
+
 // rsuntk/KernelSU
 #define EXPECTED_SIZE_RSUNTK 0x396
 #define EXPECTED_HASH_RSUNTK                                                   \
@@ -17,7 +19,7 @@
 	"c371061b19d8c7d7d6133c6a9bafe198fa944e50c1b31c9d8daa8d7f1fc2d2d6"
 
 typedef struct {
-	unsigned size;
+	u32 size;
 	const char *sha256;
 } apk_sign_key_t;
 
