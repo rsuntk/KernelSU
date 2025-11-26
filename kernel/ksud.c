@@ -42,6 +42,7 @@ extern int ksu_observer_init(void);
 
 bool ksu_module_mounted __read_mostly = false;
 bool ksu_boot_completed __read_mostly = false;
+static bool already_post_fs_data __read_mostly = false;
 
 static const char KERNEL_SU_RC[] =
 	"\n"
@@ -85,16 +86,18 @@ void on_post_fs_data(void)
 		return;
 	}
 	done = true;
+	already_post_fs_data = true;
 	pr_info("on_post_fs_data!\n");
 	ksu_load_allow_list();
 #ifdef CONFIG_KSU_SYSCALL_HOOK
 	ksu_observer_init();
 #endif
-	// sanity check, this may influence the performance
 	stop_input_hook();
 
 	ksu_file_sid = ksu_get_ksu_file_sid();
-	pr_info("ksu_file sid: %d\n", ksu_file_sid);
+	if (ksu_file_sid != 0) {
+		pr_info("got ksu_file context sid: %d\n", ksu_file_sid);
+	}
 }
 
 extern void ext4_unregister_sysfs(struct super_block *sb);
@@ -504,16 +507,22 @@ int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
 
 bool ksu_is_safe_mode(void)
 {
+	if (already_post_fs_data) {
+		// stop checking if its already on-post-fs-data
+		return false;
+	}
+
 	static bool safe_mode = false;
 	if (safe_mode) {
 		// don't need to check again, userspace may call multiple times
 		return true;
 	}
 
-	// stop hook first!
+	// just in case
 	stop_input_hook();
 
 	pr_info("volumedown_pressed_count: %d\n", volumedown_pressed_count);
+
 	if (is_volumedown_enough(volumedown_pressed_count)) {
 		// pressed over 3 times
 		pr_info("KEY_VOLUMEDOWN pressed max times, safe mode detected!\n");
