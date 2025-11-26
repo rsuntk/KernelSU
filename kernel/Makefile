@@ -1,4 +1,4 @@
-ksu_obj-y := ksu.o
+ksu_obj-y := ksu_init.o
 ksu_obj-y += allowlist.o
 ksu_obj-y += app_profile.o
 ksu_obj-y += apk_sign.o
