@@ -42,7 +42,7 @@ extern int ksu_observer_init(void);
 
 bool ksu_module_mounted __read_mostly = false;
 bool ksu_boot_completed __read_mostly = false;
-static bool already_post_fs_data __read_mostly = false;
+bool already_post_fs_data __read_mostly = false;
 
 static const char KERNEL_SU_RC[] =
 	"\n"
@@ -80,12 +80,10 @@ bool ksu_input_hook __read_mostly = true;
 u32 ksu_file_sid;
 void on_post_fs_data(void)
 {
-	static bool done = false;
-	if (done) {
+	if (already_post_fs_data) {
 		pr_info("on_post_fs_data already done\n");
 		return;
 	}
-	done = true;
 	already_post_fs_data = true;
 	pr_info("on_post_fs_data!\n");
 	ksu_load_allow_list();
