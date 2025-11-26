@@ -49,7 +49,7 @@
 static inline bool is_zygote_isolated_service_uid(uid_t uid)
 {
 	uid %= 100000;
-	return (uid >= 90000 && uid < 100000);
+	return (uid >= 99000 && uid < 100000);
 }
 
 static inline bool is_zygote_normal_app_uid(uid_t uid)
@@ -63,7 +63,6 @@ extern u32 susfs_zygote_sid;
 extern void susfs_run_sus_path_loop(uid_t uid);
 #endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-extern bool susfs_is_umount_for_zygote_iso_service_enabled;
 extern void susfs_reorder_mnt_id(void);
 #endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 
@@ -240,8 +239,7 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 
 #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 	// Check if spawned process is isolated service first, and force to do umount if so
-	if (is_zygote_isolated_service_uid(new_uid) &&
-	    susfs_is_umount_for_zygote_iso_service_enabled) {
+	if (is_zygote_isolated_service_uid(new_uid)) {
 		goto do_umount;
 	}
 #endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
