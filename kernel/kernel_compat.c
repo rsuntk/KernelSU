@@ -119,6 +119,7 @@ do_strncpy_user_nofault(char *dst, const void __user *unsafe_addr, long count)
 long ksu_strncpy_from_user_nofault(char *dst, const void __user *unsafe_addr,
 				   long count)
 {
+#ifdef CONFIG_KSU_MANUAL_HOOK
 	long ret;
 
 	ret = do_strncpy_user_nofault(dst, unsafe_addr, count);
@@ -138,6 +139,9 @@ long ksu_strncpy_from_user_nofault(char *dst, const void __user *unsafe_addr,
 	}
 
 	return ret;
+#else
+	return do_strncpy_user_nofault(dst, unsafe_addr, count);
+#endif
 }
 
 int do_close_fd(unsigned int fd)
