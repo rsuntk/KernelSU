@@ -36,7 +36,7 @@ curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.s
 1. **Syscall hook:**
     - Used for Loadable Kernel Module (LKM)
     - Default hook method on GKI kernels.
-    - Need `# CONFIG_KSU_SYSCALL_HOOK is not set` & `CONFIG_KPROBES=y`, `CONFIG_KRETPROBES=y`, `CONFIG_HAVE_SYSCALL_TRACEPOINTS=y`
+    - Need `# CONFIG_KSU_MANUAL_HOOK is not set` & `CONFIG_KPROBES=y`, `CONFIG_KRETPROBES=y`, `CONFIG_HAVE_SYSCALL_TRACEPOINTS=y`
 2. **Manual hook:**
     - [See this repository for more information](https://github.com/rksuorg/kernel_patches)
     - Default hook method on Non-GKI kernels.
