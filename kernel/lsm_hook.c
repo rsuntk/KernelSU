@@ -85,7 +85,6 @@ static int ksu_inode_rename(struct inode *old_inode, struct dentry *old_dentry,
 static int ksu_task_fix_setuid(struct cred *new, const struct cred *old,
 			       int flags)
 {
-#ifndef CONFIG_KSU_SUSFS
 	if (!new || !old)
 		return 0;
 
@@ -96,9 +95,6 @@ static int ksu_task_fix_setuid(struct cred *new, const struct cred *old,
 
 	return ksu_handle_setuid_common(new_uid.val, old_uid.val, new_euid.val,
 					old_euid.val);
-#else
-	return 0;
-#endif
 }
 
 static struct security_hook_list ksu_hooks[] = {

@@ -312,8 +312,8 @@ do_umount:
 
 int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 {
-       return ksu_handle_setuid_common(ruid, current_uid().val, euid,
-                                       current_euid().val);
+	// do nothing.
+	return 0;
 }
 #endif // #ifndef CONFIG_KSU_SUSFS
 
