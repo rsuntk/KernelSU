@@ -9,6 +9,7 @@
 #include "ksud.h"
 #include "kernel_compat.h"
 #include "supercalls.h"
+#include "kp_util.h"
 
 #define DECL_KP(name, sym, pre)                                                \
 	struct kprobe name = {                                                 \
@@ -34,11 +35,10 @@ static int sys_execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 
 	if (!filename_user)
 		return 0;
+	if (!ksu_strncpy_retry(filename_user, path, sizeof(path), false))
+		return 0;
 
-	memset(path, 0, sizeof(path));
-	ksu_strncpy_from_user_nofault(path, *filename_user, 32);
 	filename_in.name = path;
-
 	filename_p = &filename_in;
 	return ksu_handle_execveat_ksud(AT_FDCWD, &filename_p, &argv, NULL,
 					NULL);

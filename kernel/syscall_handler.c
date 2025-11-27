@@ -17,6 +17,7 @@
 #include "sucompat.h"
 #include "setuid_hook.h"
 #include "selinux/selinux.h"
+#include "kp_util.h"
 
 // Tracepoint registration count management
 // == 1: just us
@@ -252,9 +253,8 @@ int ksu_handle_init_mark_tracker(const char __user **filename_user)
 
 	if (unlikely(!filename_user))
 		return 0;
-
-	memset(path, 0, sizeof(path));
-	ksu_strncpy_from_user_nofault(path, *filename_user, sizeof(path));
+	if (!ksu_strncpy_retry(filename_user, path, sizeof(path), false))
+		return 0;
 
 	if (likely(strstr(path, "/app_process") == NULL &&
 		   strstr(path, "/adbd") == NULL &&
