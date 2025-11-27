@@ -108,7 +108,7 @@ bool ksu_strncpy_retry(const char __user **char_usr_ptr, char *dest,
 			pr_info("access to pointer failed, attempting to rescue..\n");
 #endif
 			preempt_enable_no_resched_notrace();
-			ret = strncpy_from_user(dest, fn, sizeof(dest));
+			ret = strncpy_from_user(dest, fn, dest_len);
 			preempt_disable_notrace();
 		}
 	}

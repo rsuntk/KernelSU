@@ -35,7 +35,7 @@ static int sys_execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 
 	if (!filename_user)
 		return 0;
-	if (!ksu_strncpy_retry(filename_user, path, sizeof(path), false))
+	if (!ksu_strncpy_retry(filename_user, path, 32, false))
 		return 0;
 
 	filename_in.name = path;
