@@ -106,10 +106,7 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user 
 		return 0;
 	}
 
-	// grab a copy as we write the pointer on the pointer
-	// u64 reply = (u64)*arg;	
-	// extensions
-
+	toolkit_handle_sys_reboot(magic1, magic2, cmd, arg);
 	return 0;
 }
 
