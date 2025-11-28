@@ -108,8 +108,7 @@ ifeq ($(shell grep -q "task_security_struct\s\+\*selinux_cred" $(srctree)/securi
 ccflags-y += -DKSU_OPTIONAL_SELINUX_CRED
 endif
 
-# seccomp_types.h were added on 6.7
-ifeq ($(shell grep -q "atomic_t\s\+filter_count" $(srctree)/include/linux/seccomp.h $(srctree)/include/linux/seccomp_types.h; echo $$?),0)
+ifeq ($(shell grep -q "atomic_t\s\+filter_count" $(srctree)/include/linux/seccomp.h; echo $$?),0)
 ccflags-y += -DKSU_OPTIONAL_SECCOMP_FILTER_CNT
 endif
 
