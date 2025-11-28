@@ -13,6 +13,7 @@
 #include <linux/seccomp.h>
 #include <linux/thread_info.h>
 #include <linux/uidgid.h>
+#include <linux/refcount.h>
 
 #include "allowlist.h"
 #include "app_profile.h"
@@ -24,7 +25,13 @@
 #include "syscall_handler.h"
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+static struct group_info root_groups = {
+	.usage = REFCOUNT_INIT(2),
+};
+#else
 static struct group_info root_groups = { .usage = ATOMIC_INIT(2) };
+#endif
 
 void setup_groups(struct root_profile *profile, struct cred *cred)
 {
