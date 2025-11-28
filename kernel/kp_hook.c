@@ -2,6 +2,9 @@
 #include <linux/task_work.h>
 #include <linux/compat.h>
 #include <linux/workqueue.h>
+#include <linux/namei.h>
+#include <linux/file.h>
+#include <linux/fs.h>
 
 #include "arch.h"
 #include "kp_hook.h"
@@ -42,6 +45,19 @@ static int sys_execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 	filename_p = &filename_in;
 	return ksu_handle_execveat_ksud(AT_FDCWD, &filename_p, &argv, NULL,
 					NULL);
+}
+
+// for sys_read_handler_pre
+static int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr,
+			size_t *count_ptr)
+{
+	struct file *file = fget(fd);
+	if (!file) {
+		return 0;
+	}
+	int result = ksu_handle_vfs_read(&file, buf_ptr, count_ptr, NULL);
+	fput(file);
+	return result;
 }
 
 static int sys_read_handler_pre(struct kprobe *p, struct pt_regs *regs)

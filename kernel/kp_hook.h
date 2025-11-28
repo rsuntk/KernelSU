@@ -8,11 +8,11 @@ enum ksud_stop_code {
 	INPUT_EVENT_HOOK_KP,
 };
 
-int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr,
-			size_t *count_ptr);
-
 int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
 				  int *value);
+
+int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
+			size_t *count_ptr, loff_t **pos);
 
 void kp_handle_ksud_stop(enum ksud_stop_code);
 void kp_handle_ksud_init(void);
