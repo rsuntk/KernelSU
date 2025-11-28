@@ -10,15 +10,15 @@
 static int transive_to_domain(const char *domain)
 {
 	struct cred *cred;
-	struct task_security_struct *tsec;
+	selinux_security_struct *sec;
 	u32 sid;
 	int error;
 
 	cred = (struct cred *)__task_cred(current);
 
-	tsec = cred->security;
-	if (!tsec) {
-		pr_err("tsec == NULL!\n");
+	sec = selinux_cred(cred);
+	if (!sec) {
+		pr_err("cred->security == NULL!\n");
 		return -1;
 	}
 
@@ -28,10 +28,10 @@ static int transive_to_domain(const char *domain)
 			domain, sid, error);
 	}
 	if (!error) {
-		tsec->sid = sid;
-		tsec->create_sid = 0;
-		tsec->keycreate_sid = 0;
-		tsec->sockcreate_sid = 0;
+		sec->sid = sid;
+		sec->create_sid = 0;
+		sec->keycreate_sid = 0;
+		sec->sockcreate_sid = 0;
 	}
 	return error;
 }
@@ -84,41 +84,9 @@ bool getenforce(void)
 	return __is_selinux_enforcing();
 }
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)) &&                         \
-	!defined(KSU_COMPAT_HAS_CURRENT_SID)
-/*
- * get the subjective security ID of the current task
- */
-static inline u32 current_sid(void)
-{
-	const struct task_security_struct *tsec = current_security();
-
-	return tsec->sid;
-}
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 14, 0)
-struct lsm_context {
-	char *context;
-	u32 len;
-};
-
-static int __security_secid_to_secctx(u32 secid, struct lsm_context *cp)
-{
-	return security_secid_to_secctx(secid, &cp->context, &cp->len);
-}
-static void __security_release_secctx(struct lsm_context *cp)
-{
-	security_release_secctx(cp->context, cp->len);
-}
-#else
-#define __security_secid_to_secctx security_secid_to_secctx
-#define __security_release_secctx security_release_secctx
-#endif
-
 bool is_context(const struct cred *cred, const char *context)
 {
-	const struct task_security_struct *tsec;
+	const selinux_security_struct *sec;
 	struct lsm_context ctx = {0};
 	bool result = false;
 	int err;
@@ -127,13 +95,15 @@ bool is_context(const struct cred *cred, const char *context)
 		return result;
 	}
 	
-	tsec = selinux_cred(cred);
-	if (!tsec) {
+	sec = selinux_cred(cred);
+	if (!sec) {
+		pr_err("cred->security == NULL\n");
 		return result;
 	}
 
-	err = __security_secid_to_secctx(tsec->sid, &ctx);
+	err = __security_secid_to_secctx(sec->sid, &ctx);
 	if (err) {
+		pr_err("secid_to_secctx failed: %d\n", err);
 		return result;
 	}
 
