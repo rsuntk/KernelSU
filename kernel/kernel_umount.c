@@ -106,34 +106,6 @@ static inline void do_umount_work(void)
 	}
 }
 
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-struct umount_tw {
-	struct callback_head cb;
-	const struct cred *old_cred;
-};
-
-static void umount_tw_func(struct callback_head *cb)
-{
-	struct umount_tw *tw = container_of(cb, struct umount_tw, cb);
-	const struct cred *saved = NULL;
-	if (tw->old_cred) {
-		saved = override_creds(tw->old_cred);
-	}
-
-	down_read(&mount_list_lock);
-	do_umount_work();
-	up_read(&mount_list_lock);
-
-	if (saved)
-		revert_creds(saved);
-
-	if (tw->old_cred)
-		put_cred(tw->old_cred);
-
-	kfree(tw);
-}
-#endif
-
 int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
 {
 	// if there isn't any module mounted, just ignore it!
@@ -174,29 +146,10 @@ int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
 	// umount the target mnt
 	pr_info("handle umount for uid: %d, pid: %d\n", new_uid, current->pid);
 
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	struct umount_tw *tw;
-	tw = kzalloc(sizeof(*tw), GFP_ATOMIC);
-	if (!tw)
-		return 0;
-
-	tw->old_cred = get_current_cred();
-	tw->cb.func = umount_tw_func;
-
-	int err = task_work_add(current, &tw->cb, TWA_RESUME);
-	if (err) {
-		if (tw->old_cred) {
-			put_cred(tw->old_cred);
-		}
-		kfree(tw);
-		pr_warn("unmount add task_work failed\n");
-	}
-#else
 	// Using task work for non-kp context is expansive?
 	down_read(&mount_list_lock);
 	do_umount_work();
 	up_read(&mount_list_lock);
-#endif
 
 	return 0;
 }

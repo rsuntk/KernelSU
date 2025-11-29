@@ -33,10 +33,6 @@
 #include "kernel_compat.h"
 #include "klog.h" // IWYU pragma: keep
 #include "ksud.h"
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-#include "kp_hook.h"
-extern int ksu_observer_init(void);
-#endif
 #include "selinux/selinux.h"
 #include "throne_tracker.h"
 
@@ -71,11 +67,9 @@ static void stop_vfs_read_hook(void);
 static void stop_execve_hook(void);
 static void stop_input_hook(void);
 
-#ifdef CONFIG_KSU_MANUAL_HOOK
 bool ksu_vfs_read_hook __read_mostly = true;
 bool ksu_execveat_hook __read_mostly = true;
 bool ksu_input_hook __read_mostly = true;
-#endif
 
 u32 ksu_file_sid;
 void on_post_fs_data(void)
@@ -87,9 +81,6 @@ void on_post_fs_data(void)
 	already_post_fs_data = true;
 	pr_info("on_post_fs_data!\n");
 	ksu_load_allow_list();
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	ksu_observer_init();
-#endif
 	stop_input_hook();
 
 	ksu_file_sid = ksu_get_ksu_file_sid();
@@ -131,9 +122,6 @@ void on_boot_completed(void)
 {
 	ksu_boot_completed = true;
 	pr_info("on_boot_completed!\n");
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	track_throne(true);
-#endif
 }
 
 #define MAX_ARG_STRINGS 0x7FFFFFFF
@@ -188,9 +176,8 @@ static int __maybe_unused count(struct user_arg_ptr argv, int max)
 
 			if (fatal_signal_pending(current))
 				return -ERESTARTNOHAND;
-#ifdef CONFIG_KSU_MANUAL_HOOK
+
 			cond_resched();
-#endif
 		}
 	}
 	return i;
@@ -210,11 +197,10 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 			     struct user_arg_ptr *argv,
 			     struct user_arg_ptr *envp, int *flags)
 {
-#ifdef CONFIG_KSU_MANUAL_HOOK
 	if (!ksu_execveat_hook) {
 		return 0;
 	}
-#endif
+
 	struct filename *filename;
 
 	static const char app_process[] = "/system/bin/app_process";
@@ -370,11 +356,10 @@ static ssize_t read_iter_proxy(struct kiocb *iocb, struct iov_iter *to)
 int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
 			size_t *count_ptr, loff_t **pos)
 {
-#ifdef CONFIG_KSU_MANUAL_HOOK
 	if (!ksu_vfs_read_hook) {
 		return 0;
 	}
-#endif
+
 	struct file *file;
 	char __user *buf;
 	size_t count;
@@ -483,11 +468,10 @@ static bool is_volumedown_enough(unsigned int count)
 int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
 				  int *value)
 {
-#ifdef CONFIG_KSU_MANUAL_HOOK
 	if (!ksu_input_hook) {
 		return 0;
 	}
-#endif
+
 	if (*type == EV_KEY && *code == KEY_VOLUMEDOWN) {
 		int val = *value;
 		pr_info("KEY_VOLUMEDOWN val: %d\n", val);
@@ -531,7 +515,6 @@ bool ksu_is_safe_mode(void)
 	return false;
 }
 
-#ifdef CONFIG_KSU_MANUAL_HOOK
 static int ksu_execve_ksud_common(const char __user *filename_user,
 				  struct user_arg_ptr *argv)
 {
@@ -578,52 +561,32 @@ int __maybe_unused ksu_handle_compat_execve_ksud(
 }
 #endif /* COMPAT & 64BIT */
 
-#endif
-
 static void stop_vfs_read_hook(void)
 {
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	kp_handle_ksud_stop(VFS_READ_HOOK_KP);
-#else
 	ksu_vfs_read_hook = false;
 	pr_info("stop vfs_read_hook\n");
-#endif
 }
 
 static void stop_execve_hook(void)
 {
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	kp_handle_ksud_stop(EXECVE_HOOK_KP);
-#else
 	ksu_execveat_hook = false;
 	pr_info("stop execve_hook\n");
-#endif
 }
 
 static void stop_input_hook(void)
 {
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	kp_handle_ksud_stop(INPUT_EVENT_HOOK_KP);
-#else
 	if (!ksu_input_hook) {
 		return;
 	}
 	ksu_input_hook = false;
 	pr_info("stop input_hook\n");
-#endif
 }
 
 // ksud: module support
 void ksu_ksud_init(void)
 {
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	kp_handle_ksud_init();
-#endif
 }
 
 void ksu_ksud_exit(void)
 {
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	kp_handle_ksud_exit();
-#endif
 }

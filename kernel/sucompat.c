@@ -26,9 +26,6 @@
 #include "kernel_compat.h"
 #include "sucompat.h"
 #include "app_profile.h"
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-#include "kp_util.h"
-#endif
 
 #define SU_PATH "/system/bin/su"
 #define SH_PATH "/system/bin/sh"
@@ -81,10 +78,8 @@ static char __user *ksud_user_path(void)
 
 static inline bool __is_su_allowed(const void *ptr_to_check)
 {
-#ifdef CONFIG_KSU_MANUAL_HOOK
 	if (!ksu_su_compat_enabled)
 		return false;
-#endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
 #ifdef CONFIG_SECCOMP
 	if (likely(!!current->seccomp.mode))
@@ -128,25 +123,6 @@ static int ksu_sucompat_user_common(const char __user **filename_user,
 	return 0;
 }
 
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-static int do_execve_sucompat_for_kp(const char __user **filename_user)
-{
-	char path[sizeof(su) + 1];
-
-	if (!ksu_strncpy_retry(filename_user, path, sizeof(path), true))
-		return 0;
-	if (likely(memcmp(path, su, sizeof(su))))
-		return 0;
-
-	pr_info("sys_execve su found\n");
-	*filename_user = ksud_user_path();
-
-	escape_with_root_profile();
-
-	return 0;
-}
-#endif
-
 int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 			 int *__unused_flags)
 {
@@ -187,11 +163,7 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 	if (!is_su_allowed(filename_user))
 		return 0;
 
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	return do_execve_sucompat_for_kp(filename_user);
-#else
 	return ksu_sucompat_user_common(filename_user, "sys_execve", true);
-#endif
 }
 
 int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,

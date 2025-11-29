@@ -43,7 +43,7 @@
 #define SYS_EXECVE_SYMBOL "__x64_sys_execve"
 
 #else
-#ifdef CONFIG_KSU_SYSCALL_HOOK
+#if 0
 #error "Unsupported arch"
 #endif
 #endif

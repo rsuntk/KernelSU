@@ -112,28 +112,4 @@ config KSU_SUSFS_SUS_MAP
 
 endmenu
 
-choice
-	prompt "KernelSU hooks"
-	default KSU_MANUAL_HOOK if !KPROBES || KSU_SUSFS
-	default KSU_SYSCALL_HOOK if KPROBES && KRETPROBES && HAVE_SYSCALL_TRACEPOINTS
-	help
-	  KernelSU core hooks.
-
-config KSU_MANUAL_HOOK
-	bool "KernelSU manual hook mode."
-	depends on KSU && KSU != m
-	help
-	  Enable manual hook support.
-
-config KSU_SYSCALL_HOOK
-	bool "KernelSU syscall hook mode."
-	depends on KSU
-	depends on KPROBES && KRETPROBES && HAVE_SYSCALL_TRACEPOINTS
-	depends on !KSU_SUSFS
-	help
-	  Enable KPROBES, KRETPROBES and TRACEPOINT hook for KernelSU core.
-	  This should not be used on kernel below 5.10.
-
-endchoice
-
 endmenu

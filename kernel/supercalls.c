@@ -27,10 +27,6 @@
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
 #include "ksud.h"
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-#include "kp_hook.h"
-#include "syscall_handler.h"
-#endif
 #include "kernel_compat.h"
 #include "kernel_umount.h"
 #include "manager.h"
@@ -426,73 +422,9 @@ put_orig_file:
 
 static int do_manage_mark(void __user *arg)
 {
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	struct ksu_manage_mark_cmd cmd;
-	int ret = 0;
-
-	if (copy_from_user(&cmd, arg, sizeof(cmd))) {
-		pr_err("manage_mark: copy_from_user failed\n");
-		return -EFAULT;
-	}
-
-	switch (cmd.operation) {
-	case KSU_MARK_GET: {
-		// Get task mark status
-		ret = ksu_get_task_mark(cmd.pid);
-		if (ret < 0) {
-			pr_err("manage_mark: get failed for pid %d: %d\n",
-			       cmd.pid, ret);
-			return ret;
-		}
-		cmd.result = (u32)ret;
-		break;
-	}
-	case KSU_MARK_MARK: {
-		if (cmd.pid == 0) {
-			ksu_mark_all_process();
-		} else {
-			ret = ksu_set_task_mark(cmd.pid, true);
-			if (ret < 0) {
-				pr_err("manage_mark: set_mark failed for pid %d: %d\n",
-				       cmd.pid, ret);
-				return ret;
-			}
-		}
-		break;
-	}
-	case KSU_MARK_UNMARK: {
-		if (cmd.pid == 0) {
-			ksu_unmark_all_process();
-		} else {
-			ret = ksu_set_task_mark(cmd.pid, false);
-			if (ret < 0) {
-				pr_err("manage_mark: set_unmark failed for pid %d: %d\n",
-				       cmd.pid, ret);
-				return ret;
-			}
-		}
-		break;
-	}
-	case KSU_MARK_REFRESH: {
-		ksu_mark_running_process();
-		pr_info("manage_mark: refreshed running processes\n");
-		break;
-	}
-	default: {
-		pr_err("manage_mark: invalid operation %u\n", cmd.operation);
-		return -EINVAL;
-	}
-	}
-	if (copy_to_user(arg, &cmd, sizeof(cmd))) {
-		pr_err("manage_mark: copy_to_user failed\n");
-		return -EFAULT;
-	}
-	return 0;
-#else
 	// We don't care, just return -ENOTSUPP
 	pr_warn("manage_mark: this supercalls is not implemented for manual hook.\n");
 	return -ENOTSUPP;
-#endif
 }
 
 struct list_head mount_list = LIST_HEAD_INIT(mount_list);
@@ -795,16 +727,10 @@ void ksu_supercalls_init(void)
 		pr_info("  %-18s = 0x%08x\n", ksu_ioctl_handlers[i].name,
 			ksu_ioctl_handlers[i].cmd);
 	}
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	kp_handle_supercalls_init();
-#endif
 }
 
 void ksu_supercalls_exit(void)
 {
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	kp_handle_supercalls_exit();
-#endif
 }
 
 // IOCTL dispatcher
