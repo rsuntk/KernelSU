@@ -18,6 +18,8 @@
     <string name="home_click_to_learn_kernelsu">Tìm hiểu cách cài đặt KernelSU và sử dụng các module.</string>
     <string name="home_support_title">Ủng hộ chúng tôi</string>
     <string name="home_support_content">KernelSU sẽ luôn là miễn phí và mã nguồn mở. Tuy nhiên, bạn có thể cho chúng tôi thấy rằng bạn quan tâm bằng cách quyên góp!</string>
+    <string name="home_unofficial_kernelsu_title">KernelSU không chính thức bởi Rissu</string>
+    <string name="home_unofficial_kernelsu_summary">Nhấp vào thẻ này để xem mã nguồn mở của RKSU.</string>
     <string name="about_source_code"><![CDATA[Xem mã nguồn tại %1$s<br/>Tham gia kênh %2$s của chúng tôi]]></string>
     <string name="module_magisk_conflict">Các module bị vô hiệu hoá do xung đột với Magisk!</string>
     <string name="module_uninstall_confirm">Bạn có THẬT SỰ muốn gỡ cài đặt module %s không?</string>
@@ -179,4 +181,6 @@
     <string name="settings_key_color">Màu nhấn</string>
     <string name="feature_status_managed_summary">Tính năng này được quản lý bởi một module.</string>
     <string name="feature_status_unsupported_summary">Kernel không hỗ trợ tính năng này.</string>
+    <string name="module_repo">Kho lưu trữ Module</string>
+    <string name="module_reinstall">Cài đặt lại</string>
 </resources>
