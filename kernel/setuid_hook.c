@@ -137,10 +137,12 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 		return 0;
 	}
 
+#ifdef CONFIG_KSU_SUSFS
 	// We only interest in process spwaned by zygote
 	if (!susfs_is_sid_equal(current_cred()->security, susfs_zygote_sid)) {
 		return 0;
 	}
+#endif
 
 #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 	// Check if spawned process is isolated service first, and force to do umount if so
@@ -198,6 +200,7 @@ do_umount:
 	// Handle kernel umount
 	ksu_handle_umount(old_uid, new_uid);
 
+#ifdef CONFIG_KSU_SUSFS
 	get_task_struct(current);
 
 #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
@@ -212,6 +215,7 @@ do_umount:
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 	susfs_run_sus_path_loop(new_uid);
 #endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH
+#endif
 	return 0;
 }
 
