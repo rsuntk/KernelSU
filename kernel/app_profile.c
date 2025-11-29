@@ -13,7 +13,6 @@
 #include <linux/seccomp.h>
 #include <linux/thread_info.h>
 #include <linux/uidgid.h>
-#include <linux/refcount.h>
 
 #include "allowlist.h"
 #include "app_profile.h"
