@@ -17,7 +17,7 @@ cmaker {
                 "-DANDROID_STL=none",
             )
         )
-        abiFilters("arm64-v8a", "x86_64", "armeabi-v7a")
+        abiFilters("arm64-v8a", "armeabi-v7a", "x86_64")
     }
     buildTypes {
         if (it.name == "release") {
@@ -49,8 +49,7 @@ fun getGitDescribe(): String {
 
 fun getVersionCode(): Int {
     val commitCount = getGitCommitCount()
-    val major = 2
-    return major * 10000 + commitCount
+    return 30000 + commitCount
 }
 
 fun getVersionName(): String {
@@ -72,7 +71,7 @@ subprojects {
                     versionName = managerVersionName
                 }
                 ndk {
-                    abiFilters += listOf("arm64-v8a", "x86_64", "armeabi-v7a")
+                    abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
                 }
             }
 
