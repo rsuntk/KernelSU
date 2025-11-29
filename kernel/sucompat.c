@@ -161,7 +161,7 @@ int ksu_handle_stat(int *dfd, struct filename **filename, int *flags)
 {
 	if (!is_su_allowed(filename))
 		return 0;
-	if (unlikely(IS_ERR(filename))
+	if (unlikely(IS_ERR(filename)))
 		return 0;
 	if (likely(memcmp((*filename)->name, su, sizeof(su))))
 		return 0;
