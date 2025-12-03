@@ -20,6 +20,7 @@
 #include "selinux/selinux.h"
 #include "feature.h"
 #include "ksud.h"
+#include "ksu.h"
 
 static bool ksu_kernel_umount_enabled = true;
 
@@ -106,6 +107,17 @@ static inline void do_umount_work(void)
 	}
 }
 
+static void umount_func(void)
+{
+	const struct cred *saved = override_creds(ksu_cred);
+
+	down_read(&mount_list_lock);
+	do_umount_work();
+	up_read(&mount_list_lock);
+
+	revert_creds(saved);
+}
+
 int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
 {
 	// if there isn't any module mounted, just ignore it!
@@ -114,6 +126,10 @@ int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
 	}
 
 	if (!ksu_kernel_umount_enabled) {
+		return 0;
+	}
+
+	if (!ksu_cred) {
 		return 0;
 	}
 
@@ -146,10 +162,8 @@ int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
 	// umount the target mnt
 	pr_info("handle umount for uid: %d, pid: %d\n", new_uid, current->pid);
 
-	// Using task work for non-kp context is expansive?
-	down_read(&mount_list_lock);
-	do_umount_work();
-	up_read(&mount_list_lock);
+	// Maybe using task work for non-atomic context is just useless?
+	umount_func();
 
 	return 0;
 }

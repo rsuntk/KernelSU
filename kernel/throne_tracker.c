@@ -417,12 +417,12 @@ out:
 	}
 }
 
-void ksu_throne_tracker_init()
+void ksu_throne_tracker_init(void)
 {
 	// nothing to do
 }
 
-void ksu_throne_tracker_exit()
+void ksu_throne_tracker_exit(void)
 {
 	// nothing to do
 }

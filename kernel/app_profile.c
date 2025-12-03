@@ -21,7 +21,7 @@
 #include "klog.h" // IWYU pragma: keep
 #include "selinux/selinux.h"
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0) && defined(CONFIG_CC_IS_GCC))
 static struct group_info root_groups = {
 	.usage = REFCOUNT_INIT(2),
 };
@@ -96,7 +96,8 @@ void disable_seccomp(struct task_struct *tsk)
 
 	tsk->seccomp.mode = 0;
 	// 5.9+ have filter_count, but optional.
-#ifdef KSU_OPTIONAL_SECCOMP_FILTER_CNT
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0) ||                          \
+     defined(KSU_OPTIONAL_SECCOMP_FILTER_CNT))
 	atomic_set(&tsk->seccomp.filter_count, 0);
 #endif
 	// some old kernel backport seccomp_filter_release..
@@ -170,4 +171,9 @@ void escape_with_root_profile(void)
 	spin_unlock_irq(&current->sighand->siglock);
 
 	setup_selinux(profile->selinux_domain);
+}
+
+void __maybe_unused escape_to_root_for_init(void)
+{
+	setup_selinux(KERNEL_SU_CONTEXT);
 }

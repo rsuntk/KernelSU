@@ -23,7 +23,7 @@ ccflags-y += -I$(srctree)/security/selinux -I$(srctree)/security/selinux/include
 ccflags-y += -I$(objtree)/security/selinux -include $(srctree)/include/uapi/asm-generic/errno.h
 
 obj-$(CONFIG_KSU) += kernelsu.o
-ccflags-y += -DKSU_VERSION=32251
+ccflags-y += -DKSU_VERSION=32261
 
 # SELinux drivers check
 ifeq ($(shell grep -q "current_sid(void)" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
@@ -63,8 +63,7 @@ ifeq ($(shell grep -q "task_security_struct\s\+\*selinux_cred" $(srctree)/securi
 ccflags-y += -DKSU_OPTIONAL_SELINUX_CRED
 endif
 
-# seccomp_types.h were added on 6.7
-ifeq ($(shell grep -q "atomic_t\s\+filter_count" $(srctree)/include/linux/seccomp.h $(srctree)/include/linux/seccomp_types.h; echo $$?),0)
+ifeq ($(shell grep -q "atomic_t\s\+filter_count" $(srctree)/include/linux/seccomp.h; echo $$?),0)
 ccflags-y += -DKSU_OPTIONAL_SECCOMP_FILTER_CNT
 endif
 
@@ -101,7 +100,7 @@ ccflags-y += -DKSU_MANAGER_PACKAGE=\"$(KSU_MANAGER_PACKAGE)\"
 $(info -- KernelSU Manager package name: $(KSU_MANAGER_PACKAGE))
 endif
 
-$(info -- Supported KernelSU Manager(s): tiann, rsuntk, 5ec1cff)
+$(info -- Supported KernelSU Manager(s): tiann, rsuntk, 5ec1cff, KOWX712)
 
 ccflags-y += -Wno-strict-prototypes -Wno-int-conversion -Wno-gcc-compat
 ccflags-y += -Wno-declaration-after-statement -Wno-unused-function -Wno-missing-prototypes
@@ -114,4 +113,4 @@ else
 $(error -- You have not integrated susfs in your kernel yet. Read: https://gitlab.com/simonpunk/susfs4ksu)
 endif
 
-# Keep a new line here !!Because someone may append config
+# Keep a new line here !! Because someone may append config
