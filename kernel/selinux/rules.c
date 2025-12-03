@@ -33,10 +33,8 @@ static struct policydb *get_policydb(void)
 	return db;
 }
 
-static DEFINE_MUTEX(ksu_rules);
-
 // https://github.com/tiann/KernelSU/commit/0b243c24ab6640ea1553c08066a2386456985a0d
-static void apply_rules_for_manual_hook(struct policydb *db)
+static void __maybe_unused apply_rules_for_manual_hook(struct policydb *db)
 {
 	// we need to save allowlist in /data/adb/ksu
 	ksu_allow(db, "kernel", "adb_data_file", "dir", ALL);
@@ -69,6 +67,7 @@ static void apply_rules_for_manual_hook(struct policydb *db)
 	ksu_allow(db, "zygote", "adb_data_file", "dir", "search");
 }
 
+static DEFINE_MUTEX(ksu_rules);
 void apply_kernelsu_rules(void)
 {
 	struct policydb *db;
@@ -141,6 +140,7 @@ void apply_kernelsu_rules(void)
 	ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "getpgid");
 	ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
 
+	// Keep applying rules for manual hook.
 #ifdef CONFIG_KSU_MANUAL_HOOK
 	apply_rules_for_manual_hook(db);
 #endif

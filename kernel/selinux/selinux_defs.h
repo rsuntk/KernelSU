@@ -39,8 +39,8 @@ typedef struct task_security_struct selinux_security_struct;
 typedef struct cred_security_struct selinux_security_struct;
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 1, 0) &&                            \
-	!defined(KSU_OPTIONAL_SELINUX_CRED))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 1, 0) &&                           \
+     !defined(KSU_OPTIONAL_SELINUX_CRED))
 static inline selinux_security_struct *selinux_cred(const struct cred *cred)
 {
 	return (selinux_security_struct *)cred->security;
