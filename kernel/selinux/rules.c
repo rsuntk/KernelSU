@@ -65,6 +65,8 @@ static void apply_rules_for_manual_hook(struct policydb *db)
 	// For manual hooked init context
 	ksu_allow(db, "init", "adb_data_file", "file", ALL);
 	ksu_allow(db, "init", "adb_data_file", "dir", ALL); // #1289
+	// we need to umount modules in zygote
+	ksu_allow(db, "zygote", "adb_data_file", "dir", "search");
 }
 
 void apply_kernelsu_rules(void)
@@ -102,8 +104,6 @@ void apply_kernelsu_rules(void)
 
 	// our ksud triggered by init
 	ksu_allow(db, "init", KERNEL_SU_DOMAIN, ALL, ALL);
-	// we need to umount modules in zygote
-	ksu_allow(db, "zygote", "adb_data_file", "dir", "search");
 
 	// copied from Magisk rules
 	// suRights
