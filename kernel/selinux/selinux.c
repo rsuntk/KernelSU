@@ -5,8 +5,6 @@
 #include "selinux_defs.h"
 #include "../klog.h" // IWYU pragma: keep
 
-#define KERNEL_SU_DOMAIN "u:r:su:s0"
-
 static int transive_to_domain(const char *domain)
 {
 	struct cred *cred;
@@ -48,8 +46,8 @@ is_ksu_transition(const struct task_security_struct *old_tsec,
 	bool allowed = false;
 
 	if (!ksu_sid) {
-		err = security_secctx_to_secid(KERNEL_SU_DOMAIN,
-					 strlen(KERNEL_SU_DOMAIN), &ksu_sid);
+		err = security_secctx_to_secid(KERNEL_SU_CONTEXT,
+					 strlen(KERNEL_SU_CONTEXT), &ksu_sid);
 		pr_err("failed to get ksu_sid: %d\n", err);
 	}
 
@@ -114,7 +112,7 @@ bool is_context(const struct cred *cred, const char *context)
 
 bool is_task_ksu_domain(const struct cred *cred)
 {
-	return is_context(cred, KERNEL_SU_DOMAIN);
+	return is_context(cred, KERNEL_SU_CONTEXT);
 }
 
 bool is_ksu_domain(void)
@@ -133,13 +131,11 @@ bool is_init(const struct cred *cred)
 	return is_context(cred, "u:r:init:s0");
 }
 
-#define KSU_FILE_DOMAIN "u:object_r:ksu_file:s0"
-
 u32 ksu_get_ksu_file_sid(void)
 {
 	u32 ksu_file_sid = 0;
-	int err = security_secctx_to_secid(KSU_FILE_DOMAIN,
-		strlen(KSU_FILE_DOMAIN), &ksu_file_sid);
+	int err = security_secctx_to_secid(KSU_FILE_CONTEXT,
+		strlen(KSU_FILE_CONTEXT), &ksu_file_sid);
 
 	if (err) {
 		pr_info("get ksufile sid err %d\n", err);

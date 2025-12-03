@@ -13,9 +13,6 @@
 #define SELINUX_POLICY_INSTEAD_SELINUX_SS
 #endif
 
-#define KERNEL_SU_DOMAIN "su"
-#define KERNEL_SU_FILE "ksu_file"
-#define KERNEL_EXEC_TYPE "ksu_exec"
 #define ALL NULL
 
 static struct policydb *get_policydb(void)
@@ -39,7 +36,7 @@ static struct policydb *get_policydb(void)
 static DEFINE_MUTEX(ksu_rules);
 
 // https://github.com/tiann/KernelSU/commit/0b243c24ab6640ea1553c08066a2386456985a0d
-static void apply_rules_for_kernel_ctx(struct policydb *db)
+static void apply_rules_for_manual_hook(struct policydb *db)
 {
 	// we need to save allowlist in /data/adb/ksu
 	ksu_allow(db, "kernel", "adb_data_file", "dir", ALL);
@@ -65,6 +62,9 @@ static void apply_rules_for_kernel_ctx(struct policydb *db)
 	// For mounting loop devices, mirrors, tmpfs
 	ksu_allow(db, "kernel", ALL, "file", "read");
 	ksu_allow(db, "kernel", ALL, "file", "write");
+	// For manual hooked init context
+	ksu_allow(db, "init", "adb_data_file", "file", ALL);
+	ksu_allow(db, "init", "adb_data_file", "dir", ALL); // #1289
 }
 
 void apply_kernelsu_rules(void)
@@ -101,8 +101,6 @@ void apply_kernelsu_rules(void)
 	}
 
 	// our ksud triggered by init
-	ksu_allow(db, "init", "adb_data_file", "file", ALL);
-	ksu_allow(db, "init", "adb_data_file", "dir", ALL); // #1289
 	ksu_allow(db, "init", KERNEL_SU_DOMAIN, ALL, ALL);
 	// we need to umount modules in zygote
 	ksu_allow(db, "zygote", "adb_data_file", "dir", "search");
@@ -144,7 +142,7 @@ void apply_kernelsu_rules(void)
 	ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
 
 #ifdef CONFIG_KSU_MANUAL_HOOK
-	apply_rules_for_kernel_ctx(db);
+	apply_rules_for_manual_hook(db);
 #endif
 
 	mutex_unlock(&ksu_rules);
