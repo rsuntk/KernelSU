@@ -205,7 +205,7 @@ int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
 }
 
 // dead code: devpts handling
-int ksu_handle_devpts(struct inode *inode)
+int __maybe_unused ksu_handle_devpts(struct inode *inode)
 {
 	return 0;
 }
