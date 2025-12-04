@@ -1,5 +1,4 @@
 #include <linux/kprobes.h>
-#include <linux/task_work.h>
 #include <linux/compat.h>
 #include <linux/workqueue.h>
 
@@ -139,25 +138,6 @@ void kp_handle_ksud_exit(void)
 }
 
 // supercalls.c
-struct ksu_install_fd_tw {
-	struct callback_head cb;
-	int __user *outp;
-};
-
-static void ksu_install_fd_tw_func(struct callback_head *cb)
-{
-	struct ksu_install_fd_tw *tw =
-		container_of(cb, struct ksu_install_fd_tw, cb);
-	int fd = ksu_install_fd();
-	pr_info("[%d] install ksu fd: %d\n", current->pid, fd);
-
-	if (copy_to_user(tw->outp, &fd, sizeof(fd))) {
-		pr_err("install ksu fd reply err\n");
-		do_close_fd(fd);
-	}
-
-	kfree(tw);
-}
 
 static int reboot_handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
@@ -168,21 +148,7 @@ static int reboot_handler_pre(struct kprobe *p, struct pt_regs *regs)
 
 	// Check if this is a request to install KSU fd
 	if (magic1 == KSU_INSTALL_MAGIC1 && magic2 == KSU_INSTALL_MAGIC2) {
-		struct ksu_install_fd_tw *tw;
-
-		arg4 = (unsigned long)PT_REGS_SYSCALL_PARM4(real_regs);
-
-		tw = kzalloc(sizeof(*tw), GFP_ATOMIC);
-		if (!tw)
-			return 0;
-
-		tw->outp = (int __user *)arg4;
-		tw->cb.func = ksu_install_fd_tw_func;
-
-		if (task_work_add(current, &tw->cb, TWA_RESUME)) {
-			kfree(tw);
-			pr_warn("install fd add task_work failed\n");
-		}
+		return ksu_handle_fd_request((void __user *)arg4);
 	}
 
 	return 0;

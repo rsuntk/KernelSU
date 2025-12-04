@@ -660,6 +660,47 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
 	{ .cmd = 0, .name = NULL, .handler = NULL, .perm_check = NULL }
 };
 
+struct ksu_install_fd_tw {
+	struct callback_head cb;
+	int __user *outp;
+};
+
+static void ksu_install_fd_tw_func(struct callback_head *cb)
+{
+	struct ksu_install_fd_tw *tw = container_of(cb, struct ksu_install_fd_tw, cb);
+	int fd = ksu_install_fd();
+
+#ifdef CONFIG_KSU_DEBUG
+	pr_info("[%d] install ksu fd: %d\n", current->pid, fd);
+#endif
+
+	if (copy_to_user(tw->outp, &fd, sizeof(fd))) {
+		pr_err("install ksu fd reply err\n");
+		close_fd(fd);
+	}
+
+	kfree(tw);
+}
+
+int ksu_handle_fd_request(void __user *arg)
+{
+	struct ksu_install_fd_tw *tw;
+
+	tw = kzalloc(sizeof(*tw), GFP_ATOMIC);
+	if (!tw)
+		return 0;
+
+	tw->outp = (int __user *)arg;
+	tw->cb.func = ksu_install_fd_tw_func;
+
+	if (task_work_add(current, &tw->cb, TWA_RESUME)) {
+		kfree(tw);
+		pr_warn("install fd add task_work failed\n");
+	}
+
+	return 0;
+}
+
 int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
 			  void __user **arg)
 {
@@ -673,13 +714,7 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
 
 	// Check if this is a request to install KSU fd
 	if (magic2 == KSU_INSTALL_MAGIC2) {
-		int fd = ksu_install_fd();
-		// downstream: dereference all arg usage!
-		if (copy_to_user((void __user *)*arg, &fd, sizeof(fd))) {
-			pr_err("install ksu fd reply err\n");
-			do_close_fd(fd);
-		}
-		return 0;
+		return ksu_handle_fd_request((void __user *)*arg);
 	}
 
 	return 0;
