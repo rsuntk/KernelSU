@@ -148,6 +148,7 @@ static int reboot_handler_pre(struct kprobe *p, struct pt_regs *regs)
 
 	// Check if this is a request to install KSU fd
 	if (magic1 == KSU_INSTALL_MAGIC1 && magic2 == KSU_INSTALL_MAGIC2) {
+		arg4 = (unsigned long)PT_REGS_SYSCALL_PARM4(real_regs);
 		return ksu_handle_fd_request((void __user *)arg4);
 	}
 
