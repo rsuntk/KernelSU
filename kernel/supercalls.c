@@ -610,12 +610,12 @@ static int do_nuke_ext4_sysfs(void __user *arg)
 
 	ret = strncpy_from_user(mnt, cmd.arg, sizeof(mnt));
 	if (ret < 0) {
-		pr_err("nuke ext4 copy mnt failed: %ld\\n", ret);
+		pr_err("nuke ext4 copy mnt failed: %ld\n", ret);
 		return -EFAULT; // 或者 return ret;
 	}
 
 	if (ret == sizeof(mnt)) {
-		pr_err("nuke ext4 mnt path too long\\n");
+		pr_err("nuke ext4 mnt path too long\n");
 		return -ENAMETOOLONG;
 	}
 
@@ -670,13 +670,9 @@ static void ksu_install_fd_tw_func(struct callback_head *cb)
 	struct ksu_install_fd_tw *tw = container_of(cb, struct ksu_install_fd_tw, cb);
 	int fd = ksu_install_fd();
 
-#ifdef CONFIG_KSU_DEBUG
-	pr_info("[%d] install ksu fd: %d\n", current->pid, fd);
-#endif
-
 	if (copy_to_user(tw->outp, &fd, sizeof(fd))) {
 		pr_err("install ksu fd reply err\n");
-		close_fd(fd);
+		do_close_fd(fd);
 	}
 
 	kfree(tw);
