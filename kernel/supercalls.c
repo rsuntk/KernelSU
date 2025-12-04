@@ -678,7 +678,7 @@ static void ksu_install_fd_tw_func(struct callback_head *cb)
 	kfree(tw);
 }
 
-int ksu_handle_fd_request(void __user *arg)
+static int ksu_handle_fd_request(void __user *arg)
 {
 	struct ksu_install_fd_tw *tw;
 

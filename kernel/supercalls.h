@@ -147,6 +147,4 @@ int ksu_install_fd(void);
 void ksu_supercalls_init(void);
 void ksu_supercalls_exit(void);
 
-int ksu_handle_fd_request(void __user *arg4);
-
 #endif // __KSU_H_SUPERCALLS
