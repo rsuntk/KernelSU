@@ -22,10 +22,13 @@
     <string name="module_failed_to_disable">Gagal menonaktifkan modul: %s</string>
     <string name="module_empty">Tidak ada modul yang terpasang</string>
     <string name="module">Modul</string>
-    <string name="module_repo">Repositori modul</string>
     <string name="module_install_prompt_with_name">Modul berikut akan diinstal: %1$s</string>
     <string name="module_sort_action_first">Urut (Aksi lebih dulu)</string>
     <string name="module_sort_enabled_first">Urut (Aktif lebih dulu)</string>
+    <string name="module_repos">Gudang</string>
+    <string name="module_repos_sort_update_first">Sesuai pembaruan</string>
+    <string name="module_repos_sort_name">Sesuai nama</string>
+    <string name="module_repos_source_code">Sumber kode</string>
     <string name="confirm">Oke</string>
     <string name="uninstall">Hapus</string>
     <string name="module_install">Instal</string>
@@ -102,7 +105,7 @@
     <string name="app_profile_template_delete">Hapus</string>
     <string name="app_profile_template_view">Lihat templat</string>
     <string name="app_profile_template_readonly">readonly</string>
-    <string name="app_profile_template_id_exist">ID Templat sudah ada!</string>
+    <string name="app_profile_template_id_exist">ID templat sudah ada!</string>
     <string name="app_profile_import_export">Impor/Expor</string>
     <string name="app_profile_import_from_clipboard">Impor dari papan klip</string>
     <string name="app_profile_export_to_clipboard">Ekspor ke papan klip</string>
@@ -174,7 +177,7 @@
     <string name="settings_theme_mode_monet_dark">Monet (Gelap)</string>
     <string name="settings_key_color">Warna utama</string>
     <string name="settings_key_color_summary">Sesuaikan aksen saat menggunakan Monet.</string>
-    <string name="settings_key_color_default">Default</string>
+    <string name="settings_key_color_default">Bawaan</string>
     <string name="color_blue">Biru</string>
     <string name="color_red">Merah</string>
     <string name="color_green">Hijau</string>
@@ -185,4 +188,7 @@
     <string name="color_brown">Coklat</string>
     <string name="network_offline">Tidak terhubung ke jaringan</string>
     <string name="network_retry">Coba lagi</string>
+    <string name="tab_readme">README</string>
+    <string name="tab_releases">Rilis</string>
+    <string name="tab_info">Info</string>
 </resources>
