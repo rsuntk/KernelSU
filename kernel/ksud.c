@@ -50,7 +50,8 @@ static const char KERNEL_SU_RC[] =
 	"on post-fs-data\n"
 	"    start logd\n"
 	// We should wait for the post-fs-data finish
-	"    exec u:r:" KERNEL_SU_DOMAIN ":s0 root -- " KSUD_PATH " post-fs-data\n"
+	"    exec u:r:" KERNEL_SU_DOMAIN ":s0 root -- " KSUD_PATH
+	" post-fs-data\n"
 	"\n"
 
 	"on nonencrypted\n"
@@ -62,7 +63,8 @@ static const char KERNEL_SU_RC[] =
 	"\n"
 
 	"on property:sys.boot_completed=1\n"
-	"    exec u:r:" KERNEL_SU_DOMAIN ":s0 root -- " KSUD_PATH " boot-completed\n"
+	"    exec u:r:" KERNEL_SU_DOMAIN ":s0 root -- " KSUD_PATH
+	" boot-completed\n"
 	"\n"
 
 	"\n";
@@ -211,6 +213,21 @@ static inline void handle_second_stage(void)
 	setup_ksu_cred();
 }
 
+// For handling ksud on init
+// TODO: Use it for SYSCALL_HOOK too!
+int __maybe_unused ksu_handle_execveat_init(struct filename *filename)
+{
+	if (current->pid != 1 && is_init(get_current_cred())) {
+		if (unlikely(strcmp(filename->name, KSUD_PATH) == 0)) {
+			pr_info("execveat_init: escape to root for init executing ksud: %d\n",
+				current->pid);
+			escape_to_root_for_init();
+		}
+		return 0;
+	}
+	return 1;
+}
+
 // IMPORTANT NOTE: the call from execve_handler_pre WON'T provided correct value for envp and flags in GKI version
 int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 			     struct user_arg_ptr *argv,
@@ -239,6 +256,11 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 	if (IS_ERR(filename)) {
 		return 0;
 	}
+
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	if (!ksu_handle_execveat_init(filename))
+		return 1;
+#endif
 
 	if (unlikely(!memcmp(filename->name, system_bin_init,
 			     sizeof(system_bin_init) - 1) &&

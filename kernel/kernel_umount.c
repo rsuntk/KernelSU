@@ -97,17 +97,6 @@ static void try_umount(const char *mnt, int flags)
 	ksu_umount_mnt(mnt, &path, flags);
 }
 
-static inline void do_umount_work(void)
-{
-	struct mount_entry *entry;
-	list_for_each_entry (entry, &mount_list, list) {
-		pr_info("%s: unmounting: %s flags 0x%x\n", __func__,
-			entry->umountable, entry->flags);
-		try_umount(entry->umountable, entry->flags);
-	}
-}
-
-#ifdef CONFIG_KSU_SYSCALL_HOOK
 struct umount_tw {
 	struct callback_head cb;
 };
@@ -118,25 +107,18 @@ static void umount_tw_func(struct callback_head *cb)
 	const struct cred *saved = override_creds(ksu_cred);
 
 	down_read(&mount_list_lock);
-	do_umount_work();
+	struct mount_entry *entry;
+	list_for_each_entry (entry, &mount_list, list) {
+		pr_info("%s: unmounting: %s flags 0x%x\n", __func__,
+			entry->umountable, entry->flags);
+		try_umount(entry->umountable, entry->flags);
+	}
 	up_read(&mount_list_lock);
 
 	revert_creds(saved);
 
 	kfree(tw);
 }
-#else
-static void umount_func(void)
-{
-	const struct cred *saved = override_creds(ksu_cred);
-
-	down_read(&mount_list_lock);
-	do_umount_work();
-	up_read(&mount_list_lock);
-
-	revert_creds(saved);
-}
-#endif
 
 int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
 {
@@ -180,7 +162,6 @@ int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
 	// umount the target mnt
 	pr_info("handle umount for uid: %d, pid: %d\n", new_uid, current->pid);
 
-#ifdef CONFIG_KSU_SYSCALL_HOOK
 	struct umount_tw *tw;
 	tw = kzalloc(sizeof(*tw), GFP_ATOMIC);
 	if (!tw)
@@ -193,10 +174,6 @@ int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
 		kfree(tw);
 		pr_warn("unmount add task_work failed\n");
 	}
-#else
-	// Maybe using task work for non-atomic context is just useless?
-	umount_func();
-#endif
 
 	return 0;
 }
