@@ -214,8 +214,7 @@ static inline void handle_second_stage(void)
 }
 
 // For handling ksud on init
-// TODO: Use it for SYSCALL_HOOK too!
-int __maybe_unused ksu_handle_execveat_init(struct filename *filename)
+static int ksu_handle_execveat_init(struct filename *filename)
 {
 	if (current->pid != 1 && is_init(get_current_cred())) {
 		if (unlikely(strcmp(filename->name, KSUD_PATH) == 0)) {
