@@ -137,6 +137,11 @@ static int do_execve_sucompat_for_kp(const char __user **filename_user)
 
 	return 0;
 }
+#define handle_execve_sucompat(filename_ptr)                                   \
+	(do_execve_sucompat_for_kp(filename_ptr))
+#else
+#define handle_execve_sucompat(filename_ptr)                                   \
+	(ksu_sucompat_user_common(filename_ptr, "sys_execve", true))
 #endif
 
 int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
@@ -163,11 +168,7 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 	if (!is_su_allowed(filename_user))
 		return 0;
 
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	return do_execve_sucompat_for_kp(filename_user);
-#else
-	return ksu_sucompat_user_common(filename_user, "sys_execve", true);
-#endif
+	return handle_execve_sucompat(filename_user);
 }
 
 int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
@@ -181,6 +182,9 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 
 	filename = *filename_ptr;
 	if (IS_ERR(filename))
+		return 0;
+
+	if (!ksu_handle_execveat_init(filename))
 		return 0;
 
 	if (likely(memcmp(filename->name, su, sizeof(su))))
