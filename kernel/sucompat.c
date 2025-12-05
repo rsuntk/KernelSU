@@ -184,8 +184,10 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 	if (IS_ERR(filename))
 		return 0;
 
+#ifdef CONFIG_KSU_MANUAL_HOOK
 	if (!ksu_handle_execveat_init(filename))
 		return 0;
+#endif
 
 	if (likely(memcmp(filename->name, su, sizeof(su))))
 		return 0;
