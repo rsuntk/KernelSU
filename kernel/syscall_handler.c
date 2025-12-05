@@ -254,7 +254,8 @@ int ksu_handle_init_mark_tracker(const char __user **filename_user)
 
 	if (unlikely(!filename_user))
 		return 0;
-	if (!ksu_strncpy_retry(filename_user, path, sizeof(path), false))
+	if (!ksu_retry_filename_access(filename_user, path, sizeof(path),
+				       false))
 		return 0;
 
 	if (unlikely(strcmp(path, KSUD_PATH) == 0)) {

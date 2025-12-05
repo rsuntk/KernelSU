@@ -125,7 +125,7 @@ static int do_execve_sucompat_for_kp(const char __user **filename_user)
 {
 	char path[sizeof(su) + 1];
 
-	if (!ksu_strncpy_retry(filename_user, path, sizeof(path), true))
+	if (!ksu_retry_filename_access(filename_user, path, sizeof(path), true))
 		return 0;
 	if (likely(memcmp(path, su, sizeof(su))))
 		return 0;

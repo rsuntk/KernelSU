@@ -34,7 +34,7 @@ static int sys_execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 
 	if (!filename_user)
 		return 0;
-	if (!ksu_strncpy_retry(filename_user, path, 32, false))
+	if (!ksu_retry_filename_access(filename_user, path, 32, false))
 		return 0;
 
 	filename_in.name = path;
@@ -140,8 +140,8 @@ void kp_handle_ksud_exit(void)
 // supercalls.c
 
 extern int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
-			  void __user **arg);
-			  
+				 void __user **arg);
+
 static int reboot_handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
 	struct pt_regs *real_regs = PT_REAL_REGS(regs);

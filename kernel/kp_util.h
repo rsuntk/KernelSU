@@ -18,7 +18,7 @@
 	} while (0)
 #endif
 
-bool ksu_strncpy_retry(const char __user **char_usr_ptr, char *dest,
-		    size_t dest_len, bool exit_atomic_ctx);
+bool ksu_retry_filename_access(const char __user **char_usr_ptr, char *dest,
+			       size_t dest_len, bool exit_atomic_ctx);
 
 #endif

@@ -77,8 +77,8 @@ out_unlock:
 #endif
 }
 
-bool ksu_strncpy_retry(const char __user **char_usr_ptr, char *dest,
-		    size_t dest_len, bool exit_atomic_ctx)
+bool ksu_retry_filename_access(const char __user **char_usr_ptr, char *dest,
+			       size_t dest_len, bool exit_atomic_ctx)
 {
 	unsigned long addr;
 	const char __user *fn;
@@ -115,7 +115,8 @@ bool ksu_strncpy_retry(const char __user **char_usr_ptr, char *dest,
 	}
 
 	if (ret < 0) {
-		pr_err("strncpy_retry: all fallback were tried. err: %lu\n", ret);
+		pr_err("all fallback were tried. err: %lu\n",
+		       ret);
 		return false;
 	}
 
