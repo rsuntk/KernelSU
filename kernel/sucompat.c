@@ -25,6 +25,7 @@
 #ifdef CONFIG_KSU_SYSCALL_HOOK
 #include "kp_util.h"
 #endif
+#include "selinux/selinux.h"
 
 #define SU_PATH "/system/bin/su"
 #define SH_PATH "/system/bin/sh"
@@ -173,6 +174,7 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 
 int ksu_handle_execveat_init(struct filename *filename)
 {
+#ifdef CONFIG_KSU_MANUAL_HOOK
 	if (current->pid != 1 && is_init(get_current_cred())) {
 		if (unlikely(strcmp(filename->name, KSUD_PATH) == 0)) {
 			pr_info("hook_manager: escape to root for init executing ksud: %d\n",
@@ -181,6 +183,7 @@ int ksu_handle_execveat_init(struct filename *filename)
 		}
 		return 0;
 	}
+#endif
 	return 1;
 }
 
@@ -198,7 +201,7 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 		return 0;
 	if (!ksu_handle_execveat_init(filename))
 		return 0;
-	// rsuntk: Haha! double recheck
+	// rsuntk: Haha! double check
 	if (!is_su_allowed(filename))
 		return 0;
 	if (likely(memcmp(filename->name, su, sizeof(su))))
