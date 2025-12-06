@@ -91,7 +91,7 @@
     <string name="force_stop_app">Paksa berhenti</string>
     <string name="restart_app">Mulai ulang</string>
     <string name="failed_to_update_sepolicy">Gagal memperbarui aturan SELinux untuk %s</string>
-    <string name="su_not_allowed">Tidak dapat memberikan akses Superuser ke %s</string>
+    <string name="su_not_allowed">Tidak dapat memberikan akses SU untuk %s</string>
     <string name="module_changelog">Catatan perubahan</string>
     <string name="settings_profile_template">Templat Profil Apl</string>
     <string name="settings_profile_template_summary">Kelola templat lokal dan online pada Profil Aplikasi.</string>
@@ -123,11 +123,11 @@
     <string name="action">Aksi</string>
     <string name="open">Buka</string>
     <string name="enable_web_debugging">Debugging WebView</string>
-    <string name="enable_web_debugging_summary">Dapat digunakan untuk men-debug WebUI. Harap aktifkan hanya jika diperlukan.</string>
+    <string name="enable_web_debugging_summary">Dapat digunakan untuk mendebug WebUI. Harap aktifkan hanya saat diperlukan.</string>
     <string name="direct_install">Instal langsung (Disarankan)</string>
     <string name="select_file">Pilih berkas</string>
     <string name="install_inactive_slot">Instal ke slot nonaktif (Setelah OTA)</string>
-    <string name="install_inactive_slot_warning">Perangkatmu akan **DIPAKSA** untuk melakukan boot ke slot tidak aktif saat ini setelah reboot!\nGunakan hanya setelah proses OTA selesai.\nLanjutkan?</string>
+    <string name="install_inactive_slot_warning">Perangkatmu akan **DIPAKSA** untuk melakukan boot ke slot nonaktif saat ini setelah reboot!\nGunakan hanya setelah proses OTA selesai.\nLanjutkan?</string>
     <string name="install_next">Selanjutnya</string>
     <string name="install_select_partition">Pilih partisi</string>
     <string name="install_upload_lkm_file">Gunakan berkas LKM lokal</string>
@@ -147,9 +147,9 @@
     <string name="selected_lkm">LKM dipilih: %s</string>
     <string name="save_log">Simpan log</string>
     <string name="log_saved">Log disimpan</string>
-    <string name="settings_disable_su">Nonaktifkan kompatibilitas su</string>
+    <string name="settings_disable_su">Nonaktifkan kompatibilitas SU</string>
     <string name="settings_disable_su_summary">Nonaktifkan kemampuan aplikasi apa pun untuk mendapatkan hak akses root melalui perintah ⁠`su` (proses root yang ada tidak akan terpengaruh).</string>
-    <string name="settings_disable_kernel_umount">Nonaktifkan kernel umount</string>
+    <string name="settings_disable_kernel_umount">Nonaktifkan umount kernel</string>
     <string name="settings_disable_kernel_umount_summary">Nonaktifkan umount pada level kernel yang dikontrol oleh KernelSU.</string>
     <string name="settings_enable_enhanced_security">Aktifkan keamanan tingkat lanjut</string>
     <string name="settings_enable_enhanced_security_summary">Aktifkan kebijakan keamanan yang lebih ketat.</string>
