@@ -113,25 +113,23 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 		return 0;
 	}
 
-	// if on private space, see if its possibly the manager
-	if (new_uid > PER_USER_RANGE &&
-	    new_uid % PER_USER_RANGE == ksu_get_manager_uid()) {
-		ksu_set_manager_uid(new_uid);
-	}
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
-	if (ksu_get_manager_uid() == new_uid) {
+	if (ksu_get_manager_appid() == new_uid % PER_USER_RANGE) {
 		pr_info("install fd for ksu manager(uid=%d)\n", new_uid);
 		ksu_install_fd();
 		spin_lock_irq(&current->sighand->siglock);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 		ksu_seccomp_allow_cache(current->seccomp.filter, __NR_reboot);
 #ifdef CONFIG_KSU_SYSCALL_HOOK
 		ksu_set_task_tracepoint_flag(current);
+#endif
+#else
+		disable_seccomp(current);
 #endif
 		spin_unlock_irq(&current->sighand->siglock);
 		return 0;
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 	if (ksu_is_allow_uid_for_current(new_uid)) {
 		if (current->seccomp.mode == SECCOMP_MODE_FILTER &&
 		    current->seccomp.filter) {
@@ -147,15 +145,6 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 #endif
 	}
 #else
-	if (ksu_get_manager_uid() == new_uid) {
-		pr_info("install fd for ksu manager(uid=%d)\n", new_uid);
-		ksu_install_fd();
-		spin_lock_irq(&current->sighand->siglock);
-		disable_seccomp(current);
-		spin_unlock_irq(&current->sighand->siglock);
-		return 0;
-	}
-
 	if (ksu_is_allow_uid_for_current(new_uid)) {
 		// FIXME: Should do proper checking
 		if (current->seccomp.filter != NULL) {

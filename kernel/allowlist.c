@@ -287,8 +287,8 @@ bool __ksu_is_allow_uid(uid_t uid)
 		return false;
 	}
 
-	if (likely(ksu_is_manager_uid_valid()) &&
-	    unlikely(ksu_get_manager_uid() == uid)) {
+	if (likely(ksu_is_manager_appid_valid()) &&
+	    unlikely(ksu_get_manager_appid() == uid % PER_USER_RANGE)) {
 		// manager is always allowed!
 		return true;
 	}
@@ -318,11 +318,13 @@ bool __ksu_is_allow_uid_for_current(uid_t uid)
 bool ksu_uid_should_umount(uid_t uid)
 {
 	struct app_profile profile = { .current_uid = uid };
-	if (likely(ksu_is_manager_uid_valid()) &&
-	    unlikely(ksu_get_manager_uid() == uid)) {
+
+	if (likely(ksu_is_manager_appid_valid()) &&
+	    unlikely(ksu_get_manager_appid() == uid % PER_USER_RANGE)) {
 		// we should not umount on manager!
 		return false;
 	}
+
 	bool found = ksu_get_app_profile(&profile);
 	if (!found) {
 		// no app profile found, it must be non root app

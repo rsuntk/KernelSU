@@ -244,14 +244,14 @@ static int do_uid_should_umount(void __user *arg)
 	return 0;
 }
 
-static int do_get_manager_uid(void __user *arg)
+static int do_get_manager_appid(void __user *arg)
 {
-	struct ksu_get_manager_uid_cmd cmd;
+	struct ksu_get_manager_appid_cmd cmd;
 
-	cmd.uid = ksu_get_manager_uid();
+	cmd.appid = ksu_get_manager_appid();
 
 	if (copy_to_user(arg, &cmd, sizeof(cmd))) {
-		pr_err("get_manager_uid: copy_to_user failed\n");
+		pr_err("get_manager_appid: copy_to_user failed\n");
 		return -EFAULT;
 	}
 
@@ -640,7 +640,7 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
 		  manager_or_root),
 	KSU_IOCTL(UID_SHOULD_UMOUNT, "UID_SHOULD_UMOUNT", do_uid_should_umount,
 		  manager_or_root),
-	KSU_IOCTL(GET_MANAGER_UID, "GET_MANAGER_UID", do_get_manager_uid,
+	KSU_IOCTL(GET_MANAGER_APPID, "GET_MANAGER_APPID", do_get_manager_appid,
 		  manager_or_root),
 	KSU_IOCTL(GET_APP_PROFILE, "GET_APP_PROFILE", do_get_app_profile,
 		  only_manager),
