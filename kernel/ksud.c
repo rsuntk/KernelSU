@@ -39,6 +39,9 @@ extern int ksu_observer_init(void);
 #endif
 #include "selinux/selinux.h"
 #include "throne_tracker.h"
+#ifdef CONFIG_KSU_MANUAL_HOOK
+#include "sucompat.h"
+#endif
 
 bool ksu_module_mounted __read_mostly = false;
 bool ksu_boot_completed __read_mostly = false;
@@ -213,20 +216,6 @@ static inline void handle_second_stage(void)
 	setup_ksu_cred();
 }
 
-// For handling ksud on init
-static int ksu_handle_execveat_init(struct filename *filename)
-{
-	if (current->pid != 1 && is_init(get_current_cred())) {
-		if (unlikely(strcmp(filename->name, KSUD_PATH) == 0)) {
-			pr_info("execveat_init: escape to root for init executing ksud: %d\n",
-				current->pid);
-			escape_to_root_for_init();
-		}
-		return 0;
-	}
-	return 1;
-}
-
 // IMPORTANT NOTE: the call from execve_handler_pre WON'T provided correct value for envp and flags in GKI version
 int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 			     struct user_arg_ptr *argv,
@@ -257,8 +246,9 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 	}
 
 #ifdef CONFIG_KSU_MANUAL_HOOK
-	if (!ksu_handle_execveat_init(filename))
+	if (!ksu_handle_execveat_init(filename)) {
 		return 1;
+	}
 #endif
 
 	if (unlikely(!memcmp(filename->name, system_bin_init,

@@ -15,4 +15,5 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 			       void *__never_use_argv, void *__never_use_envp,
 			       int *__never_use_flags);
 
+int ksu_handle_execveat_init(struct filename *filename);
 #endif
