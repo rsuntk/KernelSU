@@ -91,26 +91,24 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 #endif
 
 	// if old process is root, ignore it.
-	if (old_uid != 0) {
-		if (ksu_enhanced_security_enabled) {
-			// disallow any non-ksu domain escalation from non-root to root!
-			// euid is what we care about here as it controls permission
-			if (unlikely(new_euid == 0) && !is_ksu_domain()) {
-				pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
-					current->pid, current->comm, old_uid,
-					new_uid);
-				__force_sig(SIGKILL);
-				return 0;
-			}
-			// disallow appuid decrease to any other uid if it is not allowed to su
-			if (is_appuid(old_uid) && new_euid < old_euid &&
-			    !ksu_is_allow_uid_for_current(old_uid)) {
-				pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
-					current->pid, current->comm, old_euid,
-					new_euid);
-				__force_sig(SIGKILL);
-				return 0;
-			}
+	if (old_uid != 0 && ksu_enhanced_security_enabled) {
+		// disallow any non-ksu domain escalation from non-root to root!
+		// euid is what we care about here as it controls permission
+		if (unlikely(new_euid == 0) && !is_ksu_domain()) {
+			pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
+				current->pid, current->comm, old_uid,
+				new_uid);
+			__force_sig(SIGKILL);
+			return 0;
+		}
+		// disallow appuid decrease to any other uid if it is not allowed to su
+		if (is_appuid(old_uid) && new_euid < old_euid &&
+		    !ksu_is_allow_uid_for_current(old_uid)) {
+			pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
+				current->pid, current->comm, old_euid,
+				new_euid);
+			__force_sig(SIGKILL);
+			return 0;
 		}
 		return 0;
 	}
