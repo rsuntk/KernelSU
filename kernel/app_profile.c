@@ -186,7 +186,7 @@ void escape_with_root_profile(void)
 #endif
 }
 
-void escape_to_root_for_init(void)
+void __maybe_unused escape_to_root_for_init(void)
 {
 	setup_selinux(KERNEL_SU_CONTEXT);
 }
