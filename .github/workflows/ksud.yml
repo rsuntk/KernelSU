@@ -36,10 +36,6 @@ jobs:
     - name: Setup rustup
       run: |
         rustup update stable
-    - uses: Swatinem/rust-cache@v2
-      with:
-        workspaces: userspace/ksud
-        cache-targets: false
 
     - name: Install cross
       run: |
