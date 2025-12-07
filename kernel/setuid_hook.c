@@ -201,6 +201,8 @@ do_umount:
 #endif // #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 
 	susfs_set_current_proc_umounted();
+	
+	return 0;
 }
 
 int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
