@@ -649,7 +649,7 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
 #endif
 
 	// If magic2 is susfs and current process is root
-	if (magic2 == SUSFS_MAGIC && only_root) {
+	if (magic2 == SUSFS_MAGIC && only_root()) {
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 		if (cmd == CMD_SUSFS_ADD_SUS_PATH) {
 			susfs_add_sus_path(arg);
