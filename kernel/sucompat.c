@@ -101,8 +101,7 @@ static int ksu_sucompat_user_common(const char __user **filename_user,
 				    const char *syscall_name,
 				    const bool escalate)
 {
-	char path[sizeof(su)]; // sizeof includes nullterm already!
-	memset(path, 0, sizeof(path));
+	char path[sizeof(su) + 1] = {0}; // sizeof includes nullterm already!
 	ksu_strncpy_from_user_nofault(path, *filename_user, sizeof(path));
 
 	if (memcmp(path, su, sizeof(su)))
@@ -120,9 +119,6 @@ static int ksu_sucompat_user_common(const char __user **filename_user,
 	return 0;
 }
 
-#define handle_execve_sucompat(filename_ptr)                                   \
-	(ksu_sucompat_user_common(filename_ptr, "sys_execve", true))
-
 int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 			 int *__unused_flags)
 {
@@ -133,19 +129,24 @@ int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
-int ksu_handle_stat(int *dfd, struct filename **filename, int *flags)
+int ksu_handle_stat(int *dfd, struct filename **filename_ptr, int *flags)
 {
-	if (unlikely(IS_ERR(*filename)))
+	struct filename *filename;
+	if (!filename_ptr)
+		return 0;
+
+	filename = *filename_ptr;
+	if (IS_ERR(filename))
 		return 0;
 
 	if (!is_su_allowed(filename))
 		return 0;
 
-	if (likely(memcmp((*filename)->name, su, sizeof(su))))
+	if (likely(memcmp(filename->name, su, sizeof(su))))
 		return 0;
 
 	pr_info("ksu_handle_stat: su->sh!\n");
-	memcpy((void *)((*filename)->name), sh_path, sizeof(sh_path));
+	memcpy((void *)filename->name, sh_path, sizeof(sh_path));
 	return 0;
 }
 #else
@@ -165,7 +166,7 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 	if (!is_su_allowed(filename_user))
 		return 0;
 
-	return handle_execve_sucompat(filename_user);
+	return ksu_sucompat_user_common(filename_ptr, "sys_execve", true);
 }
 
 int ksu_handle_execveat_init(struct filename *filename)

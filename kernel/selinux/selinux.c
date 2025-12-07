@@ -8,7 +8,7 @@
 
 static int transive_to_domain(const char *domain, struct cred *cred)
 {
-	selinux_security_struct *sec;
+	selinux_sec_t *sec;
 	u32 sid;
 	int error;
 
@@ -89,7 +89,7 @@ bool getenforce(void)
 
 bool is_context(const struct cred *cred, const char *context)
 {
-	const selinux_security_struct *sec;
+	const selinux_sec_t *sec;
 	struct lsm_context ctx = { 0 };
 	bool result = false;
 	int err;
@@ -181,7 +181,7 @@ static inline void susfs_set_sid(const char *secctx_name, u32 *out_sid)
 
 bool susfs_is_sid_equal(void *sec, u32 sid2)
 {
-	selinux_security_struct *tsec = (selinux_security_struct *)sec;
+	const selinux_sec_t *tsec = (selinux_sec_t *)sec;
 	if (!tsec) {
 		return false;
 	}
