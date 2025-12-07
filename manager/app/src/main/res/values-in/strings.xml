@@ -26,8 +26,8 @@
     <string name="module_sort_action_first">Urut (Aksi lebih dulu)</string>
     <string name="module_sort_enabled_first">Urut (Aktif lebih dulu)</string>
     <string name="module_repos">Gudang</string>
-    <string name="module_repos_sort_update_first">Sesuai pembaruan</string>
-    <string name="module_repos_sort_name">Sesuai nama</string>
+    <string name="module_repos_sort_update_first">Urut (Pembaruan dulu)</string>
+    <string name="module_repos_sort_name">Urut (A-Z)</string>
     <string name="module_repos_source_code">Sumber kode</string>
     <string name="confirm">Oke</string>
     <string name="uninstall">Hapus</string>
@@ -67,7 +67,7 @@
     <string name="profile_template">Templat</string>
     <string name="profile_custom">Khusus</string>
     <string name="profile_name">Nama profil</string>
-    <string name="profile_namespace">Gunakan namespace</string>
+    <string name="profile_namespace">Gunakan Namespace</string>
     <string name="profile_namespace_inherited">Diwariskan</string>
     <string name="profile_namespace_global">Universal</string>
     <string name="profile_namespace_individual">Individual</string>
