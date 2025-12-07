@@ -14,11 +14,7 @@
 
 uid_t ksu_manager_appid = KSU_INVALID_APPID;
 
-#ifdef CONFIG_KSU_MANUAL_HOOK
 #define SYSTEM_PACKAGES_LIST_PATH "/data/system/packages.list.tmp"
-#else
-#define SYSTEM_PACKAGES_LIST_PATH "/data/system/packages.list"
-#endif
 
 struct uid_data {
 	struct list_head list;
