@@ -182,9 +182,6 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 	}
 #endif
 
-	// Handle kernel umount
-	ksu_handle_umount(old_uid, new_uid);
-
 	return 0;
 
 do_umount:
