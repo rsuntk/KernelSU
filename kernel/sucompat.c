@@ -166,7 +166,7 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 	if (!is_su_allowed(filename_user))
 		return 0;
 
-	return ksu_sucompat_user_common(filename_ptr, "sys_execve", true);
+	return ksu_sucompat_user_common(filename_user, "sys_execve", true);
 }
 
 int ksu_handle_execveat_init(struct filename *filename)
