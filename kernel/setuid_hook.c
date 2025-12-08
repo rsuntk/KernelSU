@@ -164,12 +164,9 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 	}
 #else
 	if (ksu_is_allow_uid_for_current(new_uid)) {
-		// FIXME: Should do proper checking
-		if (current->seccomp.filter != NULL) {
-			spin_lock_irq(&current->sighand->siglock);
-			disable_seccomp(current);
-			spin_unlock_irq(&current->sighand->siglock);
-		}
+		spin_lock_irq(&current->sighand->siglock);
+		disable_seccomp(current);
+		spin_unlock_irq(&current->sighand->siglock);
 	}
 #endif
 
