@@ -82,7 +82,6 @@ static void ksu_install_manager_fd_tw_func(struct callback_head *cb)
 
 static void do_install_manager_fd(void)
 {
-	pr_info("install fd for manager (uid=%d)\n", new_uid);
 	struct callback_head *cb = kzalloc(sizeof(*cb), GFP_ATOMIC);
 	if (!cb)
 		return;
@@ -143,6 +142,7 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 		disable_seccomp(current);
 #endif
 		spin_unlock_irq(&current->sighand->siglock);
+		pr_info("install fd for manager (uid=%d)\n", new_uid);
 		do_install_manager_fd();
 		return 0;
 	}
