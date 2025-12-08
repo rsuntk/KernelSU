@@ -39,9 +39,6 @@ extern int ksu_observer_init(void);
 #endif
 #include "selinux/selinux.h"
 #include "throne_tracker.h"
-#ifdef CONFIG_KSU_MANUAL_HOOK
-#include "sucompat.h"
-#endif
 
 bool ksu_module_mounted __read_mostly = false;
 bool ksu_boot_completed __read_mostly = false;
@@ -244,12 +241,6 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 	if (IS_ERR(filename)) {
 		return 0;
 	}
-
-#ifdef CONFIG_KSU_MANUAL_HOOK
-	if (!ksu_handle_execveat_init(filename)) {
-		return 1;
-	}
-#endif
 
 	if (unlikely(!memcmp(filename->name, system_bin_init,
 			     sizeof(system_bin_init) - 1) &&
