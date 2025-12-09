@@ -41,6 +41,7 @@
 #include "syscall_handler.h"
 #endif
 #include "kernel_umount.h"
+#include "kernel_compat.h"
 
 static bool ksu_enhanced_security_enabled = false;
 
