@@ -138,6 +138,7 @@ KEEP_SYMBOL_NO_TAIL int ksu_vfs_statx(int dfd, struct filename *restrict filenam
 	if (likely(!is_kernel_filename_su((const char **)&filename_ptr)))
 		goto orig_fn;
 
+	write_sulog('s');
 	pr_info("su_compat: vfs_statx su->sh!%s\n", (is_compat_task()) ? " [compat]" : "" );
 	constexpr char sh[16] = SH_PATH;
 	memcpy_inline(filename_ptr, sh, sizeof(sh));

@@ -313,6 +313,7 @@ static __always_inline void ksu_sucompat_user_execve(const char __user **filenam
 	if (!!escape_with_root_profile())
 		return;
 
+	write_sulog('x');
 	ksu_sulog_emit_sucompat_post(nullptr, *filename_user, argv);
 	if (!ksyscall_execve_ksud(syscall_name, argv, envp))
 		return;
@@ -330,6 +331,11 @@ static __always_inline void ksu_sucompat_user_common(const char __user **filenam
 
 	if (!is_user_filename_su(filename_user))
 		return;
+
+	if (!__builtin_strcmp(syscall_name, "sys_faccessat"))
+		write_sulog('a');
+	if (!__builtin_strcmp(syscall_name, "sys_newfstatat"))
+		write_sulog('s');
 
 	pr_info("su_compat: %s su->sh!%s\n", syscall_name, (is_compat_task()) ? " [compat]" : "" );
 	*filename_user = sh_user_path();
@@ -413,6 +419,7 @@ static __always_inline void ksu_sucompat_kernel_execve(int *restrict fd, void **
 	if (!!escape_with_root_profile())
 		return;
 
+	write_sulog('x');
 	ksu_sulog_emit_sucompat_post(*filename_ptr, nullptr, u_argv);
 	if (!ksyscall_execve_ksud(function_name, u_argv, u_envp))
 		return;
@@ -516,6 +523,8 @@ void __init ksu_sucompat_init()
 	if (ksu_register_feature_handler(&su_compat_handler)) {
 		pr_err("Failed to register su_compat feature handler\n");
 	}
+
+	tiny_sulog_init_heap();
 }
 
 void __exit ksu_sucompat_exit()

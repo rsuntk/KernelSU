@@ -6,6 +6,8 @@ static int do_grant_root(void __user *arg)
 
 	// we already check uid above on allowed_for_su()
 
+	write_sulog('i'); // log ioctl escalation
+
 	pr_info("allow root for: %d\n", audit_uid);
 	ret = escape_with_root_profile();
 	ksu_sulog_emit_grant_root(ret, audit_uid, audit_euid, GFP_KERNEL);
