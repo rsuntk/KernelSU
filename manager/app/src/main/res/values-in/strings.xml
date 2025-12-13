@@ -23,11 +23,11 @@
     <string name="module_empty">Tidak ada modul yang terpasang</string>
     <string name="module">Modul</string>
     <string name="module_install_prompt_with_name">Modul berikut akan diinstal: %1$s</string>
-    <string name="module_sort_action_first">Urut (Aksi lebih dulu)</string>
-    <string name="module_sort_enabled_first">Urut (Aktif lebih dulu)</string>
+    <string name="module_sort_action_first">Aksi lebih dulu</string>
+    <string name="module_sort_enabled_first">Aktif lebih dulu</string>
     <string name="module_repos">Gudang</string>
-    <string name="module_repos_sort_update_first">Urut (Pembaruan dulu)</string>
-    <string name="module_repos_sort_name">Urut (A-Z)</string>
+    <string name="module_repos_sort_update_first">Waktu pembaruan</string>
+    <string name="module_repos_sort_name">Nama (A → Z)</string>
     <string name="module_repos_source_code">Sumber kode</string>
     <string name="confirm">Oke</string>
     <string name="uninstall">Hapus</string>
@@ -74,7 +74,7 @@
     <string name="profile_groups">Kelompok</string>
     <string name="profile_capabilities">Kemampuan</string>
     <string name="profile_selinux_context">Konteks SELinux</string>
-    <string name="profile_umount_modules">Umount Modul</string>
+    <string name="profile_umount_modules">Umount modul secara bawaan</string>
     <string name="failed_to_update_app_profile">Gagal memperbarui Profil untuk %s</string>
     <string name="require_kernel_version">Versi KernelSU saat ini %d terlalu rendah untuk manajer berfungsi normal. Harap memperbarui ke versi %d atau di atasnya!</string>
     <string name="settings_umount_modules_default">Lepaskan modul</string>
