@@ -275,8 +275,7 @@ int ksu_handle_init_mark_tracker(const char __user **filename_user)
 #ifdef CONFIG_HAVE_SYSCALL_TRACEPOINTS
 static int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 {
-	return ksu_handle_setuid_common(ruid, current_uid().val, euid,
-					current_euid().val);
+	return ksu_handle_setuid_common(ruid, current_uid().val, euid);
 }
 
 // Generic sys_enter handler that dispatches to specific handlers

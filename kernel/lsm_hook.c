@@ -85,16 +85,16 @@ static int ksu_inode_rename(struct inode *old_inode, struct dentry *old_dentry,
 static int ksu_task_fix_setuid(struct cred *new, const struct cred *old,
 			       int flags)
 {
+	kuid_t old_uid, new_uid, new_euid;
+
 	if (!new || !old)
 		return 0;
 
-	kuid_t old_uid = old->uid;
-	kuid_t old_euid = old->euid;
-	kuid_t new_uid = new->uid;
-	kuid_t new_euid = new->euid;
+	old_uid = old->uid;
+	old_euid = old->euid;
+	new_uid = new->uid;
 
-	return ksu_handle_setuid_common(new_uid.val, old_uid.val, new_euid.val,
-					old_euid.val);
+	return ksu_handle_setuid_common(new_uid.val, old_uid.val, new_euid.val);
 }
 
 static struct security_hook_list ksu_hooks[] = {

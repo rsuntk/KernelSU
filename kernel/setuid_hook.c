@@ -97,14 +97,13 @@ static void do_install_manager_fd(void)
 // force_sig kcompat, TODO: move it out of core_hook.c
 // https://elixir.bootlin.com/linux/v5.3-rc1/source/kernel/signal.c#L1613
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0)
-#define __force_sig(sig) force_sig(sig)
+#define send_sigkill() force_sig(SIGKILL)
 #else
-#define __force_sig(sig) force_sig(sig, current)
+#define send_sigkill() force_sig(SIGKILL, current)
 #endif
 
 extern void disable_seccomp(struct task_struct *tsk);
-int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
-			     uid_t old_euid)
+int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid)
 {
 #ifdef CONFIG_KSU_DEBUG
 	pr_info("handle_set{res}uid from %d to %d\n", old_uid, new_uid);
@@ -117,16 +116,16 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid,
 		if (unlikely(new_euid == 0) && !is_ksu_domain()) {
 			pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
 				current->pid, current->comm, old_uid, new_uid);
-			__force_sig(SIGKILL);
+			send_sigkill();
 			return 0;
 		}
 		// disallow appuid decrease to any other uid if it is not allowed to su
-		if (is_appuid(old_uid) && new_euid < old_euid &&
+		if (is_appuid(old_uid) && new_euid < current_euid().val &&
 		    !ksu_is_allow_uid_for_current(old_uid)) {
 			pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
-				current->pid, current->comm, old_euid,
+				current->pid, current->comm, old_uid,
 				new_euid);
-			__force_sig(SIGKILL);
+			send_sigkill();
 			return 0;
 		}
 		return 0;
