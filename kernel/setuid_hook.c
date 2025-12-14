@@ -218,6 +218,11 @@ do_umount:
 	return 0;
 }
 
+int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
+{
+	return 0;
+}
+
 void ksu_setuid_hook_init(void)
 {
 	ksu_kernel_umount_init();
