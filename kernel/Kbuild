@@ -50,14 +50,14 @@ ifdef KSU_GIT_VERSION_VALID
 # ksu_version: major * 10000 + git version + 200 for historical reasons
 $(eval KSU_VERSION=$(shell expr 30000 + $(KSU_GIT_VERSION)))
 ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
-ccflags-y += -DKSU_BRANCH=$(KSU_GIT_BRANCH)
+ccflags-y += -DKSU_BRANCH=\"$(KSU_GIT_BRANCH)\"
 $(info -- KernelSU version: $(KSU_VERSION))
 $(info -- KernelSU branch: $(KSU_GIT_BRANCH))
 else
 # If there is no .git directory, use default version
 $(warning "KSU_GIT_VERSION not defined! It is better to make KernelSU a git repository!")
 ccflags-y += -DKSU_VERSION=32302
-ccflags-y += -DKSU_BRANCH="-"
+ccflags-y += -DKSU_BRANCH=\"-\"
 endif
 
 # Checks hooks state
