@@ -136,10 +136,10 @@ struct ksu_ioctl_cmd_map {
 };
 
 #define KSU_IOCTL(CMD, NAME, HANDLER, PERM)                                    \
-	{ .cmd = KSU_IOCTL_##CMD,                                              \
-	  .name = NAME,                                                        \
-	  .handler = HANDLER,                                                  \
-	  .perm_check = PERM }
+	{                                                                      \
+		.cmd = KSU_IOCTL_##CMD, .name = NAME, .handler = HANDLER,      \
+		.perm_check = PERM                                             \
+	}
 
 // Install KSU fd to current process
 int ksu_install_fd(void);

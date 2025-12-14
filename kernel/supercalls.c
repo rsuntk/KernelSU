@@ -667,7 +667,8 @@ struct ksu_install_fd_tw {
 
 static void ksu_install_fd_tw_func(struct callback_head *cb)
 {
-	struct ksu_install_fd_tw *tw = container_of(cb, struct ksu_install_fd_tw, cb);
+	struct ksu_install_fd_tw *tw =
+		container_of(cb, struct ksu_install_fd_tw, cb);
 	int fd = ksu_install_fd();
 
 	if (copy_to_user(tw->outp, &fd, sizeof(fd))) {
