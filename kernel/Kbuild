@@ -35,11 +35,13 @@ ifeq ($(shell test -e $(srctree)/$(src)/../.git && echo "in-tree"),in-tree)
 # In-tree build (git submodule)
 $(shell cd $(srctree)/$(src); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin [ -f ../.git/shallow ] && git fetch --unshallow)
 KSU_GIT_VERSION := $(shell cd $(srctree)/$(src); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin git rev-list --count HEAD)
+KSU_GIT_BRANCH := $(shell cd $(srctree)/$(src); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin git rev-parse --abbrev-ref HEAD)
 KSU_GIT_VERSION_VALID := 1
 else ifeq ($(shell test -e $(MDIR)/../.git && echo "out-of-tree"),out-of-tree)
 # Out-of-tree build (standalone repository)
 $(shell cd $(MDIR); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin [ -f ../.git/shallow ] && git fetch --unshallow)
 KSU_GIT_VERSION := $(shell cd $(MDIR); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin git rev-list --count HEAD)
+KSU_GIT_BRANCH := $(shell cd $(MDIR); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin git rev-parse --abbrev-ref HEAD)
 KSU_GIT_VERSION_VALID := 1
 endif
 
@@ -47,12 +49,15 @@ endif
 ifdef KSU_GIT_VERSION_VALID
 # ksu_version: major * 10000 + git version + 200 for historical reasons
 $(eval KSU_VERSION=$(shell expr 30000 + $(KSU_GIT_VERSION)))
-$(info -- KernelSU version: $(KSU_VERSION))
 ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
+ccflags-y += -DKSU_BRANCH=$(KSU_GIT_BRANCH)
+$(info -- KernelSU version: $(KSU_VERSION))
+$(info -- KernelSU branch: $(KSU_GIT_BRANCH))
 else
 # If there is no .git directory, use default version
 $(warning "KSU_GIT_VERSION not defined! It is better to make KernelSU a git repository!")
 ccflags-y += -DKSU_VERSION=32302
+ccflags-y += -DKSU_BRANCH="-"
 endif
 
 # Checks hooks state
