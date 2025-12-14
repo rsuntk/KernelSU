@@ -393,6 +393,12 @@ enum UmountOp {
     },
     /// Wipe all entries from umount list
     Wipe,
+
+    /// Get umount list entry size
+    GetSize,
+
+    /// Get umount list entry
+    GetList,
 }
 
 pub fn run() -> Result<()> {
@@ -626,6 +632,12 @@ pub fn run() -> Result<()> {
                 UmountOp::Add { mnt, flags } => ksucalls::umount_list_add(&mnt, flags),
                 UmountOp::Del { mnt } => ksucalls::umount_list_del(&mnt),
                 UmountOp::Wipe => ksucalls::umount_list_wipe().map_err(Into::into),
+                UmountOp::GetSize => {
+                    let total_size: usize = ksucalls::umount_list_getsize();
+                    println!("try_umount list total size: {total_size} bytes");
+                    Ok(())
+                }
+                UmountOp::GetList => ksucalls::umount_list_getlist(),
             },
             Kernel::NotifyModuleMounted => {
                 ksucalls::report_module_mounted();
