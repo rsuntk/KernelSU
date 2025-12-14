@@ -330,7 +330,7 @@ pub fn umount_list_del(path: &str) -> anyhow::Result<()> {
 pub fn umount_list_getsize() -> usize {
     let mut total_size: usize = 0;
     let mut cmd = AddTryUmountCmd {
-        arg: (&mut total_size as *mut usize) as u64,
+        arg: (&raw mut total_size) as u64,
         flags: 0,
         mode: KSU_UMOUNT_GETSIZE,
     };
@@ -361,7 +361,7 @@ pub fn umount_list_getlist() -> anyhow::Result<()> {
     let end_ptr: *const u8 = unsafe { current_ptr.add(total_size) };
 
     while current_ptr < end_ptr {
-        let c_str = unsafe { std::ffi::CStr::from_ptr(current_ptr as *const libc::c_char) };
+        let c_str = unsafe { std::ffi::CStr::from_ptr(current_ptr.cast::<libc::c_char>()) };
 
         let list_entry = c_str.to_string_lossy();
         println!("try_umount list entry: {list_entry}");
