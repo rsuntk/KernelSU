@@ -75,7 +75,7 @@ void setup_ksu_cred(void)
 
 void setenforce(bool enforce)
 {
-	__setenforce(enforce);
+	do_setenforce(enforce);
 }
 
 bool getenforce(void)
@@ -84,7 +84,7 @@ bool getenforce(void)
 		return false;
 	}
 
-	return __is_selinux_enforcing();
+	return is_selinux_enforcing();
 }
 
 bool is_context(const struct cred *cred, const char *context)
