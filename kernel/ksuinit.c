@@ -6,6 +6,7 @@
 #include <generated/utsrelease.h>
 #include <generated/compile.h>
 #include <linux/version.h> /* LINUX_VERSION_CODE, KERNEL_VERSION macros */
+#include <linux/susfs.h>
 
 #include "allowlist.h"
 #include "arch.h"
@@ -13,22 +14,14 @@
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
 #include "throne_tracker.h"
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-#include "syscall_handler.h"
-#endif
-#ifdef CONFIG_KSU_MANUAL_HOOK
 #include "setuid_hook.h"
 #include "sucompat.h"
-#endif
 #include "ksud.h"
 #include "supercalls.h"
 #include "ksu.h"
 
 struct cred* ksu_cred;
-
-#ifdef CONFIG_KSU_MANUAL_HOOK
 extern void __init ksu_lsm_hook_init(void);
-#endif
 
 int __init kernelsu_init(void)
 {
@@ -56,32 +49,20 @@ int __init kernelsu_init(void)
 
 	ksu_supercalls_init();
 
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	ksu_syscall_hook_manager_init();
-#endif
-#ifdef CONFIG_KSU_MANUAL_HOOK
 	ksu_lsm_hook_init();
 	ksu_setuid_hook_init();
 	ksu_sucompat_init();
-#endif
 
 	ksu_allowlist_init();
 
 	ksu_throne_tracker_init();
 
+	susfs_init();
+
 	ksu_ksud_init();
 
-#ifdef MODULE
-#ifndef CONFIG_KSU_DEBUG
-	kobject_del(&THIS_MODULE->mkobj.kobj);
-#endif
-#endif
 	return 0;
 }
-
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-extern void ksu_observer_exit(void);
-#endif
 
 void kernelsu_exit(void)
 {
@@ -89,19 +70,10 @@ void kernelsu_exit(void)
 
 	ksu_throne_tracker_exit();
 
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	ksu_observer_exit();
-#endif
-
 	ksu_ksud_exit();
 
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	ksu_syscall_hook_manager_exit();
-#endif
-#ifdef CONFIG_KSU_MANUAL_HOOK
 	ksu_sucompat_exit();
 	ksu_setuid_hook_exit();
-#endif
 
 	ksu_supercalls_exit();
 
