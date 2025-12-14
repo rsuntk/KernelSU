@@ -22,7 +22,7 @@
 #include "ksud.h"
 #include "ksu.h"
 
-static bool ksu_kernel_umount_enabled = true;
+bool __read_mostly ksu_kernel_umount_enabled = true;
 
 static int kernel_umount_feature_get(u64 *value)
 {
