@@ -57,9 +57,7 @@ bool always_allow(void)
 
 bool allowed_for_su(void)
 {
-	bool is_allowed =
-		is_manager() || ksu_is_allow_uid_for_current(current_uid().val);
-	return is_allowed;
+	return is_manager() || ksu_is_allow_uid_for_current(current_uid().val);
 }
 
 static int do_grant_root(void __user *arg)
