@@ -15,6 +15,7 @@
 #else
 #include <linux/sched.h>
 #endif
+#include <linux/susfs.h>
 
 #include "supercalls.h"
 #include "arch.h"
