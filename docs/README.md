@@ -18,28 +18,38 @@
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-orange.svg?logo=gnu)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![GitHub License](https://img.shields.io/github/license/tiann/KernelSU?logo=gnu)](/LICENSE)
 
-## How to add
+## How to add RKSU kernel driver into your kernel source
+
+- **main branch**
 ```
 curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
 ```
 
-## Suspicious FS (SusFS) Add-On
+- **tag**
+```
+curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s v3.0.0-20-legacy
+```
+
+- **susfs branch**
 
 > [!WARNING]
 > This branch is not always updated.
 >
 
-- `susfs-rksu-master`: Synced with latest https://gitlab.com/simonpunk/susfs4ksu.git commit(s), for GKI or non-GKI kernel (backport required).
+```
+curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s v3.0.0-20-legacy
+```
 
 ## Hook method
 
 1. **Syscall hook:**
-    - Used for Loadable Kernel Module (LKM)
+    - Used for Loadable Kernel Module (LKM) or GKI with this hook.
     - Default hook method on GKI kernels.
-    - Need `# CONFIG_KSU_MANUAL_HOOK is not set` & `CONFIG_KPROBES=y`, `CONFIG_KRETPROBES=y`, `CONFIG_HAVE_SYSCALL_TRACEPOINTS=y`
+    - Does not support armv7l.
+    - Need `CONFIG_KSU_SYSCALL_HOOK=y` & `CONFIG_KPROBES=y`, `CONFIG_KRETPROBES=y`, `CONFIG_HAVE_SYSCALL_TRACEPOINTS=y`
 2. **Manual hook:**
     - [See this repository for more information](https://github.com/rksuorg/kernel_patches)
-    - Default hook method on Non-GKI kernels.
+    - Default hook method on Non-GKI kernels, with condition that `CONFIG_KPROBES` off by default.
     - Need `CONFIG_KSU_MANUAL_HOOK=y`
 
 ## Features
@@ -54,7 +64,7 @@ curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.s
     - Android GKI 2.0 (5.10+): aarch64, armv8l, x86_64
     - Android GKI 1.0 (5.4): aarch64, armv8l, armv7l
     - Non-GKI (4.4-4.19): aarch64, armv8l, armv7l
-- **Application compaibility:**
+- **Application compaibility (ksud/manager):**
     - arm64-v8a, armeabi-v7a, x86_64
 
 ## Usage
@@ -65,8 +75,7 @@ curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.s
 
 ## Discussion
 
-- Official KernelSU Telegram: [@KernelSU](https://t.me/KernelSU)
-- RKSU Telegram: [@rsukrnlsu_grp](https://t.me/rsukrnlsu_grp)
+- RKSU Telegram Group: [@rsukrnlsu_grp](https://t.me/rsukrnlsu_grp)
 
 ## Security
 
