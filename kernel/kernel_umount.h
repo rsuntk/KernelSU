@@ -20,4 +20,6 @@ struct mount_entry {
 extern struct list_head mount_list;
 extern struct rw_semaphore mount_list_lock;
 
+extern bool __read_mostly ksu_kernel_umount_enabled;
+
 #endif
