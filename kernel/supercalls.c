@@ -497,8 +497,9 @@ static int add_try_umount(void __user *arg)
 		return -ENOTSUPP;
 	}
 
-	if (copy_from_user(&cmd, arg, sizeof(cmd))
+	if (copy_from_user(&cmd, arg, sizeof(cmd))) {
 		return -EFAULT;
+	}
 
 	switch (cmd.mode) {
 	case KSU_UMOUNT_WIPE: {
