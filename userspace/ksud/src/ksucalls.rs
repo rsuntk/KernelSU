@@ -101,6 +101,8 @@ const KSU_MARK_REFRESH: u32 = 4;
 const KSU_UMOUNT_WIPE: u8 = 0;
 const KSU_UMOUNT_ADD: u8 = 1;
 const KSU_UMOUNT_DEL: u8 = 2;
+const KSU_UMOUNT_GETSIZE: u8 = 3;
+const KSU_UMOUNT_GETLIST: u8 = 4;
 
 // Global driver fd cache
 static DRIVER_FD: OnceLock<RawFd> = OnceLock::new();
@@ -322,5 +324,54 @@ pub fn umount_list_del(path: &str) -> anyhow::Result<()> {
         mode: KSU_UMOUNT_DEL,
     };
     ksuctl(KSU_IOCTL_ADD_TRY_UMOUNT, &raw mut cmd)?;
+    Ok(())
+}
+
+pub fn umount_list_getsize() -> usize {
+    let mut total_size: usize = 0;
+    let mut cmd = AddTryUmountCmd {
+        arg: (&mut total_size as *mut usize) as u64,
+        flags: 0,
+        mode: KSU_UMOUNT_GETSIZE,
+    };
+    let _ = ksuctl(KSU_IOCTL_ADD_TRY_UMOUNT, &raw mut cmd);
+
+    total_size
+}
+
+pub fn umount_list_getlist() -> anyhow::Result<()> {
+    let total_size: usize = umount_list_getsize();
+    if total_size == 0 {
+        println!("No entries in the list, or kernel_umount is disabled.");
+        return Ok(());
+    }
+
+    let mut buf: Vec<u8> = vec![0; total_size];
+
+    let mut cmd = AddTryUmountCmd {
+        arg: buf.as_mut_ptr() as u64,
+        flags: 0,
+        mode: KSU_UMOUNT_GETLIST,
+    };
+
+    ksuctl(KSU_IOCTL_ADD_TRY_UMOUNT, &raw mut cmd)
+        .map_err(|e| anyhow::anyhow!("Failed to get umount list: {}", e))?;
+
+    let mut current_ptr: *const u8 = buf.as_ptr();
+    let end_ptr: *const u8 = unsafe { current_ptr.add(total_size) };
+
+    while current_ptr < end_ptr {
+        let c_str = unsafe { std::ffi::CStr::from_ptr(current_ptr as *const libc::c_char) };
+
+        let list_entry = c_str.to_string_lossy();
+        println!("try_umount list entry: {list_entry}");
+
+        let len = c_str.to_bytes().len();
+        if len == 0 {
+            break;
+        }
+
+        current_ptr = unsafe { current_ptr.add(len + 1) };
+    }
     Ok(())
 }
