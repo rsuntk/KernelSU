@@ -565,8 +565,8 @@ static int ksu_execve_ksud_common(const char __user *filename_user,
 	filename_in.name = path;
 	filename_p = &filename_in;
 
-	return ksu_handle_execveat_ksud((int *)AT_FDCWD, &filename_p, argv, NULL,
-					NULL);
+	return ksu_handle_execveat_ksud((int *)AT_FDCWD, &filename_p, argv,
+					NULL, NULL);
 }
 
 int __maybe_unused

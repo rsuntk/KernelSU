@@ -123,8 +123,7 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid)
 		if (is_appuid(old_uid) && new_euid < current_euid().val &&
 		    !ksu_is_allow_uid_for_current(old_uid)) {
 			pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
-				current->pid, current->comm, old_uid,
-				new_euid);
+				current->pid, current->comm, old_uid, new_euid);
 			send_sigkill();
 			return 0;
 		}

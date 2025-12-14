@@ -39,8 +39,8 @@ static int sys_execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 
 	filename_in.name = path;
 	filename_p = &filename_in;
-	return ksu_handle_execveat_ksud((int *)AT_FDCWD, &filename_p, &argv, NULL,
-					NULL);
+	return ksu_handle_execveat_ksud((int *)AT_FDCWD, &filename_p, &argv,
+					NULL, NULL);
 }
 
 static int sys_read_handler_pre(struct kprobe *p, struct pt_regs *regs)

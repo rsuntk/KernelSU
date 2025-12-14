@@ -115,8 +115,7 @@ bool ksu_retry_filename_access(const char __user **char_usr_ptr, char *dest,
 	}
 
 	if (ret < 0) {
-		pr_err("all fallback were tried. err: %lu\n",
-		       ret);
+		pr_err("all fallback were tried. err: %lu\n", ret);
 		return false;
 	}
 

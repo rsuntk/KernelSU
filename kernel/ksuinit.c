@@ -24,7 +24,7 @@
 #include "supercalls.h"
 #include "ksu.h"
 
-struct cred* ksu_cred;
+struct cred *ksu_cred;
 
 #ifdef CONFIG_KSU_MANUAL_HOOK
 extern void __init ksu_lsm_hook_init(void);
