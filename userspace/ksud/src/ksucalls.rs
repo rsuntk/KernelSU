@@ -363,27 +363,30 @@ pub fn umount_list_getlist() -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!("Failed to get umount list: {}", e))?;
 
     let mut char_buf: *const u8 = buf.as_ptr();
+    let start_ptr: *const u8 = char_buf;
     let end_ptr: *const u8 = unsafe { char_buf.add(total_size) };
     let buf_slice = &mut buf[..];
 
     println!("kernel_umount: try_umount entries:");
-    while char_buf < end_ptr && *char_buf != 0 {
-        let len = libc::strlen(char_buf.cast::<libc::c_char>());
-        let nullterm_ptr = unsafe { char_buf.add(len) };
+    unsafe {
+        while char_buf < end_ptr && *char_buf != 0 {
+            let len = libc::strlen(char_buf.cast::<libc::c_char>());
+            let nullterm_ptr = char_buf.add(len);
 
-        if nullterm_ptr >= end_ptr {
-            break;
+            if nullterm_ptr >= end_ptr {
+                break;
+            }
+
+            let offset = char_buf.offset_from(start_ptr) as usize;
+            buf_slice[offset + len as usize] = b'\n';
+
+            let line_slice = std::slice::from_raw_parts(char_buf, len + 1);
+            let output_str = std::str::from_utf8(line_slice)?;
+
+            print!("{output_str}");
+
+            char_buf = char_buf.add(len + 1);
         }
-
-        let offset = char_buf.offset_from(buf.as_ptr()) as usize;
-        buf_slice[offset + len as usize] = b'\n';
-
-        let line_slice = std::slice::from_raw_parts(char_buf, len + 1);
-        let output_str = std::str::from_utf8(line_slice)?;
-
-        print!("{output_str}");
-
-        char_buf = unsafe { char_buf.add(len + 1) };
     }
     Ok(())
 }
