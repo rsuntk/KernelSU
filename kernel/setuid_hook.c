@@ -1,29 +1,14 @@
 #include <linux/compiler.h>
 #include <linux/version.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
-#include <linux/sched/signal.h>
-#endif
 #include <linux/slab.h>
 #include <linux/task_work.h>
 #include <linux/thread_info.h>
 #include <linux/seccomp.h>
-#include <linux/capability.h>
-#include <linux/cred.h>
-#include <linux/dcache.h>
-#include <linux/err.h>
-#include <linux/fs.h>
-#include <linux/init.h>
-#include <linux/init_task.h>
-#include <linux/kernel.h>
-#include <linux/kprobes.h>
-#include <linux/mm.h>
-#include <linux/mount.h>
-#include <linux/namei.h>
-#include <linux/nsproxy.h>
-#include <linux/path.h>
 #include <linux/printk.h>
 #include <linux/sched.h>
-#include <linux/stddef.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+#include <linux/sched/signal.h>
+#endif
 #include <linux/string.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
@@ -65,15 +50,6 @@ static const struct ksu_feature_handler enhanced_security_handler = {
 	.get_handler = enhanced_security_feature_get,
 	.set_handler = enhanced_security_feature_set,
 };
-
-static inline bool is_allow_su(void)
-{
-	if (is_manager()) {
-		// we are manager, allow!
-		return true;
-	}
-	return ksu_is_allow_uid_for_current(current_uid().val);
-}
 
 static void ksu_install_manager_fd_tw_func(struct callback_head *cb)
 {
