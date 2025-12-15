@@ -635,9 +635,10 @@ static int add_try_umount(void __user *arg)
 				entry->umountable);
 
 			if (copy_to_user(user_buf, entry->umountable,
-					 strlen(entry->umountable)))
+					 strlen(entry->umountable))) {
+				up_read(&mount_list_lock);
 				return -EFAULT;
-
+			}
 			// walk it! +1 for null terminator
 			user_buf = user_buf + strlen(entry->umountable) + 1;
 		}
