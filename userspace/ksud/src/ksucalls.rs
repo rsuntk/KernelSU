@@ -341,12 +341,17 @@ pub fn umount_list_getsize() -> usize {
 
 pub fn umount_list_getlist() -> anyhow::Result<()> {
     let total_size: usize = umount_list_getsize();
+
     if total_size == 0 {
-        println!("No entries in the list, or kernel_umount is disabled.");
+        println!("No entries in the list, or perhaps kernel_umount is disabled.");
         return Ok(());
     }
 
-    let mut buf: Vec<u8> = vec![0; total_size];
+    if total_size > 8_000_000 {
+        panic!("Total try_umount entries size exceeds 8MB! Current size: {total_size} bytes");
+    }
+
+    let mut buf: Vec<u8> = vec![0u8; total_size];
 
     let mut cmd = AddTryUmountCmd {
         arg: buf.as_mut_ptr() as u64,
@@ -357,21 +362,28 @@ pub fn umount_list_getlist() -> anyhow::Result<()> {
     ksuctl(KSU_IOCTL_ADD_TRY_UMOUNT, &raw mut cmd)
         .map_err(|e| anyhow::anyhow!("Failed to get umount list: {}", e))?;
 
-    let mut current_ptr: *const u8 = buf.as_ptr();
+    let mut char_buf: *const u8 = buf.as_ptr();
     let end_ptr: *const u8 = unsafe { current_ptr.add(total_size) };
+    let buf_slice = &mut buf[..];
 
-    while current_ptr < end_ptr {
-        let c_str = unsafe { std::ffi::CStr::from_ptr(current_ptr.cast::<libc::c_char>()) };
+    println!("kernel_umount: try_umount entries:");
+    while char_buf < end_ptr && *char_buf != 0 {
+        let len = libc::strlen(char_buf.cast::<libc::c_char>());
+        let nullterm_ptr = unsafe { char_buf.add(len) };
 
-        let list_entry = c_str.to_string_lossy();
-        println!("try_umount list entry: {list_entry}");
-
-        let len = c_str.to_bytes().len();
-        if len == 0 {
+        if nullterm_ptr >= end_ptr {
             break;
         }
 
-        current_ptr = unsafe { current_ptr.add(len + 1) };
+        let offset = char_buf.offset_from(buf.as_ptr()) as usize;
+        buf_slice[offset + len as usize] = b'\n';
+
+        let line_slice = std::slice::from_raw_parts(char_buf, len + 1);
+        let output_str = std::str::from_utf8(line_slice)?;
+
+        print!("{output_str}");
+
+        char_buf = unsafe { char_buf.add(len + 1) };
     }
     Ok(())
 }
