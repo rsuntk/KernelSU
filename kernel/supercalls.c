@@ -604,7 +604,6 @@ static int add_try_umount(void __user *arg)
 		}
 		up_read(&mount_list_lock);
 
-		// debug
 		pr_info("cmd_add_try_umount: total_size: %zu\n", total_size);
 
 		if (copy_to_user((size_t __user *)cmd.arg, &total_size,
@@ -617,28 +616,25 @@ static int add_try_umount(void __user *arg)
 	// WARNING! this is straight up pointerwalking.
 	// this way we dont need to redefine the ioctl defs.
 	// this also avoids us needing to kmalloc
-	// userspace have to send pointer to memory or pointer to a VLA.
-	// userspace also has to process the flat blob itself and zero init properly.
+	// userspace have to send pointer to memory (malloc/alloca) or pointer to a VLA.
 	case KSU_UMOUNT_GETLIST: {
-		// check for pointer first
 		if (!cmd.arg)
 			return -EFAULT;
 
-		void *user_buf = (void *)cmd.arg;
-
-		// userspace is resposible for zero init-ing their buffer!
+		char *user_buf = (char *)cmd.arg;
 
 		down_read(&mount_list_lock);
 		list_for_each_entry (entry, &mount_list, list) {
-			//debug
 			pr_info("cmd_add_try_umount: entry: %s\n",
 				entry->umountable);
 
-			if (copy_to_user(user_buf, entry->umountable,
-					 strlen(entry->umountable))) {
+			if (copy_to_user((char __user *)user_buf,
+					 entry->umountable,
+					 strlen(entry->umountable) + 1)) {
 				up_read(&mount_list_lock);
 				return -EFAULT;
 			}
+
 			// walk it! +1 for null terminator
 			user_buf = user_buf + strlen(entry->umountable) + 1;
 		}
