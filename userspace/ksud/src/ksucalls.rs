@@ -363,7 +363,7 @@ pub fn umount_list_getlist() -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!("Failed to get umount list: {}", e))?;
 
     let mut char_buf: *const u8 = buf.as_ptr();
-    let end_ptr: *const u8 = unsafe { current_ptr.add(total_size) };
+    let end_ptr: *const u8 = unsafe { char_buf.add(total_size) };
     let buf_slice = &mut buf[..];
 
     println!("kernel_umount: try_umount entries:");
