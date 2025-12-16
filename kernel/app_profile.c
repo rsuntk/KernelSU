@@ -77,8 +77,9 @@ void setup_groups(struct root_profile *profile, struct cred *cred)
 }
 
 // RKSU: Use it wisely, not static.
-void disable_seccomp(struct task_struct *tsk)
+void disable_seccomp(void)
 {
+	struct task_struct *tsk = current;
 	if (!tsk)
 		return;
 
@@ -98,24 +99,10 @@ void disable_seccomp(struct task_struct *tsk)
 		return;
 
 	tsk->seccomp.mode = 0;
-	// 5.9+ have filter_count, but optional.
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0) ||                          \
      defined(KSU_OPTIONAL_SECCOMP_FILTER_CNT))
 	atomic_set(&tsk->seccomp.filter_count, 0);
 #endif
-	// some old kernel backport seccomp_filter_release..
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0) &&                           \
-     defined(KSU_OPTIONAL_SECCOMP_FILTER_RELEASE))
-	seccomp_filter_release(tsk);
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0)
-	put_seccomp_filter(tsk);
-#endif
-	// never, ever call seccomp_filter_release on 6.10+ (no effect)
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) &&                          \
-     LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 0))
-	seccomp_filter_release(tsk);
-#endif
-	// finally, we freed the filter to avoid UAF.
 	tsk->seccomp.filter = NULL;
 #endif
 }
@@ -124,8 +111,7 @@ void escape_with_root_profile(void)
 {
 	struct cred *cred;
 #ifdef CONFIG_KSU_SYSCALL_HOOK
-	struct task_struct *p, *t;
-	p = current;
+	struct task_struct *t;
 #endif
 
 	if (current_euid().val == 0) {
@@ -180,7 +166,7 @@ void escape_with_root_profile(void)
 	setup_selinux(profile->selinux_domain);
 
 #ifdef CONFIG_KSU_SYSCALL_HOOK
-	for_each_thread (p, t) {
+	for_each_thread (current, t) {
 		ksu_set_task_tracepoint_flag(t);
 	}
 #endif
