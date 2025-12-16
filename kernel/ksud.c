@@ -501,19 +501,20 @@ int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
 		return 0;
 	}
 #endif
-	if (*type == EV_KEY && *code == KEY_VOLUMEDOWN) {
-		int val = *value;
-		pr_info("input_handle_event: vol_down event val: %d\n", val);
-		if (val) {
-			// key pressed, count it
-			volumedown_pressed_count++;
-			pr_info("input_handle_event: vol_down pressed count: %u\n", volumedown_pressed_count);
-		}
-	}
 
-	if (is_volumedown_enough(volumedown_pressed_count)) {
-		pr_info("input_handle_event: vol_down pressed MAX! safe mode is active!\n");
-		stop_input_hook();
+	if (*type == EV_KEY && *code == KEY_VOLUMEDOWN) {
+		// Logic: 0 = released, 1 = pressed
+		if (*value <= 0) {
+			return 0;
+		}
+
+		// key pressed, count it
+		volumedown_pressed_count++;
+		pr_info("input_handle_event: vol_down pressed count: %u\n", volumedown_pressed_count);
+		if (is_volumedown_enough(volumedown_pressed_count)) {
+			pr_info("input_handle_event: vol_down pressed MAX! safe mode is active!\n");
+			stop_input_hook();
+		}
 	}
 
 	return 0;
@@ -524,6 +525,7 @@ bool ksu_is_safe_mode(void)
 	static bool is_safe_mode = false;
 
 #ifdef CONFIG_KSU_MANUAL_HOOK
+	// TODO: why we check is_safe_mode too?
 	if (!ksu_input_hook && !is_safe_mode) {
 		return is_safe_mode;
 	}
