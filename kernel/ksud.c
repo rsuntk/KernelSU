@@ -42,7 +42,6 @@ extern int ksu_observer_init(void);
 
 bool ksu_module_mounted __read_mostly = false;
 bool ksu_boot_completed __read_mostly = false;
-bool already_post_fs_data __read_mostly = false;
 
 static const char KERNEL_SU_RC[] =
 	"\n"
@@ -82,6 +81,7 @@ bool ksu_input_hook __read_mostly = true;
 u32 ksu_file_sid;
 void on_post_fs_data(void)
 {
+	static bool already_post_fs_data = false;
 	if (already_post_fs_data) {
 		pr_info("on_post_fs_data already done\n");
 		return;
@@ -518,18 +518,18 @@ int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
 
 bool ksu_is_safe_mode(void)
 {
-	if (already_post_fs_data) {
-		// stop checking if its already on-post-fs-data
+	static bool safe_mode = false;
+
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	if (!ksu_input_hook && !safe_mode) {
 		return false;
 	}
-
-	static bool safe_mode = false;
+#endif
 	if (safe_mode) {
 		// don't need to check again, userspace may call multiple times
 		return true;
 	}
 
-	// just in case
 	stop_input_hook();
 
 	pr_info("volumedown_pressed_count: %d\n", volumedown_pressed_count);
@@ -569,6 +569,7 @@ static void stop_input_hook(void)
 #ifdef CONFIG_KSU_SYSCALL_HOOK
 	kp_handle_ksud_stop(INPUT_EVENT_HOOK_KP);
 #else
+	// No need to stop when its already stopped.
 	if (!ksu_input_hook) {
 		return;
 	}
