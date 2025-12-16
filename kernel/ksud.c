@@ -503,14 +503,17 @@ int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
 #endif
 	if (*type == EV_KEY && *code == KEY_VOLUMEDOWN) {
 		int val = *value;
-		pr_info("KEY_VOLUMEDOWN val: %d\n", val);
+		pr_info("input_handle_event: vol_down event val: %d\n", val);
 		if (val) {
 			// key pressed, count it
-			volumedown_pressed_count += 1;
-			if (is_volumedown_enough(volumedown_pressed_count)) {
-				stop_input_hook();
-			}
+			volumedown_pressed_count++;
+			pr_info("input_handle_event: vol_down pressed count: %u\n", volumedown_pressed_count);
 		}
+	}
+
+	if (is_volumedown_enough(volumedown_pressed_count)) {
+		pr_info("input_handle_event: vol_down pressed MAX! safe mode is active!\n");
+		stop_input_hook();
 	}
 
 	return 0;
@@ -518,30 +521,27 @@ int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
 
 bool ksu_is_safe_mode(void)
 {
-	static bool safe_mode = false;
+	static bool is_safe_mode = false;
 
 #ifdef CONFIG_KSU_MANUAL_HOOK
-	if (!ksu_input_hook && !safe_mode) {
-		return false;
+	if (!ksu_input_hook && !is_safe_mode) {
+		return is_safe_mode;
 	}
 #endif
-	if (safe_mode) {
-		// don't need to check again, userspace may call multiple times
-		return true;
+
+	// don't need to check again, userspace may call multiple times
+	if (is_safe_mode) {
+		return is_safe_mode;
 	}
 
+	// stop the hook when its safe mode
 	stop_input_hook();
 
-	pr_info("volumedown_pressed_count: %d\n", volumedown_pressed_count);
-
 	if (is_volumedown_enough(volumedown_pressed_count)) {
-		// pressed over 3 times
-		pr_info("KEY_VOLUMEDOWN pressed max times, safe mode detected!\n");
-		safe_mode = true;
-		return true;
+		is_safe_mode = true;
 	}
 
-	return false;
+	return is_safe_mode;
 }
 
 static void stop_vfs_read_hook(void)
