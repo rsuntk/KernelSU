@@ -2,30 +2,13 @@ name: Build Manager
 
 on:
   push:
-    branches: [ "main", "dev", "ci" ]
+    branches: [ "main", "dev", "ci", "test", "staging", "magic" ]
     paths:
       - '.github/workflows/build-manager.yml'
-      - '.github/workflows/build-lkm.yml'
-      - '.github/workflows/ddk-lkm.yml'
-      - '.github/workflows/ksud.yml'
-      - '.github/workflows/ksud-extra.yml'
-      - '.github/scripts/setup-rust-build.sh'
       - 'manager/**'
-      - 'kernel/**'
-      - 'userspace/**'
-  pull_request:
-    branches: [ "main", "dev" ]
-    paths:
-      - '.github/workflows/build-manager.yml'
-      - '.github/workflows/build-lkm.yml'
-      - '.github/workflows/ddk-lkm.yml'
-      - '.github/workflows/ksud.yml'
-      - '.github/workflows/ksud-extra.yml'
-      - '.github/scripts/setup-rust-build.sh'
-      - 'manager/**'
-      - 'kernel/**'
       - 'userspace/**'
   workflow_call:
+  workflow_dispatch:  
 
 jobs:
   generate-key:
@@ -83,51 +66,18 @@ jobs:
           echo "Certificate size: $SIZE_HEX ($SIZE_DEC bytes)"
           echo "Certificate hash: $HASH"
 
-  build-lkm:
-    needs: generate-key
-    uses: ./.github/workflows/build-lkm.yml
-    with:
-      expected_size2: ${{ needs.generate-key.outputs.expected_size || '' }}
-      expected_hash2: ${{ needs.generate-key.outputs.expected_hash || '' }}
-    secrets: inherit
-
-  build-ksuinit:
-    uses: ./.github/workflows/ksuinit.yml
-
   build-ksud:
-    needs: [build-lkm, build-ksuinit]
     strategy:
       matrix:
         include:
           - target: aarch64-linux-android
-          - target: x86_64-linux-android
+            os: ubuntu-latest
+
     uses: ./.github/workflows/ksud.yml
     with:
       target: ${{ matrix.target }}
-      pack_lkm: true
-      pack_ksuinit: true
-  
-  build-ksud-extra:
-    needs: [build-lkm, build-ksuinit]
-    strategy:
-      matrix:
-        include:
-          - target: x86_64-pc-windows-gnu # windows pc
-            os: ubuntu-latest
-          - target: x86_64-apple-darwin # Intel mac
-            os: macos-latest
-          - target: aarch64-apple-darwin # M chip mac
-            os: macos-latest
-          - target: aarch64-unknown-linux-musl # arm64 Linux
-            os: ubuntu-latest
-          - target: x86_64-unknown-linux-musl # x86 Linux
-            os: ubuntu-latest
-    uses: ./.github/workflows/ksud-extra.yml
-    with:
-      target: ${{ matrix.target }}
-      os: ${{ matrix.os }}
-      pack_lkm: true
-      pack_ksuinit: true
+      pack_lkm: false
+      pack_ksuinit: false
 
   build-manager:
     needs: [build-ksud, generate-key]
@@ -153,7 +103,7 @@ jobs:
           fi
 
       - name: Write key
-        if: ${{ ( github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' )) || github.ref_type == 'tag' }}
+        if: ${{ ( github.event_name != 'pull_request' ) || github.ref_type == 'tag' }}
         run: |
           if [ ! -z "${{ secrets.KEYSTORE }}" ]; then
             {
@@ -218,48 +168,16 @@ jobs:
       - name: Build with Gradle
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            ./gradlew clean assembleRelease -PIS_PR_BUILD=true
+            ./gradlew clean assembleRelease --stacktrace -PIS_PR_BUILD=true
           else
-            ./gradlew clean assembleRelease
+            ./gradlew clean assembleRelease --stacktrace
           fi
 
       - name: Upload build artifact
-        if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) || github.ref_type == 'tag' }}
+        if: ${{ ( github.event_name != 'pull_request' ) || github.ref_type == 'tag' }}
         uses: actions/upload-artifact@v7
         with:
           name: manager
           path: manager/app/build/outputs/apk/release/*.apk
 
-      - name: Upload mappings
-        uses: actions/upload-artifact@v7
-        if: ${{ ( github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' )) || github.ref_type == 'tag' }}
-        with:
-          name: "mappings"
-          path: "manager/app/build/outputs/mapping/release/"
 
-      - name: Bot session cache
-        if: github.event_name != 'pull_request' && steps.need_upload.outputs.UPLOAD == 'true'
-        id: bot_session_cache
-        uses: actions/cache@v5
-        with:
-          path: scripts/ksubot.session
-          key: ${{ runner.os }}-bot-session
-
-      - name: Upload to telegram
-        if: github.event_name != 'pull_request' && steps.need_upload.outputs.UPLOAD == 'true'
-        env:
-          CHAT_ID: ${{ secrets.CHAT_ID }}
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          MESSAGE_THREAD_ID: ${{ secrets.MESSAGE_THREAD_ID }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-          COMMIT_URL: ${{ github.event.head_commit.url }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          TITLE: Manager
-          BRANCH: ${{ github.ref_name }}
-        run: |
-          if [ ! -z "${{ secrets.BOT_TOKEN }}" ]; then
-            export VERSION=$(git rev-list --count HEAD)
-            APK=$(find ./app/build/outputs/apk/release -name "*.apk")
-            pip3 install telethon
-            python3 $GITHUB_WORKSPACE/scripts/ksubot.py $APK
-          fi
