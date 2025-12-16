@@ -347,11 +347,6 @@ pub fn umount_list_getlist() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    assert!(
-        total_size <= 8_000_000,
-        "Total try_umount entries size exceeds 8MB! Current size: {total_size} bytes"
-    );
-
     let mut buf: Vec<u8> = vec![0u8; total_size];
 
     let mut cmd = AddTryUmountCmd {
