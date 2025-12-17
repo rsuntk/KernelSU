@@ -200,8 +200,6 @@ static inline void handle_second_stage(void)
 	setup_ksu_cred();
 }
 
-extern int ksu_handle_execveat_init(struct filename *filename);
-
 // IMPORTANT NOTE: the call from execve_handler_pre WON'T provided correct value for envp and flags in GKI version
 int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 			     struct user_arg_ptr *argv,
@@ -228,12 +226,6 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 	filename = *filename_ptr;
 	if (IS_ERR(filename)) {
 		return 0;
-	}
-
-	if (!ksu_handle_execveat_init(filename)) {
-		// - return non-zero here if ksu_handle_execveat_init() return success
-		//   as we don't want it to execute ksu_handle_execveat_sucompat()
-		return 1;
 	}
 
 	if (unlikely(!memcmp(filename->name, system_bin_init,
