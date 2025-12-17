@@ -760,11 +760,10 @@ static int ksu_handle_fd_request(void __user *arg)
 int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
 			  void __user **arg)
 {
-	void __user *argp;
 	if (magic1 != KSU_INSTALL_MAGIC1)
 		return -EINVAL;
 
-	// Rare case
+	// Rare case that unlikely to happen
 	if (unlikely(!arg))
 		return -EINVAL;
 
@@ -772,8 +771,12 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
 	pr_info("sys_reboot: magic: 0x%x (id: %d)\n", magic1, magic2);
 #endif
 
-	// Dereference **arg (\xx)
-	argp = (void __user *)*arg;
+	// Dereference **arg.. with IS_ERR check.
+	void __user *argp = (void __user *)*arg;
+	if (IS_ERR(argp)) {
+		pr_err("Failed to deref **arg, err: %lu\n", ERR_PTR(argp));
+		return ERR_PTR(argp);
+	}
 
 	// Check if this is a request to install KSU fd
 	if (magic2 == KSU_INSTALL_MAGIC2) {
