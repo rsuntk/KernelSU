@@ -718,8 +718,8 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
 	// Dereference **arg.. with IS_ERR check.
 	void __user *argp = (void __user *)*arg;
 	if (IS_ERR(argp)) {
-		pr_err("Failed to deref **arg, err: %lu\n", ERR_PTR(argp));
-		return ERR_PTR(argp);
+		pr_err("Failed to deref user arg, err: %lu\n", PTR_ERR(argp));
+		return PTR_ERR(argp);
 	}
 
 	// Check if this is a request to install KSU fd
