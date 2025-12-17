@@ -520,7 +520,7 @@ static const struct dentry_operations ksu_file_wrapper_d_ops = {
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 #define ksu_anon_inode_create_getfile_compat anon_inode_getfile_secure
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
-// There is no anon_inode_create_getfile before 4.19, but it's not difficult to implement it.
+// There is no anon_inode_create_getfile in 4.19, but it's not difficult to implement it.
 // https://cs.android.com/android/kernel/superproject/+/common-android12-5.10:common/fs/anon_inodes.c;l=58-125;drc=0d34ce8aa78e38affbb501690bcabec4df88620e
 
 // Borrow kernel's anon_inode_mnt, so that we don't need to mount one by ourselves.
