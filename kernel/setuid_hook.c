@@ -13,6 +13,7 @@
 #include <linux/types.h>
 #include <linux/uaccess.h>
 #include <linux/uidgid.h>
+#include <linux/stat.h>
 #include <linux/susfs.h>
 
 #include "allowlist.h"
