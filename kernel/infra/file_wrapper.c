@@ -381,67 +381,7 @@ static const struct dentry_operations ksu_file_wrapper_d_ops = {
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 #define ksu_anon_inode_create_getfile_compat anon_inode_getfile_secure
 #else
-// There is no anon_inode_create_getfile before 5.16, but it's not difficult to implement it.
-// https://cs.android.com/android/kernel/superproject/+/common-android12-5.10:common/fs/anon_inodes.c;l=58-125;drc=0d34ce8aa78e38affbb501690bcabec4df88620e
-
-// Borrow kernel's anon_inode_mnt, so that we don't need to mount one by ourselves.
-static struct vfsmount *anon_inode_mnt __read_mostly;
-
-static struct inode *
-ksu_anon_inode_make_secure_inode(const char *name, const struct inode *context_inode)
-{
-	struct inode *inode;
-	const struct qstr qname = QSTR_INIT(name, strlen(name));
-	int error;
-
-	if (unlikely(!anon_inode_mnt)) {
-		return ERR_PTR(-ENODEV);
-	}
-
-	inode = alloc_anon_inode(anon_inode_mnt->mnt_sb);
-	if (IS_ERR(inode))
-		return inode;
-	inode->i_flags &= ~S_PRIVATE;
-	error = security_inode_init_security_anon(inode, &qname, context_inode);
-	if (error) {
-		iput(inode);
-		return ERR_PTR(error);
-	}
-	return inode;
-}
-
-static struct file *ksu_anon_inode_create_getfile_compat(
-	const char *name, const struct file_operations *fops, void *priv, int flags,
-	const struct inode *context_inode)
-{
-	struct inode *inode;
-	struct file *file;
-
-	if (fops->owner && !try_module_get(fops->owner))
-		return ERR_PTR(-ENOENT);
-
-	inode = ksu_anon_inode_make_secure_inode(name, context_inode);
-	if (IS_ERR(inode)) {
-		file = ERR_CAST(inode);
-		goto err;
-	}
-
-	file = alloc_file_pseudo(inode, anon_inode_mnt, name, flags & (O_ACCMODE | O_NONBLOCK), fops);
-	if (IS_ERR(file))
-		goto err_iput;
-
-	file->f_mapping = inode->i_mapping;
-
-	file->private_data = priv;
-
-	return file;
-
-err_iput:
-	iput(inode);
-err:
-	module_put(fops->owner);
-	return file;
-}
+#define ksu_anon_inode_create_getfile_compat(a, b, c, d, e) anon_inode_getfile(a, b, c, d)
 #endif
 
 #define ksu_selinux_inode selinux_inode
@@ -535,21 +475,4 @@ done:
 	return ret;
 }
 
-void __init ksu_file_wrapper_init(void)
-{
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0)
-	static const struct file_operations tmp = { .owner = THIS_MODULE };
-	struct file *dummy = anon_inode_getfile("dummy", &tmp, NULL, 0);
-	if (IS_ERR(dummy)) {
-		pr_err(
-			"file_wrapper: initialize anon_inode_mnt failed, can't get file: %ld\n",
-			PTR_ERR(dummy));
-		return;
-	}
-	anon_inode_mnt = dummy->f_path.mnt;
-	if (unlikely(!anon_inode_mnt)) {
-		pr_err("file_wrapper: initialize anon_inode_mnt failed, got NULL\n");
-	}
-	fput(dummy);
-#endif
-}
+void __init ksu_file_wrapper_init(void) { }
