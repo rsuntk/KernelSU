@@ -1,12 +1,16 @@
 #include <linux/version.h>
 #include <linux/fs.h>
+#include <linux/dcache.h>
+#include <linux/uaccess.h>
+#include <linux/fdtable.h>
+#include <linux/string.h>
+#include <linux/security.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 #include <linux/sched/task.h>
 #else
 #include <linux/sched.h>
 #endif
-#include <linux/uaccess.h>
-#include <linux/fdtable.h>
+
 #include "klog.h" // IWYU pragma: keep
 #include "kernel_compat.h"
 
@@ -15,7 +19,6 @@
 #include <linux/key.h>
 #include <linux/errno.h>
 #include <linux/cred.h>
-#include <linux/lsm_hooks.h>
 
 extern int install_session_keyring_to_cred(struct cred *, struct key *);
 struct key *init_session_keyring = NULL;
@@ -150,5 +153,17 @@ int do_close_fd(unsigned int fd)
 	return close_fd(fd);
 #else
 	return __close_fd(current->files, fd);
+#endif
+}
+
+int ksu_handle_secure_anon_inode(const char *name, const struct inode *inode,
+				 const struct inode *ctx_inode)
+{
+#ifdef KSU_COMPAT_HAS_INIT_SEC_ANON
+	const struct qstr qname = QSTR_INIT(name, strlen(name));
+	return security_inode_init_security_anon(inode, &qname, ctx_inode);
+#else
+	// Just assume everything is success here.
+	return 0;
 #endif
 }
