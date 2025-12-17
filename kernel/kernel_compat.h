@@ -46,6 +46,10 @@ extern struct key *init_session_keyring;
 
 extern int do_close_fd(unsigned int fd);
 
+extern int ksu_handle_secure_anon_inode(const char *name,
+					const struct inode *inode,
+					const struct inode *ctx_inode);
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
 #define ksu_access_ok(addr, size) access_ok(addr, size)
 #else
