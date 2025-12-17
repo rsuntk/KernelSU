@@ -17,6 +17,7 @@
 
 #include "objsec.h"
 #include "ksud.h"
+#include "kernel_compat.h"
 
 struct ksu_file_wrapper {
 	struct file *orig;
