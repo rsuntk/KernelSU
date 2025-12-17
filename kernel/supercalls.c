@@ -415,9 +415,52 @@ put_orig_file:
 
 static int do_manage_mark(void __user *arg)
 {
-	// We don't care, just return -ENOTSUPP
-	pr_warn("manage_mark: this supercalls is not implemented for manual hook.\n");
-	return -ENOTSUPP;
+	struct ksu_manage_mark_cmd cmd;
+	int ret = 0;
+
+	if (copy_from_user(&cmd, arg, sizeof(cmd))) {
+		pr_err("manage_mark: copy_from_user failed\n");
+		return -EFAULT;
+	}
+
+	switch (cmd.operation) {
+	case KSU_MARK_GET: {
+		if (susfs_is_current_proc_umounted()) {
+			ret = 0; // SYSCALL_TRACEPOINT is NOT flagged
+		} else {
+			ret = 1; // SYSCALL_TRACEPOINT is flagged
+		}
+		pr_info("manage_mark: ret for pid %d: %d\n", cmd.pid, ret);
+		cmd.result = (u32)ret;
+		break;
+	}
+	case KSU_MARK_MARK: {
+		if (cmd.pid != 0) {
+			return ret;
+		}
+		break;
+	}
+	case KSU_MARK_UNMARK: {
+		if (cmd.pid != 0) {
+			return ret;
+		}
+		break;
+	}
+	case KSU_MARK_REFRESH: {
+		/* Do nothing */
+		break;
+	}
+	default: {
+		pr_err("manage_mark: invalid operation %u\n", cmd.operation);
+		return -EINVAL;
+	}
+	}
+	if (copy_to_user(arg, &cmd, sizeof(cmd))) {
+		pr_err("manage_mark: copy_to_user failed\n");
+		return -EFAULT;
+	}
+
+	return 0;
 }
 
 struct list_head mount_list = LIST_HEAD_INIT(mount_list);
