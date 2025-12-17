@@ -7,12 +7,16 @@
 #include <linux/cred.h>
 #include <linux/err.h>
 #include <linux/file.h>
+#include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/seq_file.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
 #include <linux/mount.h>
+
+#include "objsec.h"
+#include "ksud.h"
 
 struct ksu_file_wrapper {
 	struct file *orig;
@@ -281,10 +285,8 @@ static int ksu_wrapper_setlease(struct file *fp, int arg1,
 	}
 	return -EINVAL;
 }
-#elif LINUX_VERSION_CODE >=                                                    \
-	KERNEL_VERSION(                                                        \
-		3, 18,                                                         \
-		0) // int (*setlease)(struct file *, long, struct file_lock **, void **);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0)
+// int (*setlease)(struct file *, long, struct file_lock **, void **);
 static int ksu_wrapper_setlease(struct file *fp, long arg1,
 				struct file_lock **fl, void **p)
 {
@@ -295,7 +297,8 @@ static int ksu_wrapper_setlease(struct file *fp, long arg1,
 	}
 	return -EINVAL;
 }
-#else // int (*setlease)(struct file *, long, struct file_lock **);
+#else
+// int (*setlease)(struct file *, long, struct file_lock **);
 static int ksu_wrapper_setlease(struct file *fp, long arg1,
 				struct file_lock **fl)
 {
