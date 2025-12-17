@@ -17,7 +17,6 @@
 
 #include "objsec.h"
 #include "ksud.h"
-#include "kernel_compat.h"
 
 struct ksu_file_wrapper {
 	struct file *orig;
@@ -521,7 +520,7 @@ static const struct dentry_operations ksu_file_wrapper_d_ops = {
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 #define ksu_anon_inode_create_getfile_compat anon_inode_getfile_secure
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
-// There is no anon_inode_create_getfile before 5.16, but it's not difficult to implement it.
+// There is no anon_inode_create_getfile before 4.19, but it's not difficult to implement it.
 // https://cs.android.com/android/kernel/superproject/+/common-android12-5.10:common/fs/anon_inodes.c;l=58-125;drc=0d34ce8aa78e38affbb501690bcabec4df88620e
 
 // Borrow kernel's anon_inode_mnt, so that we don't need to mount one by ourselves.
@@ -532,7 +531,10 @@ ksu_anon_inode_make_secure_inode(const char *name,
 				 const struct inode *context_inode)
 {
 	struct inode *inode;
+#ifdef KSU_COMPAT_HAS_INIT_SEC_ANON
 	int error;
+	const struct qstr qname = QSTR_INIT(name, strlen(name));
+#endif
 
 	if (unlikely(!anon_inode_mnt)) {
 		return ERR_PTR(-ENODEV);
@@ -542,11 +544,13 @@ ksu_anon_inode_make_secure_inode(const char *name,
 	if (IS_ERR(inode))
 		return inode;
 	inode->i_flags &= ~S_PRIVATE;
-	error = ksu_handle_secure_anon_inode(name, inode, context_inode);
+#ifdef KSU_COMPAT_HAS_INIT_SEC_ANON
+	error = security_inode_init_security_anon(inode, &qname, context_inode);
 	if (error) {
 		iput(inode);
 		return ERR_PTR(error);
 	}
+#endif
 	return inode;
 }
 
@@ -583,7 +587,7 @@ err:
 	module_put(fops->owner);
 	return file;
 }
-#else
+#else // KERNEL_VERSION < 4.19
 struct file *ksu_anon_inode_create_getfile_compat(
 	const char *name, const struct file_operations *fops, void *priv,
 	int flags, const struct inode *context_inode)

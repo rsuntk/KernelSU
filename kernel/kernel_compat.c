@@ -155,15 +155,3 @@ int do_close_fd(unsigned int fd)
 	return __close_fd(current->files, fd);
 #endif
 }
-
-int ksu_handle_secure_anon_inode(const char *name, const struct inode *inode,
-				 const struct inode *ctx_inode)
-{
-#ifdef KSU_COMPAT_HAS_INIT_SEC_ANON
-	const struct qstr qname = QSTR_INIT(name, strlen(name));
-	return security_inode_init_security_anon(inode, &qname, ctx_inode);
-#else
-	// Just assume everything is success here.
-	return 0;
-#endif
-}
