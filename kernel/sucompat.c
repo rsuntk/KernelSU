@@ -81,12 +81,12 @@ static inline bool __is_su_allowed(const void *ptr_to_check)
 	if (!ksu_su_compat_enabled)
 		return false;
 #endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
+
 #ifdef CONFIG_SECCOMP
 	if (likely(!!current->seccomp.mode))
 		return false;
 #endif
-#endif
+
 	if (!ksu_is_allow_uid_for_current(current_uid().val))
 		return false;
 
