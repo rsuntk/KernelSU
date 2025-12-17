@@ -462,23 +462,6 @@ int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
 	return 0;
 }
 
-int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr,
-			size_t *count_ptr)
-{
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-	struct file *file = fget(fd);
-	if (!file) {
-		return 0;
-	}
-	int result = ksu_handle_vfs_read(&file, buf_ptr, count_ptr, NULL);
-	fput(file);
-	return result;
-#else
-	/* Do nothing */
-	return 0;
-#endif
-}
-
 static unsigned int volumedown_pressed_count = 0;
 
 static bool is_volumedown_enough(unsigned int count)
