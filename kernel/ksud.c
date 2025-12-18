@@ -530,7 +530,7 @@ static void stop_input_hook(void)
 		return;
 	}
 	ksu_input_hook = false;
-	pr_info("stop input_hook\n")
+	pr_info("stop input_hook\n");
 }
 
 // ksud: module support
