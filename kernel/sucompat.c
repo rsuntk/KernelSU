@@ -169,7 +169,7 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 			       void *__never_use_argv, void *__never_use_envp,
 			       int *__never_use_flags)
 {
-	return ksu_sucompat_user_common(filename_ptr, "sys_execve", true);
+	return ksu_sucompat_user_common(filename_user, "sys_execve", true);
 }
 
 int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
