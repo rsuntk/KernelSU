@@ -34,7 +34,7 @@ static struct policydb *get_policydb(void)
 }
 
 // Reverting https://github.com/tiann/KernelSU/commit/0b243c24ab6640ea1553c08066a2386456985a0d
-static void __maybe_unused apply_rules_for_manual_hook(struct policydb *db)
+static void apply_rules_for_manual_hook(struct policydb *db)
 {
 	// we need to save allowlist in /data/adb/ksu
 	ksu_allow(db, "kernel", "adb_data_file", "dir", ALL);
@@ -141,9 +141,14 @@ void apply_kernelsu_rules(void)
 	ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
 
 	// Keep applying rules for manual hook.
-#ifdef CONFIG_KSU_MANUAL_HOOK
 	apply_rules_for_manual_hook(db);
-#endif
+
+	// Allow umount in zygote process without installing zygisk
+	//ksu_allow(db, "zygote", "labeledfs", "filesystem", "unmount");
+	susfs_set_priv_app_sid();
+	susfs_set_init_sid();
+	susfs_set_ksu_sid();
+	susfs_set_zygote_sid();
 
 	mutex_unlock(&ksu_rules);
 }

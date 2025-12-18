@@ -25,9 +25,6 @@
 #include "allowlist.h"
 #include "manager.h"
 #include "kernel_compat.h"
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-#include "syscall_handler.h"
-#endif
 
 #define FILE_MAGIC 0x7f4b5355 // ' KSU', u32
 #define FILE_FORMAT_VERSION 3 // u32
@@ -269,10 +266,6 @@ out:
 
 	if (persist) {
 		persistent_allow_list();
-#ifdef CONFIG_KSU_SYSCALL_HOOK
-		// FIXME: use a new flag
-		ksu_mark_running_process();
-#endif
 	}
 
 	return result;

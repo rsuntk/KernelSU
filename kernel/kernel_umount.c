@@ -137,30 +137,6 @@ int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
 		return 0;
 	}
 
-	// There are 5 scenarios:
-	// 1. Normal app: zygote -> appuid
-	// 2. Isolated process forked from zygote: zygote -> isolated_process
-	// 3. App zygote forked from zygote: zygote -> appuid
-	// 4. Isolated process froked from app zygote: appuid -> isolated_process (already handled by 3)
-	// 5. Isolated process froked from webview zygote (no need to handle, app cannot run custom code)
-	if (!is_appuid(new_uid) && !is_isolated_process(new_uid)) {
-		return 0;
-	}
-
-	if (!ksu_uid_should_umount(new_uid) && !is_isolated_process(new_uid)) {
-		return 0;
-	}
-
-	// check old process's selinux context, if it is not zygote, ignore it!
-	// because some su apps may setuid to untrusted_app but they are in global mount namespace
-	// when we umount for such process, that is a disaster!
-	// also handle case 4 and 5
-	bool is_zygote_child = is_zygote(get_current_cred());
-	if (!is_zygote_child) {
-		pr_info("handle umount ignore non zygote child: %d\n",
-			current->pid);
-		return 0;
-	}
 	// umount the target mnt
 	pr_info("handle umount for uid: %d, pid: %d\n", new_uid, current->pid);
 
