@@ -808,12 +808,10 @@ void ksu_supercalls_init(void)
 		pr_info("  %-18s = 0x%08x\n", ksu_ioctl_handlers[i].name,
 			ksu_ioctl_handlers[i].cmd);
 	}
-	kp_handle_supercalls_init();
 }
 
 void ksu_supercalls_exit(void)
 {
-	kp_handle_supercalls_exit();
 }
 
 // IOCTL dispatcher
