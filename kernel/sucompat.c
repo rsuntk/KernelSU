@@ -98,6 +98,9 @@ static int ksu_sucompat_user_common(const char __user **filename_user,
 		return 0;
 	if (!is_su_allowed())
 		return 0;
+
+	ksu_strncpy_from_user_nofault(path, *filename_user, sizeof(path));
+
 	if (memcmp(path, su, sizeof(su)))
 		return 0;
 
