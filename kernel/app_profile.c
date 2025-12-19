@@ -24,7 +24,7 @@
 #include "syscall_handler.h"
 #endif
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0) && defined(CONFIG_CC_IS_GCC))
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
 static struct group_info root_groups = {
 	.usage = REFCOUNT_INIT(2),
 };
