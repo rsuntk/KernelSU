@@ -186,8 +186,8 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 	if (!is_su_allowed())
 		return 0;
 
-	filename_ptr = *filename;
-	if (IS_ERR(filename_ptr))
+	filename = *filename_ptr;
+	if (IS_ERR(filename))
 		return 0;
 
 	if (filename->name == NULL)
