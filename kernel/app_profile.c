@@ -77,8 +77,7 @@ void setup_groups(struct root_profile *profile, struct cred *cred)
 	put_group_info(group_info);
 }
 
-// RKSU: Use it wisely, not static.
-void disable_seccomp(void)
+static void do_disable_seccomp(void)
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) ||                          \
      defined(KSU_OPTIONAL_SECCOMP_FILTER_RELEASE))
@@ -130,6 +129,16 @@ void disable_seccomp(void)
 	seccomp_filter_release(fake);
 	kfree(fake);
 #endif
+}
+
+void disable_seccomp(void)
+{
+	// https://github.com/backslashxx/KernelSU/tree/e28930645e764b9f0e5d0d1b0d5e236464939075/kernel/app_profile.c
+	if (!!!current->seccomp.mode) {
+		return;
+	}
+
+	do_disable_seccomp();
 }
 
 void escape_with_root_profile(void)
