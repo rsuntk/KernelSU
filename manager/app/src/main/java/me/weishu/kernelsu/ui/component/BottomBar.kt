@@ -12,9 +12,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.hazeEffect
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.LocalHandlePageChange
@@ -25,10 +22,7 @@ import top.yukonga.miuix.kmp.basic.NavigationItem
 
 
 @Composable
-fun BottomBar(
-    hazeState: HazeState,
-    hazeStyle: HazeStyle
-) {
+fun BottomBar() {
     val isManager = Natives.isManager
     val fullFeatured = isManager && !Natives.requireNewKernel() && rootAvailable()
 
@@ -45,13 +39,7 @@ fun BottomBar(
     }
 
     NavigationBar(
-        modifier = Modifier
-            .hazeEffect(hazeState) {
-                style = hazeStyle
-                blurRadius = 30.dp
-                noiseFactor = 0f
-            },
-        color = Color.Transparent,
+        modifier = Modifier,
         items = item,
         selected = page,
         onClick = handlePageChange

@@ -46,10 +46,6 @@ import com.ramcosta.composedestinations.generated.NavGraphs
 import com.ramcosta.composedestinations.generated.destinations.FlashScreenDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import com.ramcosta.composedestinations.utils.rememberDestinationsNavigator
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -199,11 +195,6 @@ fun MainScreen(navController: DestinationsNavigator) {
     var uiSelectedPage by remember { mutableIntStateOf(0) }
     var animateJob by remember { mutableStateOf<Job?>(null) }
     var lastRequestedPage by remember { mutableIntStateOf(pagerState.currentPage) }
-    val hazeState = remember { HazeState() }
-    val hazeStyle = HazeStyle(
-        backgroundColor = MiuixTheme.colorScheme.surface,
-        tint = HazeTint(MiuixTheme.colorScheme.surface.copy(0.8f))
-    )
     val handlePageChange: (Int) -> Unit = remember(pagerState, coroutineScope) {
         { page ->
             uiSelectedPage = page
@@ -261,11 +252,11 @@ fun MainScreen(navController: DestinationsNavigator) {
     ) {
         Scaffold(
             bottomBar = {
-                BottomBar(hazeState, hazeStyle)
+                BottomBar()
             },
         ) { innerPadding ->
             HorizontalPager(
-                modifier = Modifier.hazeSource(state = hazeState),
+                modifier = Modifier,
                 state = pagerState,
                 beyondViewportPageCount = 4,
                 userScrollEnabled = userScrollEnabled,

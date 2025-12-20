@@ -75,11 +75,6 @@ import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.FlashScreenDestination
 import com.ramcosta.composedestinations.generated.destinations.ModuleRepoDetailScreenDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -202,15 +197,9 @@ fun ModuleRepoScreen(
         derivedStateOf { 12.dp * (1f - scrollBehavior.state.collapsedFraction) }
     }
 
-    val hazeState = remember { HazeState() }
-    val hazeStyle = HazeStyle(
-        backgroundColor = colorScheme.surface,
-        tint = HazeTint(colorScheme.surface.copy(0.8f))
-    )
-
     Scaffold(
         topBar = {
-            searchStatus.TopAppBarAnim(hazeState = hazeState, hazeStyle = hazeStyle) {
+            searchStatus.TopAppBarAnim {
                 TopAppBar(
                     color = Color.Transparent,
                     title = stringResource(R.string.module_repos),
@@ -410,8 +399,6 @@ fun ModuleRepoScreen(
                     start = innerPadding.calculateStartPadding(layoutDirection),
                     end = innerPadding.calculateEndPadding(layoutDirection)
                 ),
-                hazeState = hazeState,
-                hazeStyle = hazeStyle
             ) { boxHeight ->
                 var isRefreshing by rememberSaveable { mutableStateOf(false) }
                 val pullToRefreshState = rememberPullToRefreshState()
@@ -452,7 +439,6 @@ fun ModuleRepoScreen(
                             .scrollEndHaptic()
                             .overScrollVertical()
                             .nestedScroll(scrollBehavior.nestedScrollConnection)
-                            .hazeSource(state = hazeState),
                         contentPadding = PaddingValues(
                             top = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
                             start = innerPadding.calculateStartPadding(layoutDirection),
@@ -595,8 +581,7 @@ private fun ReadmePage(
     readmeHtml: String?,
     readmeLoaded: Boolean,
     innerPadding: PaddingValues,
-    scrollBehavior: ScrollBehavior,
-    hazeState: HazeState
+    scrollBehavior: ScrollBehavior
 ) {
     val layoutDirection = LocalLayoutDirection.current
     LazyColumn(
@@ -604,8 +589,7 @@ private fun ReadmePage(
             .fillMaxHeight()
             .scrollEndHaptic()
             .overScrollVertical()
-            .nestedScroll(scrollBehavior.nestedScrollConnection)
-            .hazeSource(state = hazeState),
+            .nestedScroll(scrollBehavior.nestedScrollConnection)]
         contentPadding = PaddingValues(
             top = innerPadding.calculateTopPadding(),
             start = innerPadding.calculateStartPadding(layoutDirection),
@@ -642,7 +626,6 @@ fun ReleasesPage(
     detailReleases: List<ReleaseArg>,
     innerPadding: PaddingValues,
     scrollBehavior: ScrollBehavior,
-    hazeState: HazeState,
     actionIconTint: Color,
     secondaryContainer: Color,
     confirmTitle: String,
@@ -659,7 +642,6 @@ fun ReleasesPage(
             .scrollEndHaptic()
             .overScrollVertical()
             .nestedScroll(scrollBehavior.nestedScrollConnection)
-            .hazeSource(state = hazeState),
         contentPadding = PaddingValues(
             top = innerPadding.calculateTopPadding(),
             start = innerPadding.calculateStartPadding(layoutDirection),
@@ -856,7 +838,6 @@ fun InfoPage(
     module: RepoModuleArg,
     innerPadding: PaddingValues,
     scrollBehavior: ScrollBehavior,
-    hazeState: HazeState,
     actionIconTint: Color,
     secondaryContainer: Color,
     uriHandler: UriHandler,
@@ -869,7 +850,6 @@ fun InfoPage(
             .scrollEndHaptic()
             .overScrollVertical()
             .nestedScroll(scrollBehavior.nestedScrollConnection)
-            .hazeSource(state = hazeState),
         contentPadding = PaddingValues(
             top = innerPadding.calculateTopPadding(),
             start = innerPadding.calculateStartPadding(layoutDirection),
@@ -1013,24 +993,11 @@ fun ModuleRepoDetailScreen(
     var webUrl by remember(module.moduleId) { mutableStateOf("https://modules.kernelsu.org/module/${module.moduleId}") }
     var sourceUrl by remember(module.moduleId) { mutableStateOf("https://github.com/KernelSU-Modules-Repo/${module.moduleId}") }
 
-
     val scrollBehavior = MiuixScrollBehavior()
-
-    val hazeState = remember { HazeState() }
-    val hazeStyle = HazeStyle(
-        backgroundColor = colorScheme.surface,
-        tint = HazeTint(colorScheme.surface.copy(0.8f))
-    )
 
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.hazeEffect(hazeState) {
-                    style = hazeStyle
-                    blurRadius = 30.dp
-                    noiseFactor = 0f
-                },
-                color = Color.Transparent,
                 title = module.moduleName,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
@@ -1124,11 +1091,6 @@ fun ModuleRepoDetailScreen(
             }
             Column(
                 modifier = Modifier
-                    .hazeEffect(hazeState) {
-                        style = hazeStyle
-                        blurRadius = 30.dp
-                        noiseFactor = 0f
-                    }
                     .zIndex(1f)
                     .padding(
                         top = innerPadding.calculateTopPadding() + dynamicTopPadding,
@@ -1195,15 +1157,13 @@ fun ModuleRepoDetailScreen(
                         readmeHtml = readmeHtml,
                         readmeLoaded = readmeLoaded,
                         innerPadding = innerPadding,
-                        scrollBehavior = scrollBehavior,
-                        hazeState = hazeState
+                        scrollBehavior = scrollBehavior
                     )
 
                     1 -> ReleasesPage(
                         detailReleases = detailReleases,
                         innerPadding = innerPadding,
                         scrollBehavior = scrollBehavior,
-                        hazeState = hazeState,
                         actionIconTint = actionIconTint,
                         secondaryContainer = secondaryContainer,
                         confirmTitle = confirmTitle,
@@ -1218,7 +1178,6 @@ fun ModuleRepoDetailScreen(
                         module = module,
                         innerPadding = innerPadding,
                         scrollBehavior = scrollBehavior,
-                        hazeState = hazeState,
                         actionIconTint = actionIconTint,
                         secondaryContainer = secondaryContainer,
                         uriHandler = uriHandler,

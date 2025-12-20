@@ -65,9 +65,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.zIndex
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.hazeEffect
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.Text
@@ -109,8 +106,6 @@ class SearchStatus(val label: String) {
     fun TopAppBarAnim(
         modifier: Modifier = Modifier,
         visible: Boolean = shouldCollapsed(),
-        hazeState: HazeState? = null,
-        hazeStyle: HazeStyle? = null,
         content: @Composable () -> Unit
     ) {
         val topAppBarAlpha = animateFloatAsState(
@@ -121,17 +116,7 @@ class SearchStatus(val label: String) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .then(
-                        if (hazeState != null && hazeStyle != null) {
-                            Modifier.hazeEffect(hazeState) {
-                                style = hazeStyle
-                                blurRadius = 30.dp
-                                noiseFactor = 0f
-                            }
-                        } else {
-                            Modifier.background(colorScheme.surface)
-                        }
-                    )
+                    .background(colorScheme.surface)
             )
             Box(
                 modifier = Modifier
@@ -152,8 +137,6 @@ fun SearchStatus.SearchBox(
     },
     searchBarTopPadding: Dp = 12.dp,
     contentPadding: PaddingValues = PaddingValues(0.dp),
-    hazeState: HazeState,
-    hazeStyle: HazeStyle,
     content: @Composable (MutableState<Dp>) -> Unit
 ) {
     val searchStatus = this
@@ -182,11 +165,7 @@ fun SearchStatus.SearchBox(
             .pointerInput(Unit) {
                 detectTapGestures { searchStatus.current = SearchStatus.Status.EXPANDING }
             }
-            .hazeEffect(hazeState) {
-                style = hazeStyle
-                blurRadius = 30.dp
-                noiseFactor = 0f
-            }
+            .background(colorScheme.background)
     ) {
         collapseBar(searchStatus, searchBarTopPadding, contentPadding)
     }
