@@ -140,9 +140,7 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid)
 #endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 
 	if (ksu_get_manager_appid() == new_uid % PER_USER_RANGE) {
-		spin_lock_irq(&current->sighand->siglock);
 		disable_seccomp();
-		spin_unlock_irq(&current->sighand->siglock);
 		pr_info("install fd for manager (uid=%d)\n", new_uid);
 		do_install_manager_fd();
 		return 0;
@@ -155,9 +153,7 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid)
 	}
 
 	if (ksu_is_allow_uid_for_current(new_uid)) {
-		spin_lock_irq(&current->sighand->siglock);
 		disable_seccomp();
-		spin_unlock_irq(&current->sighand->siglock);
 	}
 
 	return 0;

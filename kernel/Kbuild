@@ -5,7 +5,8 @@ ksu_obj-y += apk_sign.o
 ksu_obj-y += sucompat.o
 ksu_obj-y += throne_tracker.o
 ksu_obj-y += setuid_hook.o
-ksu_obj-y += lsm_hook.o
+ksu_obj-$(CONFIG_KSU_MANUAL_HOOK) += lsm_hook.o
+ksu_obj-$(CONFIG_KSU_SYSCALL_HOOK) += kp_hook.o kp_util.o syscall_handler.o pkg_observer.o
 ksu_obj-y += kernel_compat.o
 ksu_obj-y += kernel_umount.o
 ksu_obj-y += supercalls.o
@@ -23,13 +24,51 @@ ccflags-y += -I$(objtree)/security/selinux -include $(srctree)/include/uapi/asm-
 
 obj-$(CONFIG_KSU) += kernelsu.o
 
-KSU_VERSION=32359
-KSU_GIT_BRANCH="susfs-rksu-master"
+KDIR := $(KDIR)
+MDIR := $(realpath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
+# Check if this is a git repository
+# For in-tree build: check $(srctree)/$(src)/../.git
+# For out-of-tree build: check $(MDIR)/../.git
+ifeq ($(shell test -e $(srctree)/$(src)/../.git && echo "in-tree"),in-tree)
+# In-tree build (git submodule)
+$(shell cd $(srctree)/$(src); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin [ -f ../.git/shallow ] && git fetch --unshallow)
+KSU_GIT_VERSION := $(shell cd $(srctree)/$(src); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin git rev-list --count HEAD)
+KSU_GIT_BRANCH := $(shell cd $(srctree)/$(src); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin git rev-parse --abbrev-ref HEAD)
+KSU_GIT_VERSION_VALID := 1
+else ifeq ($(shell test -e $(MDIR)/../.git && echo "out-of-tree"),out-of-tree)
+# Out-of-tree build (standalone repository)
+$(shell cd $(MDIR); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin [ -f ../.git/shallow ] && git fetch --unshallow)
+KSU_GIT_VERSION := $(shell cd $(MDIR); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin git rev-list --count HEAD)
+KSU_GIT_BRANCH := $(shell cd $(MDIR); /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin git rev-parse --abbrev-ref HEAD)
+KSU_GIT_VERSION_VALID := 1
+endif
+
+# Calculate version if git version is available
+ifdef KSU_GIT_VERSION_VALID
+# ksu_version: major * 10000 + git version + 200 for historical reasons
+$(eval KSU_VERSION=$(shell expr 30000 + $(KSU_GIT_VERSION)))
 ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
 ccflags-y += -DKSU_BRANCH=\"$(KSU_GIT_BRANCH)\"
 $(info -- KernelSU version: $(KSU_VERSION))
 $(info -- KernelSU branch: $(KSU_GIT_BRANCH))
+else
+# If there is no .git directory, use default version
+$(warning "KSU_GIT_VERSION not defined! It is better to make KernelSU a git repository!")
+ccflags-y += -DKSU_VERSION=32302
+ccflags-y += -DKSU_BRANCH=\"-\"
+endif
+
+# Checks hooks state
+ifeq ($(CONFIG_KSU_MANUAL_HOOK), y)
+$(info -- KernelSU: CONFIG_KSU_MANUAL_HOOK)
+ccflags-y += -DCONFIG_KSU_MANUAL_HOOK
+endif
+
+ifeq ($(CONFIG_KSU_SYSCALL_HOOK), y)
+$(info -- KernelSU: CONFIG_KSU_SYSCALL_HOOK)
+ccflags-y += -DCONFIG_KSU_SYSCALL_HOOK
+endif
 
 # SELinux drivers check
 ifeq ($(shell grep -q "current_sid(void)" $(srctree)/security/selinux/include/objsec.h; echo $$?),0)
@@ -69,6 +108,13 @@ ifeq ($(shell grep -q "atomic_t\s\+filter_count" $(srctree)/include/linux/seccom
 ccflags-y += -DKSU_OPTIONAL_SECCOMP_FILTER_CNT
 endif
 
+# some old kernel backport this, let's check if put_seccomp_filter still exist
+ifneq ($(shell grep -wq "put_seccomp_filter" $(srctree)/kernel/seccomp.c $(srctree)/include/linux/seccomp.h; echo $$?),0)
+ifeq ($(shell grep -wq "seccomp_filter_release" $(srctree)/kernel/seccomp.c $(srctree)/include/linux/seccomp.h; echo $$?),0)
+ccflags-y += -DKSU_OPTIONAL_SECCOMP_FILTER_RELEASE
+endif
+endif
+
 ifeq ($(shell grep -q "anon_inode_getfd_secure" $(srctree)/fs/anon_inodes.c; echo $$?),0)
 ccflags-y += -DKSU_HAS_GETFD_SECURE
 endif
@@ -105,13 +151,5 @@ $(info -- Supported KernelSU Manager(s): tiann, rsuntk, 5ec1cff, KOWX712)
 
 ccflags-y += -Wno-strict-prototypes -Wno-int-conversion -Wno-gcc-compat
 ccflags-y += -Wno-declaration-after-statement -Wno-unused-function -Wno-missing-prototypes
-
-## For susfs stuff ##
-ifeq ($(shell test -e $(srctree)/fs/susfs.c; echo $$?),0)
-$(eval SUSFS_VERSION=$(shell cat $(srctree)/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/"//g'))
-$(info -- KernelSU-SusFS version: $(SUSFS_VERSION))
-else
-$(error -- You have not integrated susfs in your kernel yet. Read: https://gitlab.com/simonpunk/susfs4ksu)
-endif
 
 # Keep a new line here !! Because someone may append config
