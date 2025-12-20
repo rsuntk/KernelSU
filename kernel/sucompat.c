@@ -136,7 +136,7 @@ int ksu_handle_stat(int *dfd, struct filename **filename, int *flags)
 	if (IS_ERR(filename_p))
 		return 0;
 
-	if (filename_ptr->name == NULL)
+	if (filename_p->name == NULL)
 		return 0;
 
 	if (likely(memcmp(filename_p->name, su_path, sizeof(su_path))))
