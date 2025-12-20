@@ -79,7 +79,7 @@ void setup_groups(struct root_profile *profile, struct cred *cred)
 static void __disable_seccomp(void)
 {
 #ifdef CONFIG_SECCOMP
-#ifdef(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) ||                        \
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0) ||                        \
        defined(KSU_OPTIONAL_SECCOMP_FILTER_RELEASE))
 	struct task_struct fake;
 	memcpy(&fake, current, sizeof(fake));
