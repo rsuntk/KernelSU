@@ -663,6 +663,7 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
 	{ .cmd = 0, .name = NULL, .handler = NULL, .perm_check = NULL }
 };
 
+#ifdef CONFIG_KSU_SYSCALL_HOOK
 struct ksu_install_fd_tw {
 	struct callback_head cb;
 	int __user *outp;
@@ -700,6 +701,19 @@ static int ksu_handle_fd_request(void __user *arg)
 
 	return 0;
 }
+#else
+static int ksu_handle_fd_request(void __user *arg)
+{
+	int fd = ksu_install_fd();
+	
+	if (copy_to_user(arg, &fd, sizeof(fd))) {
+		pr_err("install ksu fd reply err\n");
+		do_close_fd(fd);
+	}
+	
+	return 0;
+}
+#endif
 
 int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
 			  void __user **arg)
