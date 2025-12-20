@@ -608,22 +608,6 @@ static bool add_genfscon(struct policydb *db, const char *fs_name,
 	return false;
 }
 
-static void *ksu_realloc(void *old, size_t new_size, size_t old_size)
-{
-	// we can't use krealloc, because it may be read-only
-	void *new = kzalloc(new_size, GFP_ATOMIC);
-	if (!new) {
-		return NULL;
-	}
-	if (old_size) {
-		memcpy(new, old, old_size);
-	}
-	// we can't use kfree, because it may be read-only
-	// there maybe some leaks, maybe we can check ptr_write, but it's not a big deal
-	// kfree(old);
-	return new;
-}
-
 static bool add_type(struct policydb *db, const char *type_name, bool attr)
 {
 #ifdef KSU_SUPPORT_ADD_TYPE
@@ -658,9 +642,8 @@ static bool add_type(struct policydb *db, const char *type_name, bool attr)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
 	struct ebitmap *new_type_attr_map_array =
-		ksu_realloc(db->type_attr_map_array,
-			    value * sizeof(struct ebitmap),
-			    (value - 1) * sizeof(struct ebitmap));
+		krealloc(db->type_attr_map_array,
+			 value * sizeof(struct ebitmap), GFP_ATOMIC);
 
 	if (!new_type_attr_map_array) {
 		pr_err("add_type: alloc type_attr_map_array failed\n");
@@ -668,9 +651,8 @@ static bool add_type(struct policydb *db, const char *type_name, bool attr)
 	}
 
 	struct type_datum **new_type_val_to_struct =
-		ksu_realloc(db->type_val_to_struct,
-			    sizeof(*db->type_val_to_struct) * value,
-			    sizeof(*db->type_val_to_struct) * (value - 1));
+		krealloc(db->type_val_to_struct,
+			 sizeof(*db->type_val_to_struct) * value, GFP_ATOMIC);
 
 	if (!new_type_val_to_struct) {
 		pr_err("add_type: alloc type_val_to_struct failed\n");
@@ -678,9 +660,8 @@ static bool add_type(struct policydb *db, const char *type_name, bool attr)
 	}
 
 	char **new_val_to_name_types =
-		ksu_realloc(db->sym_val_to_name[SYM_TYPES],
-			    sizeof(char *) * value,
-			    sizeof(char *) * (value - 1));
+		krealloc(db->sym_val_to_name[SYM_TYPES], sizeof(char *) * value,
+			 GFP_ATOMIC);
 	if (!new_val_to_name_types) {
 		pr_err("add_type: alloc val_to_name failed\n");
 		return false;
