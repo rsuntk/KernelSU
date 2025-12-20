@@ -497,12 +497,7 @@ int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
 	}
 #endif
 
-	if (*type == EV_KEY && *code == KEY_VOLUMEDOWN) {
-		// Logic: 0 = released, 1 = pressed
-		if (*value <= 0) {
-			return 0;
-		}
-
+	if (*type == EV_KEY && *code == KEY_VOLUMEDOWN && *value) {
 		// key pressed, count it
 		volumedown_pressed_count++;
 		pr_info("input_handle_event: vol_down pressed count: %u\n", volumedown_pressed_count);

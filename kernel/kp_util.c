@@ -4,9 +4,6 @@
 #include <linux/preempt.h>
 #include <asm/current.h>
 
-#include "kernel_compat.h"
-#include "kp_util.h"
-
 static bool try_set_access_flag(unsigned long addr)
 {
 #ifdef CONFIG_ARM64

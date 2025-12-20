@@ -10,16 +10,6 @@
 
 #include <trace/events/syscalls.h>
 
-#include "allowlist.h"
-#include "arch.h"
-#include "klog.h" // IWYU pragma: keep
-#include "syscall_handler.h"
-#include "sucompat.h"
-#include "setuid_hook.h"
-#include "selinux/selinux.h"
-#include "kp_util.h"
-#include "ksud.h"
-
 // Tracepoint registration count management
 // == 1: just us
 // >  1: someone else is also using syscall tracepoint e.g. ftrace

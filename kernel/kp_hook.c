@@ -2,14 +2,6 @@
 #include <linux/compat.h>
 #include <linux/workqueue.h>
 
-#include "arch.h"
-#include "kp_hook.h"
-#include "ksu.h"
-#include "ksud.h"
-#include "kernel_compat.h"
-#include "supercalls.h"
-#include "kp_util.h"
-
 #define DECL_KP(name, sym, pre)                                                \
 	struct kprobe name = {                                                 \
 		.symbol_name = sym,                                            \
