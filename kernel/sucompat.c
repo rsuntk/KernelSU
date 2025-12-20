@@ -31,7 +31,7 @@
 
 bool ksu_su_compat_enabled __read_mostly = true;
 
-static const char su[] = SU_PATH;
+static const char su_path[] = SU_PATH;
 static const char ksud_path[] = KSUD_PATH;
 static const char sh_path[] = SH_PATH;
 
@@ -92,7 +92,7 @@ static int ksu_sucompat_user_common(const char __user **filename_user,
 				    const char *syscall_name,
 				    const bool escalate)
 {
-	char path[sizeof(su) + 1] = { 0 };
+	char path[sizeof(su_path) + 1] = { 0 };
 
 	if (unlikely(!filename_user))
 		return 0;
@@ -100,8 +100,7 @@ static int ksu_sucompat_user_common(const char __user **filename_user,
 		return 0;
 
 	ksu_strncpy_from_user_nofault(path, *filename_user, sizeof(path));
-
-	if (memcmp(path, su, sizeof(su)))
+	if (memcmp(path, su_path, sizeof(su_path)))
 		return 0;
 
 	if (escalate) {
@@ -125,7 +124,7 @@ int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 int ksu_handle_stat(int *dfd, struct filename **filename, int *flags)
 {
-	struct filename *filename_ptr;
+	struct filename *filename_p;
 
 	if (unlikely(!filename))
 		return 0;
@@ -133,18 +132,18 @@ int ksu_handle_stat(int *dfd, struct filename **filename, int *flags)
 	if (!is_su_allowed())
 		return 0;
 
-	filename_ptr = *filename;
-	if (IS_ERR(filename_ptr))
+	filename_p = *filename;
+	if (IS_ERR(filename_p))
 		return 0;
 
 	if (filename_ptr->name == NULL)
 		return 0;
 
-	if (likely(memcmp(filename_ptr->name, su, sizeof(su))))
+	if (likely(memcmp(filename_p->name, su_path, sizeof(su_path))))
 		return 0;
 
 	pr_info("vfs_statx: su->sh!\n");
-	memcpy((void *)filename_ptr->name, sh_path, sizeof(sh_path));
+	memcpy((void *)filename_p->name, sh_path, sizeof(sh_path));
 	return 0;
 }
 #else
@@ -184,17 +183,14 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 	if (unlikely(!filename_ptr))
 		return 0;
 
-	if (!is_su_allowed())
-		return 0;
-
-	filename = *filename_ptr;
-	if (IS_ERR(filename))
+	filename_ptr = *filename;
+	if (IS_ERR(filename_ptr))
 		return 0;
 
 	if (filename->name == NULL)
 		return 0;
 
-	if (likely(memcmp(filename->name, su, sizeof(su))))
+	if (likely(memcmp(filename->name, su_path, sizeof(su_path))))
 		return 0;
 
 	pr_info("do_execveat_common su found\n");
