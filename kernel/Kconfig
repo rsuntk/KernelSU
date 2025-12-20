@@ -67,6 +67,14 @@ config KSU_SUSFS_SPOOF_UNAME
         - Allow spoofing the string returned by uname syscall to user-defined string.
         - Effective on all processes.
 
+config KSU_SUSFS_TRY_UMOUNT
+	bool "Enable to use ksu's try_umount"
+	depends on KSU_SUSFS
+	default y
+	help
+		- Allow using try_umount to umount other user-defined mount paths prior to ksu's default umount paths.
+		- Effective only on zygote spawned umounted user app process.
+
 config KSU_SUSFS_ENABLE_LOG
     bool "Enable logging susfs log to kernel"
     depends on KSU_SUSFS

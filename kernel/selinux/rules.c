@@ -144,7 +144,7 @@ void apply_kernelsu_rules(void)
 	apply_rules_for_manual_hook(db);
 
 	// Allow umount in zygote process without installing zygisk
-	//ksu_allow(db, "zygote", "labeledfs", "filesystem", "unmount");
+	ksu_allow(db, "zygote", "labeledfs", "filesystem", "unmount");
 	susfs_set_priv_app_sid();
 	susfs_set_init_sid();
 	susfs_set_ksu_sid();
