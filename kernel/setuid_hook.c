@@ -106,21 +106,17 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid)
 	}
 
 	if (ksu_get_manager_appid() == new_uid % PER_USER_RANGE) {
-		spin_lock_irq(&current->sighand->siglock);
 		disable_seccomp();
 #ifdef CONFIG_KSU_SYSCALL_HOOK
 		ksu_set_task_tracepoint_flag(current);
 #endif
-		spin_unlock_irq(&current->sighand->siglock);
 		pr_info("install fd for manager (uid=%d)\n", new_uid);
 		do_install_manager_fd();
 		return 0;
 	}
 
 	if (ksu_is_allow_uid_for_current(new_uid)) {
-		spin_lock_irq(&current->sighand->siglock);
 		disable_seccomp();
-		spin_unlock_irq(&current->sighand->siglock);
 #ifdef CONFIG_KSU_SYSCALL_HOOK
 		ksu_set_task_tracepoint_flag(current);
 	} else {
