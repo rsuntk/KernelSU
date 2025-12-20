@@ -11,6 +11,7 @@
 #endif
 #include <linux/sched.h>
 #include <linux/seccomp.h>
+#include <linux/slab.h>
 #include <linux/thread_info.h>
 #include <linux/uidgid.h>
 
@@ -79,7 +80,13 @@ void setup_groups(struct root_profile *profile, struct cred *cred)
 // RKSU: Use it wisely, not static.
 void disable_seccomp(void)
 {
-	struct task_struct fake;
+	struct task_struct *fake;
+	fake = kmalloc(sizeof(*fake), GFP_ATOMIC);
+	if (!fake) {
+		pr_err("%s: cannot allocate fake struct!\n", __func__);
+		return;
+	}
+
 	// Refer to kernel/seccomp.c: seccomp_set_mode_strict
 	// When disabling Seccomp, ensure that current->sighand->siglock is held during the operation.
 	spin_lock_irq(&current->sighand->siglock);
@@ -91,7 +98,7 @@ void disable_seccomp(void)
 	clear_thread_flag(TIF_SECCOMP);
 #endif
 
-	memcpy(&fake, current, sizeof(fake));
+	memcpy(fake, current, sizeof(*fake));
 	current->seccomp.mode = 0;
 	current->seccomp.filter = NULL;
 	atomic_set(&current->seccomp.filter_count, 0);
@@ -99,13 +106,14 @@ void disable_seccomp(void)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
 	// https://github.com/torvalds/linux/commit/bfafe5efa9754ebc991750da0bcca2a6694f3ed3#diff-45eb79a57536d8eccfc1436932f093eb5c0b60d9361c39edb46581ad313e8987R576-R577
-	fake.flags |= PF_EXITING;
+	fake->flags |= PF_EXITING;
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
 	// https://github.com/torvalds/linux/commit/0d8315dddd2899f519fe1ca3d4d5cdaf44ea421e#diff-45eb79a57536d8eccfc1436932f093eb5c0b60d9361c39edb46581ad313e8987R556-R558
-	fake.sighand = NULL;
+	fake->sighand = NULL;
 #endif
 
-	seccomp_filter_release(&fake);
+	seccomp_filter_release(fake);
+	kfree(fake);
 }
 
 void escape_with_root_profile(void)
