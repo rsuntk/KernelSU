@@ -438,7 +438,7 @@ fun ModuleRepoScreen(
                             .fillMaxHeight()
                             .scrollEndHaptic()
                             .overScrollVertical()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection)
+                            .nestedScroll(scrollBehavior.nestedScrollConnection),
                         contentPadding = PaddingValues(
                             top = innerPadding.calculateTopPadding() + boxHeight.value + 6.dp,
                             start = innerPadding.calculateStartPadding(layoutDirection),
@@ -589,7 +589,7 @@ private fun ReadmePage(
             .fillMaxHeight()
             .scrollEndHaptic()
             .overScrollVertical()
-            .nestedScroll(scrollBehavior.nestedScrollConnection)]
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         contentPadding = PaddingValues(
             top = innerPadding.calculateTopPadding(),
             start = innerPadding.calculateStartPadding(layoutDirection),
@@ -641,7 +641,7 @@ fun ReleasesPage(
             .fillMaxHeight()
             .scrollEndHaptic()
             .overScrollVertical()
-            .nestedScroll(scrollBehavior.nestedScrollConnection)
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         contentPadding = PaddingValues(
             top = innerPadding.calculateTopPadding(),
             start = innerPadding.calculateStartPadding(layoutDirection),
@@ -849,7 +849,7 @@ fun InfoPage(
             .fillMaxHeight()
             .scrollEndHaptic()
             .overScrollVertical()
-            .nestedScroll(scrollBehavior.nestedScrollConnection)
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         contentPadding = PaddingValues(
             top = innerPadding.calculateTopPadding(),
             start = innerPadding.calculateStartPadding(layoutDirection),
