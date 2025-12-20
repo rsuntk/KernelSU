@@ -1,4 +1,6 @@
 #include <linux/version.h>
+#include <linux/compat.h>
+#include <linux/fs.h>
 
 // unity build idea from backslashxx, not full, we only use it for shim ksu hooks
 
