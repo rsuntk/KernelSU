@@ -85,7 +85,9 @@ int __init kernelsu_init(void)
 	return 0;
 }
 
-#ifdef CONFIG_KSU_SYSCALL_HOOK
+#if defined(CONFIG_KSU_SYSCALL_HOOK) ||                                        \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0) &&                      \
+	 defined(CONFIG_KSU_MANUAL_HOOK))
 extern void ksu_observer_exit(void);
 #endif
 
@@ -95,7 +97,9 @@ void kernelsu_exit(void)
 
 	ksu_throne_tracker_exit();
 
-#ifdef CONFIG_KSU_SYSCALL_HOOK
+#if defined(CONFIG_KSU_SYSCALL_HOOK) ||                                        \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0) &&                      \
+	 defined(CONFIG_KSU_MANUAL_HOOK))
 	ksu_observer_exit();
 #endif
 

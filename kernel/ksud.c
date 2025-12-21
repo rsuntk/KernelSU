@@ -35,10 +35,15 @@
 #include "ksud.h"
 #ifdef CONFIG_KSU_SYSCALL_HOOK
 #include "kp_hook.h"
-extern int ksu_observer_init(void);
 #endif
 #include "selinux/selinux.h"
 #include "throne_tracker.h"
+
+#if defined(CONFIG_KSU_SYSCALL_HOOK) ||                                        \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0) &&                      \
+	 defined(CONFIG_KSU_MANUAL_HOOK))
+extern int ksu_observer_init(void);
+#endif
 
 bool ksu_module_mounted __read_mostly = false;
 bool ksu_boot_completed __read_mostly = false;
@@ -89,7 +94,9 @@ void on_post_fs_data(void)
 	already_post_fs_data = true;
 	pr_info("on_post_fs_data!\n");
 	ksu_load_allow_list();
-#ifdef CONFIG_KSU_SYSCALL_HOOK
+#if defined(CONFIG_KSU_SYSCALL_HOOK) ||                                        \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0) &&                      \
+	 defined(CONFIG_KSU_MANUAL_HOOK))
 	ksu_observer_init();
 #endif
 	stop_input_hook();
@@ -133,7 +140,9 @@ void on_boot_completed(void)
 {
 	ksu_boot_completed = true;
 	pr_info("on_boot_completed!\n");
-#ifdef CONFIG_KSU_SYSCALL_HOOK
+#if defined(CONFIG_KSU_SYSCALL_HOOK) ||                                        \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0) &&                      \
+	 defined(CONFIG_KSU_MANUAL_HOOK))
 	track_throne(true);
 #endif
 }
@@ -500,7 +509,8 @@ int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
 	if (*type == EV_KEY && *code == KEY_VOLUMEDOWN && *value) {
 		// key pressed, count it
 		volumedown_pressed_count++;
-		pr_info("input_handle_event: vol_down pressed count: %u\n", volumedown_pressed_count);
+		pr_info("input_handle_event: vol_down pressed count: %u\n",
+			volumedown_pressed_count);
 		if (is_volumedown_enough(volumedown_pressed_count)) {
 			pr_info("input_handle_event: vol_down pressed MAX! safe mode is active!\n");
 			stop_input_hook();
