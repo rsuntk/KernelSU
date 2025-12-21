@@ -25,6 +25,7 @@
 
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
+#include "kernel_compat.h"
 #include "su_mount_ns.h"
 
 extern int path_mount(const char *dev_name, struct path *path,
@@ -65,7 +66,7 @@ static long ksu_sys_setns(int fd, int flags)
 	PT_PARM1(&regs) = fd;
 	PT_PARM2(&regs) = flags;
 
-	do_sys_setns(&regs);
+	return do_sys_setns(&regs);
 }
 #else
 static long ksu_sys_setns(int fd, int flags)
