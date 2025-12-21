@@ -21,6 +21,7 @@
 #include "kernel_compat.h"
 #include "klog.h" // IWYU pragma: keep
 #include "selinux/selinux.h"
+#include "su_mount_ns.h"
 #ifdef CONFIG_KSU_SYSCALL_HOOK
 #include "syscall_handler.h"
 #endif
@@ -200,6 +201,8 @@ void escape_with_root_profile(void)
 		ksu_set_task_tracepoint_flag(t);
 	}
 #endif
+
+	setup_mount_ns(profile->namespaces);
 }
 
 void __maybe_unused escape_to_root_for_init(void)
