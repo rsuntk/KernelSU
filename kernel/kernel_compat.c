@@ -184,10 +184,10 @@ int do_close_fd(unsigned int fd)
 #endif
 }
 
+static void *__kvmalloc(size_t size, gfp_t flags)
+{
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
 // https://elixir.bootlin.com/linux/v4.4.302/source/security/apparmor/lib.c#L79
-static void *kvmalloc(size_t size, gfp_t flags)
-{
 	void *buffer = NULL;
 
 	if (size == 0)
@@ -203,8 +203,10 @@ static void *kvmalloc(size_t size, gfp_t flags)
 			buffer = vmalloc(size);
 	}
 	return buffer;
-}
+#else
+	return kvmalloc(size, flags);
 #endif
+}
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0) &&                          \
      !defined(KSU_OPTIONAL_KVREALLOC))
@@ -216,7 +218,7 @@ void *ksu_compat_kvrealloc(const void *p, size_t oldsize, size_t newsize,
 
 	if (oldsize >= newsize)
 		return (void *)p;
-	newp = kvmalloc(newsize, flags);
+	newp = __kvmalloc(newsize, flags);
 	if (!newp)
 		return NULL;
 	memcpy(newp, p, oldsize);
