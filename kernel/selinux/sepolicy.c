@@ -677,10 +677,10 @@ static bool add_genfscon(struct policydb *db, const char *fs_name, const char *p
 // https://github.com/torvalds/linux/commit/590b9d576caec6b4c46bba49ed36223a399c3fc5#diff-cc9aa90e094e6e0f47bd7300db4f33cf4366b98b55d8753744f31eb69c691016R844-R845
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
 #define ksu_kvrealloc(p, new_size, _old_size) kvrealloc(p, new_size, GFP_KERNEL)
-#else
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || defined(KSU_TYPE_VAL_TO_STRUCT) || defined(KSU_TYPE_VAL_TO_STRUCT_ARRAY)
 // https://cs.android.com/android/_/android/kernel/common/+/f5f3e54f811679761c33526e695bd296190faade
 // Some 5.10 kernel don't have this backport, so copy one.
-void *ksu_kvrealloc_compat(const void *p, size_t oldsize, size_t newsize, gfp_t flags)
+static void *ksu_kvrealloc_compat(const void *p, size_t oldsize, size_t newsize, gfp_t flags)
 {
 	void *newp;
 
@@ -728,7 +728,7 @@ static bool add_type(struct policydb *db, const char *type_name, bool attr)
 		return false;
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) || defined(KSU_TYPE_VAL_TO_STRUCT)
 	struct ebitmap *new_type_attr_map_array =
 		ksu_kvrealloc(db->type_attr_map_array,
 			    value * sizeof(struct ebitmap),
@@ -775,6 +775,55 @@ static bool add_type(struct policydb *db, const char *type_name, bool attr)
 	}
 
 	return true;
+
+#elif defined(KSU_TYPE_VAL_TO_STRUCT_ARRAY)
+	struct ebitmap *new_type_attr_map_array =
+		ksu_kvrealloc(db->type_attr_map_array,
+			    value * sizeof(struct ebitmap),
+			    (value - 1) * sizeof(struct ebitmap));
+
+	if (!new_type_attr_map_array) {
+		pr_err("add_type: alloc type_attr_map_array failed\n");
+		return false;
+	}
+
+	struct type_datum **new_type_val_to_struct =
+		ksu_kvrealloc(db->type_val_to_struct_array,
+			    sizeof(*db->type_val_to_struct_array) * value,
+			    sizeof(*db->type_val_to_struct_array) * (value - 1));
+
+	if (!new_type_val_to_struct) {
+		pr_err("add_type: alloc type_val_to_struct failed\n");
+		return false;
+	}
+
+	char **new_val_to_name_types =
+		ksu_kvrealloc(db->sym_val_to_name[SYM_TYPES],
+			    sizeof(char *) * value,
+			    sizeof(char *) * (value - 1));
+	if (!new_val_to_name_types) {
+		pr_err("add_type: alloc val_to_name failed\n");
+		return false;
+	}
+
+	db->type_attr_map_array = new_type_attr_map_array;
+	ebitmap_init(&db->type_attr_map_array[value - 1]);
+	ebitmap_set_bit(&db->type_attr_map_array[value - 1], value - 1, 1);
+
+	db->type_val_to_struct_array = new_type_val_to_struct;
+	db->type_val_to_struct_array[value - 1] = type;
+
+	db->sym_val_to_name[SYM_TYPES] = new_val_to_name_types;
+	db->sym_val_to_name[SYM_TYPES][value - 1] = key;
+
+	int i;
+	for (i = 0; i < db->p_roles.nprim; ++i) {
+		ebitmap_set_bit(&db->role_val_to_struct[i]->types, value - 1,
+				1);
+	}
+
+	return true;
+
 #elif defined(CONFIG_IS_HW_HISI)
 	/*
    * Huawei use type_attr_map and type_val_to_struct.
@@ -974,7 +1023,7 @@ static bool set_type_state(struct policydb *db, const char *type_name,
 static void add_typeattribute_raw(struct policydb *db, struct type_datum *type,
 				  struct type_datum *attr)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0) || defined(KSU_TYPE_VAL_TO_STRUCT) || defined(KSU_TYPE_VAL_TO_STRUCT_ARRAY)
 	struct ebitmap *sattr = &db->type_attr_map_array[type->value - 1];
 #elif defined(CONFIG_IS_HW_HISI)
 	/*
