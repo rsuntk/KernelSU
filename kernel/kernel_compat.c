@@ -208,8 +208,7 @@ static void *__kvmalloc(size_t size, gfp_t flags)
 #endif
 }
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0) &&                          \
-     !defined(KSU_OPTIONAL_KVREALLOC))
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
 // https://elixir.bootlin.com/linux/v5.10.247/source/mm/util.c#L664
 void *ksu_compat_kvrealloc(const void *p, size_t oldsize, size_t newsize,
 			   gfp_t flags)
@@ -224,11 +223,5 @@ void *ksu_compat_kvrealloc(const void *p, size_t oldsize, size_t newsize,
 	memcpy(newp, p, oldsize);
 	kvfree(p);
 	return newp;
-}
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
-void *ksu_compat_kvrealloc(const void *p, size_t oldsize, size_t newsize,
-			   gfp_t flags)
-{
-	return kvrealloc(p, oldsize, newsize, flags);
 }
 #endif
