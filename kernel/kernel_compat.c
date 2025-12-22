@@ -12,6 +12,7 @@
 #endif
 #include <linux/mm.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
 
 #include "klog.h" // IWYU pragma: keep
 #include "kernel_compat.h"
@@ -182,6 +183,22 @@ int do_close_fd(unsigned int fd)
 	return __close_fd(current->files, fd);
 #endif
 }
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
+static void kvmalloc(size_t size, gfp_t flags)
+{
+	void *p;
+
+	if ((flags & GFP_KERNEL) != GFP_KERNEL)
+		return kmalloc(size, flags);
+	
+	p = kmalloc(size, flags | __GFP_NOWARN);
+	if (p)
+		return p;
+
+	return vmalloc(size);
+}
+#endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0) &&                          \
      !defined(KSU_OPTIONAL_KVREALLOC))
