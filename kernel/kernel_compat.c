@@ -200,7 +200,7 @@ void *ksu_compat_kvrealloc(const void *p, size_t oldsize, size_t newsize,
 	kvfree(p);
 	return newp;
 }
-#else
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
 void *ksu_compat_kvrealloc(const void *p, size_t oldsize, size_t newsize,
 			   gfp_t flags)
 {
