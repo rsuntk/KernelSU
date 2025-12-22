@@ -185,18 +185,24 @@ int do_close_fd(unsigned int fd)
 }
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
+// https://elixir.bootlin.com/linux/v4.4.302/source/security/apparmor/lib.c#L79
 static void kvmalloc(size_t size, gfp_t flags)
 {
-	void *p;
+	void *buffer = NULL;
 
-	if ((flags & GFP_KERNEL) != GFP_KERNEL)
-		return kmalloc(size, flags);
-	
-	p = kmalloc(size, flags | __GFP_NOWARN);
-	if (p)
-		return p;
+	if (size == 0)
+		return NULL;
 
-	return vmalloc(size);
+	/* do not attempt kmalloc if we need more than 16 pages at once */
+	if (size <= (16 * PAGE_SIZE))
+		buffer = kmalloc(size, flags | GFP_NOIO | __GFP_NOWARN);
+	if (!buffer) {
+		if (flags & __GFP_ZERO)
+			buffer = vzalloc(size);
+		else
+			buffer = vmalloc(size);
+	}
+	return buffer;
 }
 #endif
 
