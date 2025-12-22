@@ -10,6 +10,8 @@
 #else
 #include <linux/sched.h>
 #endif
+#include <linux/mm.h>
+#include <linux/slab.h>
 
 #include "klog.h" // IWYU pragma: keep
 #include "kernel_compat.h"
@@ -180,3 +182,28 @@ int do_close_fd(unsigned int fd)
 	return __close_fd(current->files, fd);
 #endif
 }
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0) &&                          \
+     !defined(KSU_OPTIONAL_KVREALLOC))
+// https://elixir.bootlin.com/linux/v5.10.247/source/mm/util.c#L664
+void *ksu_compat_kvrealloc(const void *p, size_t oldsize, size_t newsize,
+			   gfp_t flags)
+{
+	void *newp;
+
+	if (oldsize >= newsize)
+		return (void *)p;
+	newp = kvmalloc(newsize, flags);
+	if (!newp)
+		return NULL;
+	memcpy(newp, p, oldsize);
+	kvfree(p);
+	return newp;
+}
+#else
+void *ksu_compat_kvrealloc(const void *p, size_t oldsize, size_t newsize,
+			   gfp_t flags)
+{
+	return kvrealloc(p, oldsize, newsize, flags);
+}
+#endif

@@ -46,6 +46,9 @@ extern struct key *init_session_keyring;
 
 extern int do_close_fd(unsigned int fd);
 
+extern void *ksu_compat_kvrealloc(const void *p, size_t oldsize, size_t newsize,
+				  gfp_t flags);
+
 #ifndef VERIFY_READ
 #define ksu_access_ok(addr, size) access_ok(addr, size)
 #else
