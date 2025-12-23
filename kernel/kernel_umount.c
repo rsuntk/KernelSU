@@ -49,7 +49,7 @@ static const struct ksu_feature_handler kernel_umount_handler = {
 	defined(KSU_HAS_PATH_UMOUNT)
 extern int path_umount(struct path *path, int flags);
 static int ksu_umount_mnt(const char *__never_use_mnt, struct path *path,
-			   int flags)
+			  int flags)
 {
 	return path_umount(path, flags);
 }
