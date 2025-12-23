@@ -31,10 +31,6 @@ object Natives {
     val version: Int
         external get
 
-    // get the uid list of allowed su processes.
-    val allowList: IntArray
-        external get
-
     val isSafeMode: Boolean
         external get
 
@@ -85,6 +81,8 @@ object Natives {
      * Get the user name for the uid.
      */
     external fun getUserName(uid: Int): String?
+
+    external fun getSuperuserCount(): Int
 
     private const val NON_ROOT_DEFAULT_PROFILE_KEY = "$"
     private const val NOBODY_UID = 9999
