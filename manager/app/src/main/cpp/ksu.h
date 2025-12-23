@@ -122,9 +122,9 @@ struct ksu_check_safemode_cmd {
 };
 
 struct ksu_get_allow_list_cmd {
-    uint32_t uids[128]; // Output: array of allowed/denied UIDs
-    uint32_t count; // Output: number of UIDs in array
-    uint8_t allow; // Input: true for allow list, false for deny list
+    uint16_t count; // Input / Output: number of UIDs in array
+    uint16_t total_count; // Output: total number of UIDs in requested list
+    uint32_t uids[0]; // Output: array of allowed/denied UIDs
 };
 
 struct ksu_uid_granted_root_cmd {
