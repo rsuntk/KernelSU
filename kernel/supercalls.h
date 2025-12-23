@@ -35,9 +35,9 @@ struct ksu_check_safemode_cmd {
 };
 
 struct ksu_get_allow_list_cmd {
-	__u32 uids[128]; // Output: array of allowed/denied UIDs
-	__u32 count; // Output: number of UIDs in array
-	__u8 allow; // Input: true for allow list, false for deny list
+	__u16 count; // Input / Output: number of UIDs in array
+	__u16 total_count; // Output: total number of UIDs in requested list
+	__u32 uids[0]; // Output: array of allowed/denied UIDs
 };
 
 struct ksu_uid_granted_root_cmd {
@@ -138,10 +138,10 @@ struct ksu_ioctl_cmd_map {
 };
 
 #define KSU_IOCTL(CMD, NAME, HANDLER, PERM)                                    \
-	{                                                                      \
-		.cmd = KSU_IOCTL_##CMD, .name = NAME, .handler = HANDLER,      \
-		.perm_check = PERM                                             \
-	}
+	{ .cmd = KSU_IOCTL_##CMD,                                              \
+	  .name = NAME,                                                        \
+	  .handler = HANDLER,                                                  \
+	  .perm_check = PERM }
 
 // Install KSU fd to current process
 int ksu_install_fd(void);
