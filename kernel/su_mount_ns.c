@@ -60,6 +60,7 @@ extern long sys_setns(const struct pt_regs *regs);
 
 static long ksu_sys_setns(int fd, int flags)
 {
+#ifdef PT_PARM1
 	struct pt_regs regs;
 	memset(&regs, 0, sizeof(regs));
 
@@ -67,6 +68,9 @@ static long ksu_sys_setns(int fd, int flags)
 	PT_PARM2(&regs) = flags;
 
 	return do_sys_setns(&regs);
+#else
+	return -ENOSYS;
+#endif
 }
 #else
 static long ksu_sys_setns(int fd, int flags)
