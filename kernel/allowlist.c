@@ -51,14 +51,10 @@ static void remove_uid_from_arr(uid_t uid)
 	int i;
 	for (i = 0; i < allow_list_pointer; i++) {
 		if (allow_list_arr[i] == uid) {
-			int remaining = allow_list_pointer - 1 - i;
-			if (remaining > 0) {
-				memmove(&allow_list_arr[i],
-					&allow_list_arr[i + 1],
-					remaining * sizeof(allow_list_arr[0]));
-			}
+			allow_list_arr[i] =
+				allow_list_arr[allow_list_pointer - 1];
+			allow_list_arr[allow_list_pointer - 1] = -1;
 			allow_list_pointer--;
-			allow_list_arr[allow_list_pointer] = -1;
 			return;
 		}
 	}
@@ -211,6 +207,14 @@ int ksu_set_app_profile(struct app_profile *profile)
 		pr_err("too many app profile\n");
 		result = -E2BIG;
 		goto out_unlock;
+	}
+
+	if (profile->allow_su && profile->current_uid > BITMAP_UID_MAX) {
+		if (allow_list_pointer >= ARRAY_SIZE(allow_list_arr)) {
+			pr_err("allowlist array was full\n");
+			result = -ENOSPC;
+			goto out_unlock;
+		}
 	}
 
 	// not found, alloc a new node!
