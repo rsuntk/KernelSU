@@ -5,19 +5,23 @@ on:
     branches: [ "main", "ci" ]
     paths:
       - '.github/workflows/build-manager.yml'
+      - '.github/workflows/ksud.yml'
       - '.github/workflows/build-manager-common.yml'
       - '.github/workflows/build-ksud.yml'
       - '.github/workflows/build-lkm.yml'
       - '.github/workflows/ddk-lkm.yml'
       - 'manager/**'
       - 'kernel/**'
-      - 'userspace/ksud/**'
+      - 'userspace/**'
   pull_request:
     branches: [ "main" ]
     paths:
+      - '.github/workflows/build-manager.yml'
+      - '.github/workflows/build-lkm.yml'
+      - '.github/workflows/ksud.yml'
       - 'manager/**'
       - 'kernel/**'
-      - 'userspace/ksud/**'
+      - 'userspace/**'
   workflow_call:
 
 jobs:
