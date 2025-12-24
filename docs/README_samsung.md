@@ -10,3 +10,8 @@
 
 * This is Samsung anti-root escalation kernel driver
 * Building KernelSU while keeping this configuration active would cause your system to crash when it request for root (e.g opening ksu manager would cause entire system to reboot ([smiliar issue](https://github.com/rsuntk/KernelSU/issues/250)))
+
+## On older samsungs
+
+* For kernel version 5.4 and below, you are required to disable Samsung defex in the defconfig
+* You will need to disable `CONFIG_SECURITY_DEFEX`
