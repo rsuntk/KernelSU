@@ -9,4 +9,4 @@
 ## "Why would i need to disable this?"
 
 * This is Samsung anti-root escalation kernel driver
-* Building KernelSU while keeping this configuration active would cause your system to crash when it request for root (e.g opening ksu manager would cause entire system to reboot ([smiliar issue](https://github.com/rsuntk/KernelSU/issues/250))
+* Building KernelSU while keeping this configuration active would cause your system to crash when it request for root (e.g opening ksu manager would cause entire system to reboot ([smiliar issue](https://github.com/rsuntk/KernelSU/issues/250)))
