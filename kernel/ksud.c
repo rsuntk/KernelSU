@@ -432,6 +432,29 @@ append_ksu_rc:
 	return ret;
 }
 
+static bool check_init_path(char *dpath)
+{
+	const char *valid_paths[] = {
+		"/system/etc/init/hw/init.rc", "/init.rc",
+		"/vendor/etc/init/hw/init.rc"
+	};
+	bool path_match = false;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(valid_paths); i++) {
+		if (strcmp(dpath, valid_paths[i]) == 0) {
+			path_match = true;
+			break;
+		}
+	}
+
+	if (!path_match) {
+		return false;
+	}
+
+	return true;
+}
+
 int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
 			size_t *count_ptr, loff_t **pos)
 {
@@ -469,7 +492,7 @@ int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
 		return 0;
 	}
 
-	if (strcmp(dpath, "/system/etc/init/hw/init.rc")) {
+	if (!check_init_path(dpath)) {
 		return 0;
 	}
 
