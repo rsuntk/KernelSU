@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="home">Beranda</string>
-    <string name="home_not_installed">Tidak terinstal</string>
-    <string name="home_click_to_install">Klik untuk menginstal</string>
+    <string name="home_not_installed">Tidak terpasang</string>
+    <string name="home_click_to_install">Klik untuk memasang</string>
     <string name="home_working">Berfungsi</string>
     <string name="home_working_version">Versi: %d</string>
     <string name="home_superuser_count">Superuser: %d</string>
@@ -22,17 +22,17 @@
     <string name="module_failed_to_disable">Gagal menonaktifkan modul: %s</string>
     <string name="module_empty">Tidak ada modul yang terpasang</string>
     <string name="module">Modul</string>
-    <string name="module_install_prompt_with_name">Modul berikut akan diinstal: %1$s</string>
+    <string name="module_install_prompt_with_name">Modul berikut akan dipasang: %1$s</string>
     <string name="module_sort_action_first">Aksi lebih dulu</string>
     <string name="module_sort_enabled_first">Aktif lebih dulu</string>
-    <string name="module_repos">Gudang</string>
+    <string name="module_repos">Repositori</string>
     <string name="module_repos_sort_update_first">Waktu pembaruan</string>
     <string name="module_repos_sort_name">Nama (A → Z)</string>
     <string name="module_repos_source_code">Sumber kode</string>
     <string name="confirm">Oke</string>
     <string name="uninstall">Hapus</string>
-    <string name="module_install">Instal</string>
-    <string name="install">Instal</string>
+    <string name="module_install">Pasang</string>
+    <string name="install">Pasang</string>
     <string name="reboot">Reboot</string>
     <string name="settings">Setelan</string>
     <string name="reboot_userspace">Reboot secara halus</string>
@@ -52,7 +52,7 @@
     <string name="hide_system_apps">Sembunyikan apl sistem</string>
     <string name="send_log">Kirim log</string>
     <string name="safe_mode">Mode aman</string>
-    <string name="safe_mode_module_disabled">Instalasi modul dinonaktifkan di mode aman</string>
+    <string name="safe_mode_module_disabled">Pemasangan modul dinonaktifkan pada mode aman</string>
     <string name="reboot_to_apply">Reboot agar berfungsi</string>
     <string name="module_magisk_conflict">Konflik dengan Magisk, fungsi modul dinonaktifkan!</string>
     <string name="home_learn_kernelsu">Pelajari KernelSU</string>
@@ -62,8 +62,8 @@
     <string name="home_support_content">KernelSU akan selalu menjadi aplikasi gratis dan terbuka. Anda dapat memberikan donasi sebagai bentuk dukungan.</string>
     <string name="home_unofficial_kernelsu_title">Cabang tidak-resmi KernelSU oleh Rissu</string>
     <string name="home_unofficial_kernelsu_summary">Ketuk kartu ini untuk sumber kode dari RKSU.</string>
-    <string name="about_source_code"><![CDATA[Lihat kode sumber di %1$s<br/>Gabung kanal %2$s kami]]></string>
-    <string name="profile">Profil Apl</string>
+    <string name="about_source_code"><![CDATA[Lihat kode sumber di %1$s<br/>Gabung saluran %2$s kami]]></string>
+    <string name="profile">Profil Aplikasi</string>
     <string name="profile_default">Bawaan</string>
     <string name="profile_template">Templat</string>
     <string name="profile_custom">Khusus</string>
@@ -79,22 +79,22 @@
     <string name="failed_to_update_app_profile">Gagal memperbarui Profil untuk %s</string>
     <string name="require_kernel_version">Versi KernelSU saat ini %d terlalu rendah untuk manajer berfungsi normal. Harap memperbarui ke versi %d atau di atasnya!</string>
     <string name="settings_umount_modules_default">Umount modul secara bawaan</string>
-    <string name="settings_umount_modules_default_summary">Menggunakan \"Umount Modul\" secara universal pada Profil Aplikasi. Jika diaktifkan, akan menghapus semua modifikasi sistem untuk aplikasi yang tidak memiliki set profil.</string>
+    <string name="settings_umount_modules_default_summary">Gunakan \"Umount modul\" secara universal pada Profil Aplikasi. Jika diaktifkan, ini akan menghapus semua modifikasi sistem untuk aplikasi yang tidak memiliki set profil.</string>
     <string name="profile_umount_modules_summary">Aktifkan opsi ini agar KernelSU dapat memulihkan kembali berkas termodifikasi oleh modul pada aplikasi ini.</string>
     <string name="profile_selinux_domain">Domain</string>
     <string name="profile_selinux_rules">Aturan</string>
     <string name="module_update">Perbarui</string>
-    <string name="module_reinstall">Instal ulang</string>
+    <string name="module_reinstall">Pasang ulang</string>
     <string name="module_downloading">Mengunduh modul: %s</string>
     <string name="module_start_downloading">Mulai mengunduh: %s</string>
-    <string name="new_version_available">Versi baru %s tersedia, klik untuk memperbarui!</string>
-    <string name="launch_app">Jalankan</string>
+    <string name="new_version_available">Versi baru %s tersedia, ketuk untuk memperbarui!</string>
+    <string name="launch_app">Luncurkan</string>
     <string name="force_stop_app">Paksa berhenti</string>
     <string name="restart_app">Mulai ulang</string>
     <string name="failed_to_update_sepolicy">Gagal memperbarui aturan SELinux untuk %s</string>
     <string name="su_not_allowed">Gagal memberikan akses SU untuk %s</string>
     <string name="module_changelog">Catatan perubahan</string>
-    <string name="settings_profile_template">Templat Profil Apl</string>
+    <string name="settings_profile_template">Templat Profil Aplikasi</string>
     <string name="settings_profile_template_summary">Kelola templat lokal dan online pada Profil Aplikasi.</string>
     <string name="app_profile_template_create">Buat templat</string>
     <string name="app_profile_template_edit">Edit templat</string>
@@ -118,7 +118,7 @@
     <string name="app_profile_affects_following_apps">Mempengaruhi apl berikut</string>
     <string name="module_changelog_failed">Gagal mengambil catatan: %s</string>
     <string name="settings_check_update">Periksa pembaruan</string>
-    <string name="settings_check_update_summary">Periksa pembaruan secara otomatis saat membuka aplikasi.</string>
+    <string name="settings_check_update_summary">Memeriksa pembaruan secara otomatis saat membuka aplikasi.</string>
     <string name="settings_module_check_update">Periksa pembaruan modul</string>
     <string name="grant_root_failed">Gagal memberikan akses root!</string>
     <string name="action">Aksi</string>
@@ -141,9 +141,9 @@
     <string name="settings_restore_stock_image">Pulihkan image bawaan</string>
     <string name="settings_uninstall_temporary_message">Hapus KernelSU untuk sementara, memulihkan ke kondisi asal setelah reboot berikutnya.</string>
     <string name="settings_uninstall_permanent_message">Menghapus KernelSU (root dan semua modul) secara menyeluruh dan permanen.</string>
-    <string name="settings_restore_stock_image_message">Pulihkan image pabrik asli (jika ada cadangan), biasanya digunakan sebelum pembaruan OTA; jika Anda perlu menghapus KernelSU, silakan gunakan \"Hapus secara permanen\".</string>
+    <string name="settings_restore_stock_image_message">Pulihkan image bawaan pabrik (jika ada cadangan), biasanya digunakan sebelum pembaruan OTA; jika Anda perlu menghapus KernelSU, silakan gunakan \"Hapus secara permanen\".</string>
     <string name="flashing">Memasang</string>
-    <string name="flash_success">Pemasangan sukses</string>
+    <string name="flash_success">Pemasangan berhasil</string>
     <string name="flash_failed">Pemasangan gagal</string>
     <string name="selected_lkm">LKM dipilih: %s</string>
     <string name="save_log">Simpan log</string>
@@ -153,7 +153,7 @@
     <string name="settings_disable_kernel_umount">Nonaktifkan umount kernel</string>
     <string name="settings_disable_kernel_umount_summary">Nonaktifkan umount pada level kernel yang dikontrol oleh KernelSU.</string>
     <string name="settings_enable_enhanced_security">Aktifkan keamanan tingkat lanjut</string>
-    <string name="settings_enable_enhanced_security_summary">Aktifkan kebijakan keamanan yang lebih ketat.</string>
+    <string name="settings_enable_enhanced_security_summary">Mengaktifkan kebijakan keamanan yang lebih ketat.</string>
     <string name="feature_status_unsupported_summary">Kernel tidak mendukung fitur ini.</string>
     <string name="feature_status_managed_summary">Fitur ini dikelola oleh modul.</string>
     <string name="settings_mode_default">Bawaan</string>
@@ -189,7 +189,7 @@
     <string name="color_brown">Coklat</string>
     <string name="network_offline">Tidak terhubung ke jaringan</string>
     <string name="network_retry">Coba lagi</string>
-    <string name="tab_readme">README</string>
+    <string name="tab_readme">Baca Aku</string>
     <string name="tab_releases">Rilis</string>
     <string name="tab_info">Info</string>
 </resources>
