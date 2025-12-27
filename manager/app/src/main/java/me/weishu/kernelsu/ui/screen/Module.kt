@@ -91,10 +91,6 @@ import com.ramcosta.composedestinations.generated.destinations.ExecuteModuleActi
 import com.ramcosta.composedestinations.generated.destinations.FlashScreenDestination
 import com.ramcosta.composedestinations.generated.destinations.ModuleRepoScreenDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -408,17 +404,10 @@ fun ModulePager(
         animationSpec = tween(durationMillis = 350)
     )
 
-    val hazeState = remember { HazeState() }
-    val hazeStyle = HazeStyle(
-        backgroundColor = colorScheme.surface,
-        tint = HazeTint(colorScheme.surface.copy(0.8f))
-    )
-
     Scaffold(
         topBar = {
-            searchStatus.TopAppBarAnim(hazeState = hazeState, hazeStyle = hazeStyle) {
+            searchStatus.TopAppBarAnim {
                 TopAppBar(
-                    color = Color.Transparent,
                     title = stringResource(R.string.module),
                     actions = {
                         val showTopPopup = remember { mutableStateOf(false) }
@@ -700,8 +689,6 @@ fun ModulePager(
                         start = innerPadding.calculateStartPadding(layoutDirection),
                         end = innerPadding.calculateEndPadding(layoutDirection)
                     ),
-                    hazeState = hazeState,
-                    hazeStyle = hazeStyle
                 ) { boxHeight ->
                     ModuleList(
                         navigator,
@@ -711,8 +698,7 @@ fun ModulePager(
                             .scrollEndHaptic()
                             .overScrollVertical()
                             .nestedScroll(scrollBehavior.nestedScrollConnection)
-                            .nestedScroll(nestedScrollConnection)
-                            .hazeSource(state = hazeState),
+                            .nestedScroll(nestedScrollConnection),
                         scope = scope,
                         modules = modules,
                         onInstallModule = {

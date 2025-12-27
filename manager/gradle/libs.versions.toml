@@ -17,7 +17,6 @@ libsu = "6.0.0"
 apksign = "1.4"
 cmaker = "1.2"
 miuix = "0.7.2"
-haze = "1.7.1"
 capsule = "2.1.2"
 
 [plugins]
@@ -68,7 +67,5 @@ markwon = { group = "io.noties.markwon", name = "core", version.ref = "markwon" 
 lsposed-cxx = { module = "org.lsposed.libcxx:libcxx", version.ref = "ndk" }
 
 miuix = { module = "top.yukonga.miuix.kmp:miuix-android", version.ref = "miuix" }
-
-haze = { module = "dev.chrisbanes.haze:haze-android", version.ref = "haze" }
 
 capsule = { module = "io.github.kyant0:capsule", version.ref = "capsule" }
