@@ -105,7 +105,8 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid)
 		return 0;
 	}
 
-	if (ksu_get_manager_appid() == new_uid % PER_USER_RANGE) {
+	if (likely(ksu_is_manager_appid_valid()) &&
+	    unlikely(ksu_get_manager_appid() == new_uid % PER_USER_RANGE)) {
 		disable_seccomp();
 #ifdef CONFIG_KSU_SYSCALL_HOOK
 		ksu_set_task_tracepoint_flag(current);
