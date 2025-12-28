@@ -290,7 +290,7 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 			pr_info("/init second_stage executed\n");
 			handle_second_stage();
 			init_second_stage_executed = true;
-		} else if (count(argv, MAX_ARG_STRINGS) == 1 &&
+		} else if (count(*argv, MAX_ARG_STRINGS) == 1 &&
 			   !init_second_stage_executed && envp) {
 			/* This applies to versions between Android 8 ~ 9  */
 			int envc = count(*envp, MAX_ARG_STRINGS);
