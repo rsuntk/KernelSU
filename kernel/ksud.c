@@ -270,6 +270,16 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 		return 0;
 	}
 
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	if (current->pid != 1 && is_init(get_current_cred())) {
+		if (unlikely(strcmp(filename->name, KSUD_PATH) == 0)) {
+			pr_info("escape to root for init executing ksud: %d\n",
+				current->pid);
+			escape_to_root_for_init();
+		}
+	}
+#endif
+
 	if (unlikely(!memcmp(filename->name, system_bin_init,
 			     sizeof(system_bin_init) - 1) &&
 		     argv)) {
