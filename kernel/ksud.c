@@ -36,6 +36,9 @@
 #endif
 #include "selinux/selinux.h"
 #include "throne_tracker.h"
+#ifdef CONFIG_KSU_MANUAL_HOOK
+extern int ksu_handle_execveat_init(struct filename *filename);
+#endif
 
 #if defined(CONFIG_KSU_SYSCALL_HOOK) ||                                        \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0) &&                      \
@@ -269,6 +272,12 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 	if (IS_ERR(filename)) {
 		return 0;
 	}
+
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	if (!ksu_handle_execveat_init(filename)) {
+		return 1;
+	}
+#endif
 
 	if (unlikely(!memcmp(filename->name, system_bin_init,
 			     sizeof(system_bin_init) - 1) &&

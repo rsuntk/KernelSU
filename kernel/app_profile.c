@@ -205,7 +205,7 @@ void escape_with_root_profile(void)
 	setup_mount_ns(profile->namespaces);
 }
 
-void __maybe_unused escape_to_root_for_init(void)
+void escape_to_root_for_init(void)
 {
 	setup_selinux(KERNEL_SU_CONTEXT);
 }

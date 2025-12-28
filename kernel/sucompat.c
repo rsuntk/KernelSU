@@ -25,6 +25,7 @@
 #ifdef CONFIG_KSU_SYSCALL_HOOK
 #include "kp_util.h"
 #endif
+#include "selinux/selinux.h"
 
 #define SU_PATH "/system/bin/su"
 #define SH_PATH "/system/bin/sh"
@@ -166,6 +167,21 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user,
 	return handle_execve_sucompat(filename_user);
 }
 
+#ifdef CONFIG_KSU_MANUAL_HOOK
+int ksu_handle_execveat_init(struct filename *filename)
+{
+	if (current->pid != 1 && is_init(get_current_cred())) {
+		if (unlikely(strcmp(filename->name, KSUD_PATH) == 0)) {
+			pr_info("hook_manager: escape to root for init executing ksud: %d\n",
+				current->pid);
+			escape_to_root_for_init();
+		}
+		return 0;
+	}
+	return 1;
+}
+#endif
+
 int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 				 void *__never_use_argv, void *__never_use_envp,
 				 int *__never_use_flags)
@@ -194,7 +210,9 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
 int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
 			void *envp, int *flags)
 {
-	ksu_handle_execveat_ksud(fd, filename_ptr, argv, envp, flags);
+	if (ksu_handle_execveat_ksud(fd, filename_ptr, argv, envp, flags)) {
+		return 0;
+	}
 	return ksu_handle_execveat_sucompat(fd, filename_ptr, argv, envp,
 					    flags);
 }
