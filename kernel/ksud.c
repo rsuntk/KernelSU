@@ -393,10 +393,10 @@ append_ksu_rc:
 		append_count = count - ret;
 	// copy_to_user returns the number of not copied
 	if (copy_to_user(buf + ret, KERNEL_SU_RC + ksu_rc_pos, append_count)) {
-		pr_info("read_proxy: append error, totally appended %ld\n",
+		pr_info("read_proxy: append error, totally appended %zd\n",
 			ksu_rc_pos);
 	} else {
-		pr_info("read_proxy: append %ld\n", append_count);
+		pr_info("read_proxy: append %zu\n", append_count);
 
 		ksu_rc_pos += append_count;
 		if (ksu_rc_pos == ksu_rc_len) {
@@ -426,10 +426,10 @@ append_ksu_rc:
 	append_count = copy_to_iter(KERNEL_SU_RC + ksu_rc_pos,
 				    ksu_rc_len - ksu_rc_pos, to);
 	if (!append_count) {
-		pr_info("read_iter_proxy: append error, totally appended %ld\n",
+		pr_info("read_iter_proxy: append error, totally appended %zd\n",
 			ksu_rc_pos);
 	} else {
-		pr_info("read_iter_proxy: append %ld\n", append_count);
+		pr_info("read_iter_proxy: append %zu\n", append_count);
 
 		ksu_rc_pos += append_count;
 		if (ksu_rc_pos == ksu_rc_len) {
@@ -516,7 +516,7 @@ int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
 	rc_hooked = true;
 
 	// now we can sure that the init process is reading
-	// `/system/etc/init/init.rc`
+	// `/system/etc/init/hw/init.rc` or `/init.rc`
 	count = *count_ptr;
 
 	pr_info("vfs_read: %s, comm: %s, count: %zu, rc_count: %zu\n", dpath,
