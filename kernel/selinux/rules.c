@@ -69,6 +69,10 @@ void apply_kernelsu_rules(void)
 
 	// our ksud triggered by init
 	ksu_allow(db, "init", KERNEL_SU_DOMAIN, ALL, ALL);
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	ksu_allow(db, "init", "adb_data_file", "file", ALL);
+	ksu_allow(db, "init", "adb_data_file", "dir", ALL); // #1289
+#endif
 
 	// copied from Magisk rules
 	// suRights
