@@ -129,6 +129,7 @@ import top.yukonga.miuix.kmp.icon.extended.HorizontalSplit
 import top.yukonga.miuix.kmp.icon.extended.Link
 import top.yukonga.miuix.kmp.icon.extended.MoreCircle
 import top.yukonga.miuix.kmp.icon.extended.TopDownloads
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -1044,15 +1045,20 @@ fun ModuleRepoDetailScreen(
         tint = HazeTint(colorScheme.surface.copy(0.8f))
     )
 
+    val blurEnabled = me.weishu.kernelsu.ui.util.LocalBlurEnabled.current
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.hazeEffect(hazeState) {
-                    style = hazeStyle
-                    blurRadius = 30.dp
-                    noiseFactor = 0f
+                modifier = if (blurEnabled) {
+                    Modifier.hazeEffect(hazeState) {
+                        style = hazeStyle
+                        blurRadius = me.weishu.kernelsu.ui.util.blurRadius(blurEnabled)
+                        noiseFactor = 0f
+                    }
+                } else {
+                    Modifier
                 },
-                color = Color.Transparent,
+                color = if (blurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
                 title = module.moduleName,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
@@ -1150,11 +1156,13 @@ fun ModuleRepoDetailScreen(
             }
             Column(
                 modifier = Modifier
-                    .hazeEffect(hazeState) {
-                        style = hazeStyle
-                        blurRadius = 30.dp
-                        noiseFactor = 0f
-                    }
+                    .then(if (blurEnabled) {
+                        Modifier.hazeEffect(hazeState) {
+                            style = hazeStyle
+                            blurRadius = me.weishu.kernelsu.ui.util.blurRadius(blurEnabled)
+                            noiseFactor = 0f
+                        }
+                    } else Modifier.background(MiuixTheme.colorScheme.surface))
                     .zIndex(1f)
                     .padding(
                         top = innerPadding.calculateTopPadding() + dynamicTopPadding,

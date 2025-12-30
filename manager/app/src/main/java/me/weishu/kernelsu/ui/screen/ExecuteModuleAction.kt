@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
@@ -61,6 +62,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Download
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import java.io.File
@@ -177,12 +179,18 @@ private fun TopBar(
     hazeState: HazeState,
     hazeStyle: HazeStyle,
 ) {
+    val blurEnabled = me.weishu.kernelsu.ui.util.LocalBlurEnabled.current
     SmallTopAppBar(
-        modifier = Modifier.hazeEffect(hazeState) {
-            style = hazeStyle
-            blurRadius = 30.dp
-            noiseFactor = 0f
+        modifier = if (blurEnabled) {
+            Modifier.hazeEffect(hazeState) {
+                style = hazeStyle
+                blurRadius = me.weishu.kernelsu.ui.util.blurRadius(blurEnabled)
+                noiseFactor = 0f
+            }
+        } else {
+            Modifier
         },
+        color = if (blurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
         title = stringResource(R.string.action),
         navigationIcon = {
             IconButton(

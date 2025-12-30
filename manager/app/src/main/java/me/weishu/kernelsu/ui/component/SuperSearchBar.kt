@@ -117,15 +117,16 @@ class SearchStatus(val label: String) {
             if (visible) 1f else 0f,
             animationSpec = tween(if (visible) 550 else 0, easing = FastOutSlowInEasing),
         )
+        val blurEnabled = me.weishu.kernelsu.ui.util.LocalBlurEnabled.current
         Box(modifier = modifier) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
                     .then(
-                        if (hazeState != null && hazeStyle != null) {
+                        if (hazeState != null && hazeStyle != null && blurEnabled) {
                             Modifier.hazeEffect(hazeState) {
                                 style = hazeStyle
-                                blurRadius = 30.dp
+                                blurRadius = me.weishu.kernelsu.ui.util.blurRadius(blurEnabled)
                                 noiseFactor = 0f
                             }
                         } else {
@@ -163,6 +164,7 @@ fun SearchStatus.SearchBox(
 
     val offsetY = remember { mutableIntStateOf(0) }
     val boxHeight = remember { mutableStateOf(0.dp) }
+    val blurEnabled = me.weishu.kernelsu.ui.util.LocalBlurEnabled.current
 
     Box(
         modifier = Modifier
@@ -182,11 +184,17 @@ fun SearchStatus.SearchBox(
             .pointerInput(Unit) {
                 detectTapGestures { searchStatus.current = SearchStatus.Status.EXPANDING }
             }
-            .hazeEffect(hazeState) {
-                style = hazeStyle
-                blurRadius = 30.dp
-                noiseFactor = 0f
-            }
+            .then(
+                if (blurEnabled) {
+                    Modifier.hazeEffect(hazeState) {
+                        style = hazeStyle
+                        blurRadius = me.weishu.kernelsu.ui.util.blurRadius(blurEnabled)
+                        noiseFactor = 0f
+                    }
+                } else {
+                    Modifier.background(colorScheme.surface)
+                }
+            )
     ) {
         collapseBar(searchStatus, searchBarTopPadding, contentPadding)
     }

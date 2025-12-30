@@ -88,6 +88,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.ConvertFile
 import top.yukonga.miuix.kmp.icon.extended.MoveFile
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -424,13 +425,18 @@ private fun TopBar(
     hazeState: HazeState,
     hazeStyle: HazeStyle,
 ) {
+    val blurEnabled = me.weishu.kernelsu.ui.util.LocalBlurEnabled.current
     TopAppBar(
-        modifier = Modifier.hazeEffect(hazeState) {
-            style = hazeStyle
-            blurRadius = 30.dp
-            noiseFactor = 0f
+        modifier = if (blurEnabled) {
+            Modifier.hazeEffect(hazeState) {
+                style = hazeStyle
+                blurRadius = me.weishu.kernelsu.ui.util.blurRadius(blurEnabled)
+                noiseFactor = 0f
+            }
+        } else {
+            Modifier
         },
-        color = Color.Transparent,
+        color = if (blurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
         title = stringResource(R.string.install),
         navigationIcon = {
             IconButton(

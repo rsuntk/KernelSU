@@ -57,6 +57,7 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.extra.SuperArrow
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
@@ -81,15 +82,20 @@ fun AboutScreen(navigator: DestinationsNavigator) {
     )
     val result = extractLinks(htmlString)
 
+    val blurEnabled = me.weishu.kernelsu.ui.util.LocalBlurEnabled.current
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.hazeEffect(hazeState) {
-                    style = hazeStyle
-                    blurRadius = 30.dp
-                    noiseFactor = 0f
+                modifier = if (blurEnabled) {
+                    Modifier.hazeEffect(hazeState) {
+                        style = hazeStyle
+                        blurRadius = me.weishu.kernelsu.ui.util.blurRadius(blurEnabled)
+                        noiseFactor = 0f
+                    }
+                } else {
+                    Modifier
                 },
-                color = Color.Transparent,
+                color = if (blurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
                 title = stringResource(R.string.about),
                 navigationIcon = {
                     IconButton(
