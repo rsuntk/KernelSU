@@ -356,7 +356,7 @@ pub fn umount_list_getlist() -> anyhow::Result<()> {
     };
 
     ksuctl(KSU_IOCTL_ADD_TRY_UMOUNT, &raw mut cmd)
-        .map_err(|e| anyhow::anyhow!("Failed to get umount list: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to get umount list: {e}"))?;
 
     let mut char_buf: *const u8 = buf.as_ptr();
     let start_ptr: *const u8 = char_buf;
