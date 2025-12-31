@@ -26,7 +26,7 @@ jobs:
         fetch-depth: 0
 
     - name: Download artifacts
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
 
     - name: Prepare LKM files
       if: ${{ inputs.pack_lkm }}
@@ -61,7 +61,7 @@ jobs:
 
     - name: Upload ksuinit artifact
       if: inputs.target == 'aarch64-linux-android'
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: ksuinit-${{ inputs.target }}
         path: userspace/ksuinit/target/**/release/ksuinit*
@@ -70,7 +70,7 @@ jobs:
       run: CROSS_NO_WARNINGS=0 cross build --target ${{ inputs.target }} --release --manifest-path ./userspace/ksud/Cargo.toml
 
     - name: Upload ksud artifact
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: ksud-${{ inputs.target }}
         path: userspace/ksud/target/**/release/ksud*
