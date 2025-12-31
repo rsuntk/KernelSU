@@ -72,9 +72,9 @@ static void do_install_manager_fd(void)
 // force_sig kcompat, TODO: move it out of core_hook.c
 // https://elixir.bootlin.com/linux/v5.3-rc1/source/kernel/signal.c#L1613
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0)
-#define send_sigkill() force_sig(SIGKILL)
+#define send_sig(sig) force_sig(sig)
 #else
-#define send_sigkill() force_sig(SIGKILL, current)
+#define send_sig(sig) force_sig(sig, current)
 #endif
 
 extern void disable_seccomp(void);
@@ -91,7 +91,7 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid)
 		if (unlikely(new_euid == 0) && !is_ksu_domain()) {
 			pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
 				current->pid, current->comm, old_uid, new_uid);
-			send_sigkill();
+			send_sig(SIGKILL);
 			return 0;
 		}
 		// disallow appuid decrease to any other uid if it is not allowed to su
@@ -99,7 +99,7 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid)
 		    !ksu_is_allow_uid_for_current(old_uid)) {
 			pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
 				current->pid, current->comm, old_uid, new_euid);
-			send_sigkill();
+			send_sig(SIGKILL);
 			return 0;
 		}
 		return 0;
@@ -135,6 +135,12 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid)
      defined(CONFIG_KSU_MANUAL_HOOK))
 int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 {
+	if (!is_sid_equal(current_cred(), ksu_zygote_sid)) {
+#ifdef CONFIG_KSU_DEBUG
+		pr_info("setresuid: disallow non zygote sid!\n");
+#endif
+		return 0;
+	}
 	return ksu_handle_setuid_common(ruid, current_uid().val, euid);
 }
 #endif

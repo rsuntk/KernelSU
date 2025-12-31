@@ -27,7 +27,8 @@
 
 struct cred *ksu_cred;
 
-#ifdef CONFIG_KSU_MANUAL_HOOK
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0) &&                           \
+     defined(CONFIG_KSU_MANUAL_HOOK))
 extern void __init ksu_lsm_hook_init(void);
 #endif
 
@@ -42,13 +43,20 @@ int __init kernelsu_init(void)
 #endif
 
 #ifdef CONFIG_KSU_DEBUG
-	pr_alert("*************************************************************");
-	pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
-	pr_alert("**                                                         **");
-	pr_alert("**         You are running KernelSU in DEBUG mode          **");
-	pr_alert("**                                                         **");
-	pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
-	pr_alert("*************************************************************");
+	pr_alert(
+		"*************************************************************");
+	pr_alert(
+		"**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
+	pr_alert(
+		"**                                                         **");
+	pr_alert(
+		"**         You are running KernelSU in DEBUG mode          **");
+	pr_alert(
+		"**                                                         **");
+	pr_alert(
+		"**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
+	pr_alert(
+		"*************************************************************");
 #endif
 
 	ksu_cred = prepare_creds();
@@ -64,7 +72,9 @@ int __init kernelsu_init(void)
 	ksu_syscall_hook_manager_init();
 #endif
 #ifdef CONFIG_KSU_MANUAL_HOOK
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
 	ksu_lsm_hook_init();
+#endif
 	ksu_setuid_hook_init();
 	ksu_sucompat_init();
 #endif

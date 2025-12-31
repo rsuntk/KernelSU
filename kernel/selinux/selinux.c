@@ -136,15 +136,45 @@ bool is_init(const struct cred *cred)
 	return is_context(cred, "u:r:init:s0");
 }
 
+bool is_sid_equal(const struct cred *cred, u32 val)
+{
+	taskcred_sec_t *tsec = selinux_cred(cred);
+	if (!tsec) {
+		return false;
+	}
+	return tsec->sid == val;
+}
+
+static inline void ksu_get_sid(const char *secctx_name, u32 *out_sid)
+{
+	int err;
+
+	if (!secctx_name || !out_sid) {
+		return;
+	}
+
+	err = security_secctx_to_secid(secctx_name, strlen(secctx_name),
+				       out_sid);
+	if (err) {
+		pr_err("ksu_get_sid: cannot get sid for %s, err: %d\n",
+		       secctx_name, err);
+		return;
+	}
+	pr_info("ksu_get_sid: %u (secctx=%s)\n", *out_sid, secctx_name);
+}
+
+u32 ksu_zygote_sid = 0;
+void ksu_set_zygote_sid(void)
+{
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0) &&                          \
+     defined(CONFIG_KSU_MANUAL_HOOK))
+	ksu_get_sid("u:r:zygote:s0", &ksu_zygote_sid);
+#endif
+}
+
 u32 ksu_get_ksu_file_sid(void)
 {
 	u32 ksu_file_sid = 0;
-	int err = security_secctx_to_secid(
-		KSU_FILE_CONTEXT, strlen(KSU_FILE_CONTEXT), &ksu_file_sid);
-
-	if (err) {
-		pr_info("get ksufile sid err %d\n", err);
-	}
-
+	ksu_get_sid(KSU_FILE_CONTEXT, &ksu_file_sid);
 	return ksu_file_sid;
 }

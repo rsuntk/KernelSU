@@ -31,7 +31,13 @@ bool is_zygote(const struct cred *cred);
 
 bool is_init(const struct cred *cred);
 
+bool is_sid_equal(const struct cred *cred, u32 val);
+
 void apply_kernelsu_rules(void);
+
+extern u32 ksu_zygote_sid;
+
+void ksu_set_zygote_sid(void);
 
 u32 ksu_get_ksu_file_sid(void);
 
