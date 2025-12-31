@@ -16,7 +16,6 @@
 
 #include "allowlist.h"
 #include "setuid_hook.h"
-#include "feature.h"
 #include "klog.h" // IWYU pragma: keep
 #include "manager.h"
 #include "selinux/selinux.h"
@@ -26,29 +25,6 @@
 #endif
 #include "kernel_umount.h"
 #include "kernel_compat.h"
-
-static bool ksu_enhanced_security_enabled = false;
-
-static int enhanced_security_feature_get(u64 *value)
-{
-	*value = ksu_enhanced_security_enabled ? 1 : 0;
-	return 0;
-}
-
-static int enhanced_security_feature_set(u64 value)
-{
-	bool enable = value != 0;
-	ksu_enhanced_security_enabled = enable;
-	pr_info("enhanced_security: set to %d\n", enable);
-	return 0;
-}
-
-static const struct ksu_feature_handler enhanced_security_handler = {
-	.feature_id = KSU_FEATURE_ENHANCED_SECURITY,
-	.name = "enhanced_security",
-	.get_handler = enhanced_security_feature_get,
-	.set_handler = enhanced_security_feature_set,
-};
 
 static void ksu_install_manager_fd_tw_func(struct callback_head *cb)
 {
@@ -83,27 +59,6 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid)
 #ifdef CONFIG_KSU_DEBUG
 	pr_info("handle_setuid from %d to %d\n", old_uid, new_uid);
 #endif
-
-	// if old process is root, ignore it.
-	if (old_uid != 0 && ksu_enhanced_security_enabled) {
-		// disallow any non-ksu domain escalation from non-root to root!
-		// euid is what we care about here as it controls permission
-		if (unlikely(new_euid == 0) && !is_ksu_domain()) {
-			pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
-				current->pid, current->comm, old_uid, new_uid);
-			send_sig(SIGKILL);
-			return 0;
-		}
-		// disallow appuid decrease to any other uid if it is not allowed to su
-		if (is_appuid(old_uid) && new_euid < current_euid().val &&
-		    !ksu_is_allow_uid_for_current(old_uid)) {
-			pr_warn("find suspicious EoP: %d %s, from %d to %d\n",
-				current->pid, current->comm, old_uid, new_euid);
-			send_sig(SIGKILL);
-			return 0;
-		}
-		return 0;
-	}
 
 	if (likely(ksu_is_manager_appid_valid()) &&
 	    unlikely(ksu_get_manager_appid() == new_uid % PER_USER_RANGE)) {
@@ -148,14 +103,10 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 void ksu_setuid_hook_init(void)
 {
 	ksu_kernel_umount_init();
-	if (ksu_register_feature_handler(&enhanced_security_handler)) {
-		pr_err("Failed to register enhanced security feature handler\n");
-	}
 }
 
 void ksu_setuid_hook_exit(void)
 {
 	pr_info("ksu setuid exit\n");
 	ksu_kernel_umount_exit();
-	ksu_unregister_feature_handler(KSU_FEATURE_ENHANCED_SECURITY);
 }
