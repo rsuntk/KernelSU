@@ -76,7 +76,6 @@ import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.extra.SuperArrow
 import top.yukonga.miuix.kmp.extra.SuperDropdown
 import top.yukonga.miuix.kmp.extra.SuperSwitch
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -98,20 +97,15 @@ fun SettingPager(
         tint = HazeTint(colorScheme.surface.copy(0.8f))
     )
 
-    val blurEnabled = me.weishu.kernelsu.ui.util.LocalBlurEnabled.current
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = if (blurEnabled) {
-                    Modifier.hazeEffect(hazeState) {
-                        style = hazeStyle
-                        blurRadius = me.weishu.kernelsu.ui.util.blurRadius(blurEnabled)
-                        noiseFactor = 0f
-                    }
-                } else {
-                    Modifier
+                modifier = Modifier.hazeEffect(hazeState) {
+                    style = hazeStyle
+                    blurRadius = 30.dp
+                    noiseFactor = 0f
                 },
-                color = if (blurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
+                color = Color.Transparent,
                 title = stringResource(R.string.settings),
                 scrollBehavior = scrollBehavior
             )
@@ -226,27 +220,6 @@ fun SettingPager(
                         onSelectedIndexChange = { index ->
                             prefs.edit { putInt("color_mode", index) }
                             themeMode = index
-                        }
-                    )
-
-                    var enableBlur by rememberSaveable {
-                        mutableStateOf(prefs.getBoolean("enable_blur", true))
-                    }
-                    SuperSwitch(
-                        title = stringResource(id = R.string.settings_blur),
-                        summary = stringResource(id = R.string.settings_blur_summary),
-                        leftAction = {
-                            Icon(
-                                Icons.Rounded.Palette,
-                                modifier = Modifier.padding(end = 16.dp),
-                                contentDescription = stringResource(id = R.string.settings_blur),
-                                tint = colorScheme.onBackground
-                            )
-                        },
-                        checked = enableBlur,
-                        onCheckedChange = {
-                            prefs.edit { putBoolean("enable_blur", it) }
-                            enableBlur = it
                         }
                     )
 

@@ -72,8 +72,8 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.icons.basic.Search
-import top.yukonga.miuix.kmp.icon.icons.basic.SearchCleanup
+import top.yukonga.miuix.kmp.icon.basic.Search
+import top.yukonga.miuix.kmp.icon.basic.SearchCleanup
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 
@@ -117,16 +117,15 @@ class SearchStatus(val label: String) {
             if (visible) 1f else 0f,
             animationSpec = tween(if (visible) 550 else 0, easing = FastOutSlowInEasing),
         )
-        val blurEnabled = me.weishu.kernelsu.ui.util.LocalBlurEnabled.current
         Box(modifier = modifier) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
                     .then(
-                        if (hazeState != null && hazeStyle != null && blurEnabled) {
+                        if (hazeState != null && hazeStyle != null) {
                             Modifier.hazeEffect(hazeState) {
                                 style = hazeStyle
-                                blurRadius = me.weishu.kernelsu.ui.util.blurRadius(blurEnabled)
+                                blurRadius = 30.dp
                                 noiseFactor = 0f
                             }
                         } else {
@@ -164,7 +163,6 @@ fun SearchStatus.SearchBox(
 
     val offsetY = remember { mutableIntStateOf(0) }
     val boxHeight = remember { mutableStateOf(0.dp) }
-    val blurEnabled = me.weishu.kernelsu.ui.util.LocalBlurEnabled.current
 
     Box(
         modifier = Modifier
@@ -184,17 +182,11 @@ fun SearchStatus.SearchBox(
             .pointerInput(Unit) {
                 detectTapGestures { searchStatus.current = SearchStatus.Status.EXPANDING }
             }
-            .then(
-                if (blurEnabled) {
-                    Modifier.hazeEffect(hazeState) {
-                        style = hazeStyle
-                        blurRadius = me.weishu.kernelsu.ui.util.blurRadius(blurEnabled)
-                        noiseFactor = 0f
-                    }
-                } else {
-                    Modifier.background(colorScheme.surface)
-                }
-            )
+            .hazeEffect(hazeState) {
+                style = hazeStyle
+                blurRadius = 30.dp
+                noiseFactor = 0f
+            }
     ) {
         collapseBar(searchStatus, searchBarTopPadding, contentPadding)
     }

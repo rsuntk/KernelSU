@@ -85,7 +85,6 @@ class MainActivity : ComponentActivity() {
             val prefs = context.getSharedPreferences("settings", MODE_PRIVATE)
             var colorMode by remember { mutableIntStateOf(prefs.getInt("color_mode", 0)) }
             var keyColorInt by remember { mutableIntStateOf(prefs.getInt("key_color", 0)) }
-            var blurEnabled by remember { mutableStateOf(prefs.getBoolean("enable_blur", true)) }
             val keyColor = remember(keyColorInt) { if (keyColorInt == 0) null else Color(keyColorInt) }
 
             val darkMode = when (colorMode) {
@@ -113,7 +112,6 @@ class MainActivity : ComponentActivity() {
                     when (key) {
                         "color_mode" -> colorMode = prefs.getInt("color_mode", 0)
                         "key_color" -> keyColorInt = prefs.getInt("key_color", 0)
-                        "enable_blur" -> blurEnabled = prefs.getBoolean("enable_blur", true)
                     }
                 }
                 prefs.registerOnSharedPreferenceChangeListener(listener)
@@ -132,9 +130,8 @@ class MainActivity : ComponentActivity() {
                     navigator = navigator
                 )
 
-                CompositionLocalProvider(me.weishu.kernelsu.ui.util.LocalBlurEnabled provides blurEnabled) {
-                    Scaffold {
-                        DestinationsNavHost(
+                Scaffold {
+                    DestinationsNavHost(
                         modifier = Modifier,
                         navGraph = NavGraphs.root,
                         navController = navController,
@@ -170,9 +167,8 @@ class MainActivity : ComponentActivity() {
                                         animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
                                     )
                                 }
-                            }
-                        )
-                    }
+                        }
+                    )
                 }
             }
         }
@@ -327,8 +323,10 @@ private fun ZipFileIntentHandler(
         }
 
         if (isSafeMode) {
-            Toast.makeText(context,
-                context.getString(R.string.safe_mode_module_disabled), Toast.LENGTH_SHORT)
+            Toast.makeText(
+                context,
+                context.getString(R.string.safe_mode_module_disabled), Toast.LENGTH_SHORT
+            )
                 .show()
         } else {
             zipUri = uri

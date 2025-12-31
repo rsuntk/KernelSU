@@ -33,7 +33,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.Link
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -85,6 +84,8 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Link
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.isDynamicColor
@@ -257,18 +258,13 @@ private fun TopBar(
     hazeState: HazeState,
     hazeStyle: HazeStyle,
 ) {
-    val blurEnabled = me.weishu.kernelsu.ui.util.LocalBlurEnabled.current
     TopAppBar(
-        modifier = if (blurEnabled) {
-            Modifier.hazeEffect(hazeState) {
-                style = hazeStyle
-                blurRadius = me.weishu.kernelsu.ui.util.blurRadius(blurEnabled)
-                noiseFactor = 0f
-            }
-        } else {
-            Modifier
+        modifier = Modifier.hazeEffect(hazeState) {
+            style = hazeStyle
+            blurRadius = 30.dp
+            noiseFactor = 0f
         },
-        color = if (blurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
+        color = Color.Transparent,
         title = stringResource(R.string.app_name),
         actions = {
             RebootListPopup(
@@ -525,6 +521,7 @@ fun WarningCard(
         }
     }
 }
+
 @Composable
 fun UnofficialCard() {
     val uriHandler = LocalUriHandler.current
@@ -566,8 +563,7 @@ fun LearnMoreCard() {
             summary = stringResource(R.string.home_click_to_learn_kernelsu),
             rightActions = {
                 Icon(
-                    modifier = Modifier.size(28.dp),
-                    imageVector = Icons.Rounded.Link,
+                    imageVector = MiuixIcons.Link,
                     tint = colorScheme.onSurface,
                     contentDescription = null
                 )
@@ -592,8 +588,7 @@ fun DonateCard() {
             summary = stringResource(R.string.home_support_content),
             rightActions = {
                 Icon(
-                    modifier = Modifier.size(28.dp),
-                    imageVector = Icons.Rounded.Link,
+                    imageVector = MiuixIcons.Link,
                     tint = colorScheme.onSurface,
                     contentDescription = null
                 )

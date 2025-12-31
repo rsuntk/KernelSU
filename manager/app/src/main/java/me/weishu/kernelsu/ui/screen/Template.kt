@@ -1,6 +1,7 @@
 package me.weishu.kernelsu.ui.screen
 
 import android.annotation.SuppressLint
+import android.content.ClipData
 import android.widget.Toast
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -50,16 +51,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.dropUnlessResumed
@@ -86,7 +89,6 @@ import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.ListPopup
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -97,10 +99,10 @@ import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
+import top.yukonga.miuix.kmp.extra.SuperListPopup
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.icons.useful.Back
-import top.yukonga.miuix.kmp.icon.icons.useful.Copy
-import top.yukonga.miuix.kmp.icon.icons.useful.Refresh
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
@@ -172,7 +174,7 @@ fun AppProfileTemplateScreen(
 
     Scaffold(
         topBar = {
-            val clipboardManager = LocalClipboardManager.current
+            val clipboard = LocalClipboard.current
             val context = LocalContext.current
             val showToast = fun(msg: String) {
                 scope.launch(Dispatchers.Main) {
@@ -185,14 +187,15 @@ fun AppProfileTemplateScreen(
                     scope.launch { viewModel.fetchTemplates(true) }
                 },
                 onImport = {
-                    clipboardManager.getText()?.text?.let {
-                        if (it.isEmpty()) {
-                            showToast(context.getString(R.string.app_profile_template_import_empty))
-                            return@let
-                        }
-                        scope.launch {
+                    scope.launch {
+                        clipboard.getClipEntry()?.clipData?.getItemAt(0)?.text?.toString()?.let {
+                            if (it.isEmpty()) {
+                                showToast(context.getString(R.string.app_profile_template_import_empty))
+                                return@let
+                            }
                             viewModel.importTemplates(
-                                it, {
+                                it,
+                                {
                                     showToast(context.getString(R.string.app_profile_template_import_success))
                                     viewModel.fetchTemplates(false)
                                 },
@@ -206,10 +209,11 @@ fun AppProfileTemplateScreen(
                         viewModel.exportTemplates(
                             {
                                 showToast(context.getString(R.string.app_profile_template_export_empty))
+                            },
+                            {
+                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("template", it)))
                             }
-                        ) {
-                            clipboardManager.setText(AnnotatedString(it))
-                        }
+                        )
                     }
                 },
                 scrollBehavior = scrollBehavior,
@@ -426,48 +430,36 @@ private fun TopBar(
     hazeState: HazeState,
     hazeStyle: HazeStyle,
 ) {
-    val blurEnabled = me.weishu.kernelsu.ui.util.LocalBlurEnabled.current
     TopAppBar(
-        modifier = if (blurEnabled) {
-            Modifier.hazeEffect(hazeState) {
-                style = hazeStyle
-                blurRadius = me.weishu.kernelsu.ui.util.blurRadius(blurEnabled)
-                noiseFactor = 0f
-            }
-        } else {
-            Modifier
+        modifier = Modifier.hazeEffect(hazeState) {
+            style = hazeStyle
+            blurRadius = 30.dp
+            noiseFactor = 0f
         },
-        color = if (blurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
+        color = Color.Transparent,
         title = stringResource(R.string.settings_profile_template),
         navigationIcon = {
             IconButton(
                 modifier = Modifier.padding(start = 16.dp),
                 onClick = onBack
             ) {
+                val layoutDirection = LocalLayoutDirection.current
                 Icon(
-                    imageVector = MiuixIcons.Useful.Back,
+                    modifier = Modifier.graphicsLayer {
+                        if (layoutDirection == LayoutDirection.Rtl) scaleX = -1f
+                    },
+                    imageVector = MiuixIcons.Back,
                     contentDescription = null,
                     tint = colorScheme.onBackground
                 )
             }
         },
         actions = {
-            IconButton(
-                modifier = Modifier.padding(end = 16.dp),
-                onClick = onSync
-            ) {
-                Icon(
-                    imageVector = MiuixIcons.Useful.Refresh,
-                    contentDescription = stringResource(id = R.string.app_profile_template_sync),
-                    tint = colorScheme.onBackground
-                )
-            }
-
             val showTopPopup = remember { mutableStateOf(false) }
-            ListPopup(
+            SuperListPopup(
                 show = showTopPopup,
                 popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
-                alignment = PopupPositionProvider.Align.TopRight,
+                alignment = PopupPositionProvider.Align.TopEnd,
                 onDismissRequest = {
                     showTopPopup.value = false
                 }
@@ -500,7 +492,7 @@ private fun TopBar(
                 holdDownState = showTopPopup.value
             ) {
                 Icon(
-                    imageVector = MiuixIcons.Useful.Copy,
+                    imageVector = MiuixIcons.Copy,
                     contentDescription = stringResource(id = R.string.app_profile_import_export),
                     tint = colorScheme.onBackground
                 )

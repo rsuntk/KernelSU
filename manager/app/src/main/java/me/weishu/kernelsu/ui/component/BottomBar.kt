@@ -22,7 +22,7 @@ import me.weishu.kernelsu.ui.LocalSelectedPage
 import me.weishu.kernelsu.ui.util.rootAvailable
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationItem
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+
 
 @Composable
 fun BottomBar(
@@ -34,7 +34,6 @@ fun BottomBar(
 
     val page = LocalSelectedPage.current
     val handlePageChange = LocalHandlePageChange.current
-    val blurEnabled = me.weishu.kernelsu.ui.util.LocalBlurEnabled.current
 
     if (!fullFeatured) return
 
@@ -46,16 +45,13 @@ fun BottomBar(
     }
 
     NavigationBar(
-        modifier = if (blurEnabled) {
-            Modifier.hazeEffect(hazeState) {
+        modifier = Modifier
+            .hazeEffect(hazeState) {
                 style = hazeStyle
-                blurRadius = me.weishu.kernelsu.ui.util.blurRadius(blurEnabled)
+                blurRadius = 30.dp
                 noiseFactor = 0f
-            }
-        } else {
-            Modifier
-        },
-        color = if (blurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
+            },
+        color = Color.Transparent,
         items = item,
         selected = page,
         onClick = handlePageChange

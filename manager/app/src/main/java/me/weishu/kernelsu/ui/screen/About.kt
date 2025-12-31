@@ -27,12 +27,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.FixedScale
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.dropUnlessResumed
@@ -54,10 +57,9 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.extra.SuperArrow
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.icons.useful.Back
+import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 
@@ -74,33 +76,32 @@ fun AboutScreen(navigator: DestinationsNavigator) {
 
     val htmlString = stringResource(
         id = R.string.about_source_code,
-        "<b><a href=\"https://github.com/rsuntk/KernelSU\">GitHub</a></b>",
-        "<b><a href=\"https://t.me/rsukrnlsu\">Telegram</a></b>"
+        "<b><a href=\"https://github.com/tiann/KernelSU\">GitHub</a></b>",
+        "<b><a href=\"https://t.me/KernelSU\">Telegram</a></b>"
     )
     val result = extractLinks(htmlString)
 
-    val blurEnabled = me.weishu.kernelsu.ui.util.LocalBlurEnabled.current
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = if (blurEnabled) {
-                    Modifier.hazeEffect(hazeState) {
-                        style = hazeStyle
-                        blurRadius = me.weishu.kernelsu.ui.util.blurRadius(blurEnabled)
-                        noiseFactor = 0f
-                    }
-                } else {
-                    Modifier
+                modifier = Modifier.hazeEffect(hazeState) {
+                    style = hazeStyle
+                    blurRadius = 30.dp
+                    noiseFactor = 0f
                 },
-                color = if (blurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
+                color = Color.Transparent,
                 title = stringResource(R.string.about),
                 navigationIcon = {
                     IconButton(
                         modifier = Modifier.padding(start = 16.dp),
                         onClick = dropUnlessResumed { navigator.popBackStack() }
                     ) {
+                        val layoutDirection = LocalLayoutDirection.current
                         Icon(
-                            imageVector = MiuixIcons.Useful.Back,
+                            modifier = Modifier.graphicsLayer {
+                                if (layoutDirection == LayoutDirection.Rtl) scaleX = -1f
+                            },
+                            imageVector = MiuixIcons.Back,
                             contentDescription = null,
                             tint = colorScheme.onBackground
                         )
