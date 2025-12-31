@@ -541,8 +541,7 @@ fun UnofficialCard() {
             summary = stringResource(R.string.home_unofficial_kernelsu_summary),
             rightActions = {
                 Icon(
-                    modifier = Modifier.size(28.dp),
-                    imageVector = Icons.Rounded.Link,
+                    imageVector = MiuixIcons.Link,
                     tint = colorScheme.onSurface,
                     contentDescription = null
                 )
