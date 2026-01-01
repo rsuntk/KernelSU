@@ -225,19 +225,30 @@ static bool check_argv(struct user_arg_ptr argv, int index,
 {
 	const char __user *p;
 	int argc;
+	long ret;
 
 	argc = count(argv, MAX_ARG_STRINGS);
-	if (argc <= index)
+	if (argc <= index) {
 		return false;
+	}
 
 	p = get_user_arg_ptr(argv, index);
-	if (!p || IS_ERR(p))
+	if (IS_ERR_OR_NULL(p)) {
+		if (PTR_ERR(p)) {
+			pr_err("check_argv: invalid user pointer, err: %ld\n",
+			       PTR_ERR(p));
+		}
 		return false;
+	}
 
-	if (ksu_strncpy_from_user_nofault(buf, p, buf_len) <= 0)
+	ret = ksu_strncpy_from_user_nofault(buf, p, buf_len);
+	if (ret <= 0) {
+		pr_err("check_argv: failed to copy pointer, err: %ld\n", ret);
 		return false;
+	}
 
 	buf[buf_len - 1] = '\0';
+
 	return !strcmp(buf, expected);
 }
 
@@ -332,7 +343,8 @@ int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
 					     !strcmp(env_value, "true"))) {
 						pr_info("/init second_stage executed\n");
 						handle_second_stage();
-						init_second_stage_executed = true;
+						init_second_stage_executed =
+							true;
 					}
 				}
 			}
