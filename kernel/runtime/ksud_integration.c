@@ -240,7 +240,88 @@ append_module_rc:
 	return ret;
 }
 
-// TODO: add init.rc handling here!
+static bool is_init_rc(struct file *fp)
+{
+	// we are only interested in `init-like` process
+	// catch generic_init, init
+	if (!strstr(current->comm, "init")) {
+		return false;
+	}
+
+	if (!d_is_reg(fp->f_path.dentry)) {
+		return false;
+	}
+
+	// Bind mounts retain the source dentry name, so match the mounted path.
+	char path[256];
+	char *dpath = d_path(&fp->f_path, path, sizeof(path));
+
+	if (IS_ERR(dpath)) {
+		return false;
+	}
+
+	if (strcmp(dpath, "/system/etc/init/hw/init.rc")) {
+		return false;
+	}
+
+	pr_info("%s: %s \n", __func__, dpath);
+
+	return true;
+}
+
+static noinline void ksu_install_rc_hook(struct file *file)
+{
+	if (!is_init_rc(file)) {
+		return;
+	}
+
+	// we only process the first read
+	static bool rc_hooked = false;
+	if (rc_hooked) {
+		// we don't need these hooks, unregister it!
+		return;
+	}
+	rc_hooked = true;
+	stop_init_rc_hook();
+
+	// now we can sure that the init process is reading
+	// `/system/etc/init/init.rc`
+
+	load_module_rc_once();
+
+	pr_info("read init.rc, comm: %s, rc_count: %zu, module_rc: %zu\n", current->comm, ksu_rc_len, module_rc_len);
+
+	// Now we need to proxy the read and modify the result!
+	// But, we can not modify the file_operations directly, because it's in read-only memory.
+	// We just replace the whole file_operations with a proxy one.
+	memcpy(&fops_proxy, file->f_op, sizeof(struct file_operations));
+	orig_read = file->f_op->read;
+	if (orig_read) {
+		fops_proxy.read = read_proxy;
+	}
+	orig_read_iter = file->f_op->read_iter;
+	if (orig_read_iter) {
+		fops_proxy.read_iter = read_iter_proxy;
+	}
+	// replace the file_operations
+	file->f_op = &fops_proxy;
+
+	return;
+}
+
+// for sys_read kp / syscall table
+static noinline void ksu_handle_sys_read_fd(unsigned int fd)
+{
+	if (likely(!ksu_vfs_read_hook))
+		return;
+
+	struct file *file = fget(fd);
+	if (!file) {
+		return;
+	}
+	ksu_install_rc_hook(file);
+	fput(file);
+}
 
 static void stop_init_rc_hook()
 {

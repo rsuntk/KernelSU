@@ -32,6 +32,16 @@ int ksu_bprm_check(struct linux_binprm *bprm)
 	return 0;
 }
 
+int ksu_file_permission(struct file *file, int mask)
+{
+#if !defined(CONFIG_KSU_TAMPER_SYSCALL_TABLE)
+	if (unlikely(ksu_vfs_read_hook))
+		ksu_install_rc_hook(file);
+#endif
+
+	return 0;
+}
+
 static void __init ksu_lsm_hook_init(void)
 {
 	pr_info("%s: Automated LSM hooking disabled. Make sure manual security hooks are implemented!\n", __func__);

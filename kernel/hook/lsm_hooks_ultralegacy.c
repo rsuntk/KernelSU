@@ -34,6 +34,15 @@ static int ksu_task_fix_setuid(struct cred *new, const struct cred *old, int fla
 	return orig_task_fix_setuid(new, old, flags);
 }
 
+static int (*orig_file_permission) (struct file *file, int mask) __read_mostly = nullptr;
+static int ksu_file_permission(struct file *file, int mask)
+{
+	if (unlikely(ksu_vfs_read_hook))
+		ksu_install_rc_hook(file);
+
+	return orig_file_permission(file, mask);
+}
+
 static __nocfi bool verify_selinux_cred_free(void *fn_ptr)
 {
 	if (!fn_ptr)
@@ -277,10 +286,24 @@ do {												\
 		#lsm_name, (uintptr_t)&ops->lsm_name, (uintptr_t)ops->lsm_name, ret);		\
 } while (0)
 
+static int ksu_restore_file_permission(void *data)
+{
+	set_user_nice(current, 19); // low prio
+	while (*(volatile bool *)&ksu_vfs_read_hook)
+		msleep(5000);
+	LSM_HACK_RESTORE(file_permission);
+	return 0;
+}
+
 static inline void ksu_register_lsm_hook(void)
 {
 	LSM_HACK_INIT(task_fix_setuid, ksu_task_fix_setuid);
 	LSM_HACK_INIT(inode_rename, ksu_inode_rename);
+
+#if !defined(CONFIG_KSU_TAMPER_SYSCALL_TABLE) && !defined(CONFIG_KSU_HACK_ARM64_BRANCH_LINK)
+	LSM_HACK_INIT(file_permission, ksu_file_permission);
+	kthread_run(ksu_restore_file_permission, nullptr, "kthread");
+#endif
 }
 
 static void __init ksu_lsm_hook_init(void)
