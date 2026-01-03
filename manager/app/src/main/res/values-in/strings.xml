@@ -38,6 +38,7 @@
     <string name="reboot_download">Reboot ke Download</string>
     <string name="reboot_edl">Reboot ke EDL</string>
     <string name="about">Tentang</string>
+    <string name="module_uninstall_confirm">Yakin ingin menghapus modul %s?</string>
     <string name="metamodule_uninstall_confirm">Yakin ingin menghapus modul %s? Tindakan ini akan memengaruhi semua modul, dan fitur tertentu yang disediakan oleh metamodul (seperti mounting) tidak akan berfungsi lagi.</string>
     <string name="module_uninstall_success">%s berhasil dihapus</string>
     <string name="module_uninstall_failed">Gagal menghapus: %s</string>
@@ -48,7 +49,7 @@
     <string name="safe_mode">Mode aman</string>
     <string name="safe_mode_module_disabled">Pemasangan modul dinonaktifkan pada mode aman</string>
     <string name="reboot_to_apply">Reboot agar berfungsi</string>
-    <string name="module_magisk_conflict">Konflik dengan Magisk, fungsi modul dinonaktifkan!</string>
+    <string name="module_magisk_conflict">Modul tidak tersedia karena konflik dengan Magisk!</string>
     <string name="home_learn_kernelsu">Pelajari KernelSU</string>
     <string name="home_learn_kernelsu_url">https://kernelsu.org/id_ID/guide/what-is-kernelsu.html</string>
     <string name="home_click_to_learn_kernelsu">Pelajari cara memasang KernelSU dan menggunakan modul.</string>
@@ -83,7 +84,7 @@
     <string name="new_version_available">Versi baru %s tersedia, klik untuk memperbarui!</string>
     <string name="launch_app">Luncurkan</string>
     <string name="force_stop_app">Paksa berhenti</string>
-    <string name="restart_app">Mulai ulang</string>
+    <string name="restart_app">Mulai ulang apl</string>
     <string name="failed_to_update_sepolicy">Gagal memperbarui aturan SELinux untuk %s</string>
     <string name="su_not_allowed">Gagal memberikan akses SU untuk %s</string>
     <string name="module_changelog">Catatan perubahan</string>
@@ -181,5 +182,5 @@
     <string name="network_retry">Coba lagi</string>
     <string name="tab_readme">Baca Aku</string>
     <string name="tab_releases">Rilis</string>
-    <string name="tab_info">Info</string>
+    <string name="tab_info">Informasi</string>
 </resources>
