@@ -25,6 +25,8 @@ void setenforce(bool);
 
 bool getenforce(void);
 
+void ksu_selinux_init(void);
+
 bool is_task_ksu_domain(const struct cred *cred);
 
 bool is_ksu_domain(void);
