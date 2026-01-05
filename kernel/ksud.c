@@ -81,7 +81,6 @@ bool ksu_execveat_hook __read_mostly = true;
 bool ksu_input_hook __read_mostly = true;
 #endif
 
-u32 ksu_file_sid;
 void on_post_fs_data(void)
 {
 	static bool already_post_fs_data = false;
@@ -98,11 +97,6 @@ void on_post_fs_data(void)
 	ksu_observer_init();
 #endif
 	stop_input_hook();
-
-	ksu_file_sid = ksu_get_ksu_file_sid();
-	if (ksu_file_sid != 0) {
-		pr_info("got ksu_file context sid: %d\n", ksu_file_sid);
-	}
 }
 
 extern void ext4_unregister_sysfs(struct super_block *sb);
@@ -217,7 +211,7 @@ static struct callback_head on_post_fs_data_cb = {
 static inline void handle_second_stage(void)
 {
 	apply_kernelsu_rules();
-	ksu_selinux_init();
+	cache_sid();
 	setup_ksu_cred();
 }
 
