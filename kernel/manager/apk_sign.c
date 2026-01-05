@@ -319,5 +319,21 @@ int get_pkg_from_apk_dir_path(char *pkg, const char *path)
 
 bool is_manager_apk(char *path)
 {
-	return check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH);
+	// dummy.keystore
+	if (check_v2_signature(path, 0x363, "4359c171f32543394cbc23ef908c4bb94cad7c8087002ba164c8230948c21549"))
+		return true;
+
+	// kernelsu official
+	if (check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH))
+		return true;
+
+	// KOWX712/KernelSU
+	if (check_v2_signature(path, 0x375, "484fcba6e6c43b1fb09700633bf2fb4758f13cb0b2f4457b80d075084b26c588"))
+		return true;
+
+	// midori01/KernelSU
+	if (check_v2_signature(path, 0x0368, "b9ee6759de4794f954883458b722b97ae6527cb7709a051db9a2348c0eea1e42"))
+		return true;
+
+	return false;
 }
