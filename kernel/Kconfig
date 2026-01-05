@@ -9,6 +9,19 @@ config KSU
 	help
 	  Enable kernel-level root privileges on Android System.
 
+config KSU_TAMPER_SYSCALL_TABLE
+	bool "tamper sys_call_table for sucompat + sys_reboot"
+	depends on KSU
+	depends on (ARM || ARM64)
+	default n
+	help
+	  Use a high-performance syscall table hijacking method demonstrated on zx2c4's
+	  kernel-assisted-superuser. Replaces sys_reboot, sys_execve, sys_newfstatat,
+	  sys_faccessat, sys_newfstat_ret.
+	  As syscalls are called directly, it avoids indirect branch (blr) overhead and
+	  complies with Clang CFI.
+	  Verified on 3.0 ~ 7.1.
+
 config KSU_LSM_SECURITY_HOOKS
 	bool "Use LSM security hooks"
 	depends on KSU
