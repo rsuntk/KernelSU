@@ -217,6 +217,7 @@ static struct callback_head on_post_fs_data_cb = {
 static inline void handle_second_stage(void)
 {
 	apply_kernelsu_rules();
+	ksu_selinux_init();
 	setup_ksu_cred();
 }
 

@@ -90,7 +90,7 @@ int ksu_handle_setuid_common(uid_t new_uid, uid_t old_uid, uid_t new_euid)
      defined(CONFIG_KSU_MANUAL_HOOK))
 int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 {
-	if (!is_sid_equal(current_cred(), ksu_zygote_sid)) {
+	if (!is_zygote(current_cred())) {
 #ifdef CONFIG_KSU_DEBUG
 		pr_info("setresuid: disallow non zygote sid!\n");
 #endif
