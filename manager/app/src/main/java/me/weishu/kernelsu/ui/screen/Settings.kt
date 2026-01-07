@@ -235,7 +235,7 @@ fun SettingPager(
                     SuperSwitch(
                         title = stringResource(id = R.string.settings_blur),
                         summary = stringResource(id = R.string.settings_blur_summary),
-                        leftAction = {
+                        startAction = {
                             Icon(
                                 Icons.Rounded.Palette,
                                 modifier = Modifier.padding(end = 16.dp),

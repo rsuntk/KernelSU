@@ -539,7 +539,7 @@ fun UnofficialCard() {
         BasicComponent(
             title = stringResource(R.string.home_unofficial_kernelsu_title),
             summary = stringResource(R.string.home_unofficial_kernelsu_summary),
-            rightActions = {
+            endActions = {
                 Icon(
                     imageVector = MiuixIcons.Link,
                     tint = colorScheme.onSurface,
