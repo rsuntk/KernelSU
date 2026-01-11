@@ -71,12 +71,13 @@ static const char KERNEL_SU_RC[] =
 
 	"\n";
 
-static void stop_vfs_read_hook(void);
+static void stop_init_rc_hook(void);
 static void stop_execve_hook(void);
 static void stop_input_hook(void);
 
 #ifdef CONFIG_KSU_MANUAL_HOOK
 bool ksu_vfs_read_hook __read_mostly = true;
+bool ksu_vfs_fstat_hook __read_mostly = true;
 bool ksu_execveat_hook __read_mostly = true;
 bool ksu_input_hook __read_mostly = true;
 #endif
@@ -447,28 +448,31 @@ append_ksu_rc:
 	return ret;
 }
 
-static bool check_init_path(char *dpath)
+bool is_init_rc(struct file *fp)
 {
-	const char *valid_paths[] = { "/system/etc/init/hw/init.rc",
-				      "/init.rc" };
-	bool path_match = false;
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(valid_paths); i++) {
-		if (strcmp(dpath, valid_paths[i]) == 0) {
-			path_match = true;
-			break;
-		}
-	}
-
-	if (!path_match) {
-		pr_err("vfs_read: couldn't determine init.rc path for %s\n",
-		       dpath);
+	// we are only interested in `init` process
+	if (strcmp(current->comm, "init")) {
 		return false;
 	}
 
-	pr_info("vfs_read: got init.rc path: %s\n", dpath);
-	return true;
+	if (!d_is_reg(fp->f_path.dentry)) {
+		return false;
+	}
+
+	const char *short_name = fp->f_path.dentry->d_name.name;
+	if (strcmp(short_name, "init.rc")) {
+		// we are only interest `init.rc` file name file
+		return false;
+	}
+	char path[256];
+	char *dpath = d_path(&fp->f_path, path, sizeof(path));
+
+	if (IS_ERR(dpath)) {
+		return false;
+	}
+
+	return (!strcmp(dpath, "/init.rc") ||
+		!strcmp(dpath, "/system/etc/init/hw/init.rc"));
 }
 
 int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
@@ -479,55 +483,24 @@ int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
 		return 0;
 	}
 #endif
+	struct file *file = *file_ptr;
 
-	struct file *file;
-	size_t count;
-
-	if (strcmp(current->comm, "init")) {
-		// we are only interest in `init` process
-		return 0;
-	}
-
-	file = *file_ptr;
-	if (IS_ERR(file)) {
-		return 0;
-	}
-
-	if (!d_is_reg(file->f_path.dentry)) {
-		return 0;
-	}
-
-	const char *short_name = file->f_path.dentry->d_name.name;
-	if (strcmp(short_name, "init.rc")) {
-		// we are only interest `init.rc` file name file
-		return 0;
-	}
-	char path[256];
-	char *dpath = d_path(&file->f_path, path, sizeof(path));
-
-	if (IS_ERR(dpath)) {
-		return 0;
-	}
-
-	if (!check_init_path(dpath)) {
+	if (!is_init_rc(file)) {
 		return 0;
 	}
 
 	// we only process the first read
 	static bool rc_hooked = false;
 	if (rc_hooked) {
-		// we don't need this kprobe, unregister it!
-		stop_vfs_read_hook();
+		// we don't need these kprobe, unregister it!
+		stop_init_rc_hook();
 		return 0;
 	}
 	rc_hooked = true;
 
 	// now we can sure that the init process is reading
 	// `/system/etc/init/hw/init.rc` or `/init.rc`
-	count = *count_ptr;
-
-	pr_info("vfs_read: %s, comm: %s, count: %zu, rc_count: %zu\n", dpath,
-		current->comm, count, ksu_rc_len);
+	pr_info("read init.rc, count: %zu, rc_count: %zu\n", count, ksu_rc_len);
 
 	// Now we need to proxy the read and modify the result!
 	// But, we can not modify the file_operations directly, because it's in read-only memory.
@@ -551,13 +524,68 @@ int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr,
 			size_t *count_ptr)
 {
 	struct file *file = fget(fd);
+	int result;
 	if (!file) {
 		return 0;
 	}
-	int result = ksu_handle_vfs_read(&file, buf_ptr, count_ptr, NULL);
+
+	result = ksu_handle_vfs_read(&file, NULL, NULL, NULL);
 	fput(file);
 	return result;
 }
+
+#ifdef CONFIG_KSU_MANUAL_HOOK
+void ksu_handle_fstat(unsigned int *fd_ptr, struct stat __user **statbuf_ptr)
+{
+	int fd;
+	struct file *fp;
+	void __user *st_size_ptr, *statbuf;
+	long size, new_size;
+
+	if (!ksu_vfs_fstat_hook) {
+		return;
+	}
+
+	if (unlikely(!fd_ptr)) {
+		return;
+	}
+
+	fd = *fd_ptr;
+	fp = fget(fd);
+	if (!fp) {
+		pr_err("vfs_fstat: failed to get file pointer\n");
+		return;
+	}
+
+	if (is_init_rc(fp)) {
+		pr_info("vfs_fstat: stat init.rc\n");
+		fput(fp);
+		statbuf = *statbuf_ptr;
+		if (statbuf) {
+			st_size_ptr = statbuf + offsetof(struct stat, st_size);
+			if (!copy_from_user_nofault(&size, st_size_ptr,
+						    sizeof(long))) {
+				new_size = size + ksu_rc_len;
+				pr_info("vfs_fstat: adding ksu_rc_len: %ld -> %ld", size,
+					new_size);
+				if (!copy_to_user_nofault(st_size_ptr,
+							  &new_size,
+							  sizeof(long))) {
+					pr_info("vfs_fstat: added ksu_rc_len");
+				} else {
+					pr_err("vfs_fstat: add ksu_rc_len failed: statbuf 0x%lx",
+					       (unsigned long)st_size_ptr);
+				}
+			} else {
+				pr_err("vfs_fstat: read statbuf 0x%lx failed",
+				       (unsigned long)st_size_ptr);
+			}
+		}
+		return;
+	}
+	fput(fp);
+}
+#endif
 
 static unsigned int volumedown_pressed_count = 0;
 
@@ -594,13 +622,14 @@ bool ksu_is_safe_mode(void)
 	return is_volumedown_enough(volumedown_pressed_count);
 }
 
-static void stop_vfs_read_hook(void)
+static void stop_init_rc_hook(void)
 {
 #ifdef CONFIG_KSU_SYSCALL_HOOK
-	kp_handle_ksud_stop(VFS_READ_HOOK_KP);
+	kp_handle_ksud_stop(INIT_RC_HOOK);
 #else
 	ksu_vfs_read_hook = false;
-	pr_info("stop vfs_read_hook\n");
+	ksu_vfs_fstat_hook = false;
+	pr_info("stop init.rc hook\n");
 #endif
 }
 

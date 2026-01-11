@@ -225,3 +225,32 @@ void *ksu_compat_kvrealloc(const void *p, size_t oldsize, size_t newsize,
 	return newp;
 }
 #endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0)
+long probe_user_read(void *dst, const void __user *src, size_t size)
+{
+	// https://elixir.bootlin.com/linux/v5.8/source/mm/maccess.c#L205
+	long ret = -EFAULT;
+	mm_segment_t old_fs = get_fs();
+
+	set_fs(USER_DS);
+	// tweaked to use ksu_access_ok
+	if (ksu_access_ok(src, size)) {
+		pagefault_disable();
+		ret = __copy_from_user_inatomic(dst, src, size);
+		pagefault_enable();
+	}
+	set_fs(old_fs);
+
+	if (ret)
+		return -EFAULT;
+	return 0;
+}
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0) 
+long copy_from_user_nofault(void *dst, const void __user *src, size_t size)
+{
+	return probe_user_read(dst, src, size);
+}
+#endif

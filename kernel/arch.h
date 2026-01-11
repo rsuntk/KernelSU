@@ -21,6 +21,9 @@
 #define REBOOT_SYMBOL "__arm64_sys_reboot"
 #define SYS_READ_SYMBOL "__arm64_sys_read"
 #define SYS_EXECVE_SYMBOL "__arm64_sys_execve"
+// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/scripts/syscalltbl.sh;l=57;drc=9142be9e6443fd641ca37f820efe00d9cd890eb1
+// https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/scripts/syscall.tbl;l=104;drc=b36d4b6aa88ef039647228b98c59a875e92f8c8e
+#define SYS_NEWFSTAT_SYMBOL "__arm64_sys_newfstat"
 
 #elif defined(__x86_64__)
 
@@ -41,6 +44,7 @@
 #define REBOOT_SYMBOL "__x64_sys_reboot"
 #define SYS_READ_SYMBOL "__x64_sys_read"
 #define SYS_EXECVE_SYMBOL "__x64_sys_execve"
+#define SYS_NEWFSTAT_SYMBOL "__x64_sys_newfstat"
 
 #else
 #ifdef CONFIG_KSU_SYSCALL_HOOK

@@ -146,6 +146,7 @@ static int do_execve_sucompat_for_kp(const char __user **filename_user)
 #else
 #define handle_execve_sucompat(filename_ptr)                                   \
 	(ksu_sucompat_user_common(filename_ptr, "sys_execve", true))
+extern bool ksu_vfs_fstat_hook __read_mostly;
 #endif
 
 int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
@@ -156,6 +157,12 @@ int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
 
 int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
 {
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	if (ksu_vfs_fstat_hook) {
+		int fd = *dfd;
+		struct file *fp = fget(fd);
+
+	}
 	return ksu_sucompat_user_common(filename_user, "newfstatat", false);
 }
 
