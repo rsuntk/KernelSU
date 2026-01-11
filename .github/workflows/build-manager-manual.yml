@@ -22,7 +22,6 @@ jobs:
 
   build-manager:
     needs: build-ksud
-    environment: signing
     runs-on: ubuntu-latest
     defaults:
       run:

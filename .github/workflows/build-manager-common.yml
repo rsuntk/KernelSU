@@ -16,7 +16,6 @@ on:
 
 jobs:
   build-manager-common:
-    environment: signing
     runs-on: ubuntu-latest
     defaults:
       run:
