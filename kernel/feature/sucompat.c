@@ -28,8 +28,10 @@ static noinline bool __ksu_is_allow_uid_copy(uid_t uid)
 
 static __always_inline bool is_su_allowed(const void **ptr_to_check)
 {
+#ifndef CONFIG_KSU_TAMPER_SYSCALL_TABLE
 	if (!ksu_su_compat_enabled)
 		return false;
+#endif
 
 	// put ret hot on insn pipeline
 	if (likely(ksu_is_seccomp_enabled()))
@@ -409,14 +411,28 @@ int ksu_legacy_execve_sucompat(const char **filename_ptr, void *argv, void *envp
 	return 0;
 }
 
+#ifdef CONFIG_KSU_TAMPER_SYSCALL_TABLE
+static void syscall_table_sucompat_enable();
+static void syscall_table_sucompat_disable();
+#else
+#define syscall_table_sucompat_enable() do { } while (0)
+#define syscall_table_sucompat_disable() do { } while (0)
+#endif
+
 static void ksu_sucompat_enable()
 {
+
+	syscall_table_sucompat_enable();
+
 	ksu_su_compat_enabled = true;
 	pr_info("%s: hooks enabled: exec, faccessat, stat\n", __func__);
 }
 
 static void ksu_sucompat_disable()
 {
+
+	syscall_table_sucompat_disable();
+
 	ksu_su_compat_enabled = false;
 	pr_info("%s: hooks disabled: exec, faccessat, stat\n", __func__);
 }
