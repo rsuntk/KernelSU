@@ -24,30 +24,39 @@ ccflags-y += -I$(objtree)/security/selinux -include $(srctree)/include/uapi/asm-
 
 obj-$(CONFIG_KSU) += kernelsu.o
 
-KDIR := $(KDIR)
 MDIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
+# Workaround bazel
+# https://github.com/tiann/KernelSU/pull/316#issuecomment-1479043219
+GIT := $(shell PATH="$$PATH":/usr/bin:/usr/local/bin which git)
+
+ifneq ($(GIT),)
 # Check if this is a git repository
 # Try to detect Git repo intelligently
-GIT_ROOT := $(shell cd $(MDIR) && git rev-parse --show-toplevel 2>/dev/null)
-
+GIT_ROOT := $(shell cd $(MDIR) && $(GIT) rev-parse --show-toplevel 2>/dev/null)
 ifneq ($(GIT_ROOT),)
-# Successfully found a Git repository containing this directory
-$(shell cd $(GIT_ROOT) && [ -f .git/shallow ] && git fetch --unshallow)
-KSU_GIT_VERSION := $(shell cd $(GIT_ROOT) && git rev-list --count HEAD)
-KSU_GIT_BRANCH := $(shell cd $(GIT_ROOT) && git rev-parse --abbrev-ref HEAD)
+KERNEL_GIT_ROOT := $(shell cd $(srctree) && $(GIT) rev-parse --show-toplevel 2>/dev/null)
+ifneq ($(GIT_ROOT),$(KERNEL_GIT_ROOT))
+# Only set version if it's a different repo from kernel
+$(shell cd $(GIT_ROOT) && [ -f .git/shallow ] && $(GIT) fetch --unshallow 2>/dev/null || true)
+KSU_GIT_VERSION := $(shell cd $(GIT_ROOT) && $(GIT) rev-list --count HEAD 2>/dev/null)
+KSU_GIT_BRANCH := $(shell cd $(GIT_ROOT) && $(GIT) rev-parse --abbrev-ref HEAD 2>/dev/null)
 KSU_GIT_VERSION_VALID := 1
 $(info -- KernelSU: Git repo detected at $(GIT_ROOT))
+endif
+endif
+else
+$(warning -- KernelSU: Git not detected, make sure git is installed in your PATH!)
 endif
 
 # Calculate version if git version is available
 ifdef KSU_GIT_VERSION_VALID
 # ksu_version: major * 10000 + git version + 200 for historical reasons
 $(eval KSU_VERSION=$(shell expr 30000 + $(KSU_GIT_VERSION)))
-ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
-ccflags-y += -DKSU_BRANCH=\"$(KSU_GIT_BRANCH)\"
 $(info -- KernelSU version: $(KSU_VERSION))
 $(info -- KernelSU branch: $(KSU_GIT_BRANCH))
+ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
+ccflags-y += -DKSU_BRANCH=\"$(KSU_GIT_BRANCH)\"
 else
 # If there is no .git directory, use default version
 $(warning "KSU_GIT_VERSION not defined! It is better to make KernelSU a git repository!")
