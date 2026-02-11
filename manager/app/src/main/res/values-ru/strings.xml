@@ -6,6 +6,7 @@
     <string name="home_working">Работает</string>
     <string name="home_working_version">Версия: %d</string>
     <string name="superuser">Рут-доступ</string>
+    <string name="home_click_to_learn_kernelsu">Узнайте, как установить KernelSU и использовать модули</string>
     <!--Don't translate this string!-->
     <string name="home_unsupported">Не поддерживается</string>
     <string name="home_unsupported_reason">KernelSU поддерживает только GKI ядра.</string>
@@ -45,7 +46,6 @@
     <string name="module_magisk_conflict">Модули недоступны из-за конфликта с Magisk!</string>
     <string name="home_learn_kernelsu">Узнайте о KernelSU</string>
     <string name="home_learn_kernelsu_url">https://kernelsu.org/ru_RU/guide/what-is-kernelsu.html</string>
-    <string name="home_click_to_learn_kernelsu">Узнайте, как установить KernelSU и использовать модули.</string>
     <string name="home_support_title">Поддержите нас</string>
     <string name="home_support_content">KernelSU был и всегда будет бесплатным и открытым проектом. Однако Вы всегда можете поддержать нас, отправив небольшое пожертвование.</string>
     <string name="about_source_code"><![CDATA[Посмотреть исходный код на %1$s<br/>Присоединяйтесь к нашему %2$s каналу]]></string>
