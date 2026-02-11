@@ -8,6 +8,8 @@
     <string name="superuser">Рут-доступ</string>
     <string name="settings_blur">Размытие в реальном времени</string>
     <string name="settings_blur_summary">Включение размытия по Гауссу в реальном времени в пользовательском интерфейсе</string>
+    <string name="home_unofficial_kernelsu_title">Неофициальный форк KernelSU от Rissu</string>
+    <string name="home_unofficial_kernelsu_summary">Нажмите на эту карточку, чтобы увидеть открытый исходный код RKSU</string>
     <!--Don't translate this string!-->
     <string name="home_unsupported">Не поддерживается</string>
     <string name="home_unsupported_reason">KernelSU поддерживает только GKI ядра.</string>
