@@ -59,19 +59,19 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Download arm64 ksud
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ksud-aarch64-linux-android
           path: .
 
       - name: Download arm ksud
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ksud-armv7-linux-androideabi
           path: .
 
       - name: Download x86_64 ksud
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ksud-x86_64-linux-android
           path: .
@@ -88,13 +88,13 @@ jobs:
         run: ./gradlew clean assembleRelease
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: manager
           path: manager/app/build/outputs/apk/release/*.apk
 
       - name: Upload mappings
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: mappings
           path: "manager/app/build/outputs/mapping/release/"
