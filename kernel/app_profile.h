@@ -65,4 +65,8 @@ void escape_with_root_profile(void);
 
 void escape_to_root_for_init(void);
 
+void ksu_app_profile_init(void);
+
+void disable_seccomp(void);
+
 #endif

@@ -6,7 +6,9 @@
 #include <linux/seccomp.h>
 #include <linux/printk.h>
 #include <linux/sched.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 #include <linux/sched/signal.h>
+#endif
 #include <linux/string.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
@@ -38,10 +40,16 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 
     if (likely(ksu_is_manager_appid_valid()) &&
         unlikely(ksu_get_manager_appid() == new_uid % PER_USER_RANGE)) {
+#ifdef USE_SECCOMP_CACHE
         spin_lock_irq(&current->sighand->siglock);
         ksu_seccomp_allow_cache(current->seccomp.filter, __NR_reboot);
+#ifdef USE_SYSCALL_MANAGER
         ksu_set_task_tracepoint_flag(current);
+#endif
         spin_unlock_irq(&current->sighand->siglock);
+#else
+        disable_seccomp();
+#endif
 
         pr_info("install fd for manager: %d\n", new_uid);
         struct callback_head *cb = kzalloc(sizeof(*cb), GFP_ATOMIC);
@@ -56,15 +64,21 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
     }
 
     if (ksu_is_allow_uid_for_current(new_uid)) {
+#ifdef USE_SECCOMP_CACHE
         if (current->seccomp.mode == SECCOMP_MODE_FILTER &&
             current->seccomp.filter) {
             spin_lock_irq(&current->sighand->siglock);
             ksu_seccomp_allow_cache(current->seccomp.filter, __NR_reboot);
             spin_unlock_irq(&current->sighand->siglock);
         }
+#ifdef USE_SYSCALL_MANAGER
         ksu_set_task_tracepoint_flag(current);
     } else {
         ksu_clear_task_tracepoint_flag_if_needed(current);
+#endif
+#else
+        disable_seccomp();
+#endif
     }
 
     // Handle kernel umount

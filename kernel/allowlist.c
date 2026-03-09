@@ -13,7 +13,14 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+#include <linux/sched/task.h>
+#else
+#include <linux/sched.h>
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 #include <linux/compiler_types.h>
+#endif
 
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
@@ -56,7 +63,7 @@ static void remove_uid_from_arr(uid_t uid)
     }
 }
 
-static void init_default_profiles()
+static void init_default_profiles(void)
 {
     kernel_cap_t full_cap = CAP_FULL_SET;
 
@@ -101,7 +108,7 @@ void ksu_show_allow_list(void)
 }
 
 #ifdef CONFIG_KSU_DEBUG
-static void ksu_grant_root_to_shell()
+static void ksu_grant_root_to_shell(void)
 {
     struct app_profile profile = {
         .version = KSU_APP_PROFILE_VER,

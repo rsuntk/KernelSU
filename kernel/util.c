@@ -1,3 +1,6 @@
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 #include <linux/mm.h>
 #include <linux/pgtable.h>
 #include <linux/printk.h>
@@ -74,3 +77,4 @@ out_unlock:
     return false;
 #endif
 }
+#endif

@@ -410,6 +410,7 @@ static int do_get_wrapper_fd(void __user *arg)
 
 static int do_manage_mark(void __user *arg)
 {
+#ifdef USE_SYSCALL_MANAGER
     struct ksu_manage_mark_cmd cmd;
     int ret = 0;
 
@@ -469,8 +470,10 @@ static int do_manage_mark(void __user *arg)
         pr_err("manage_mark: copy_to_user failed\n");
         return -EFAULT;
     }
-
     return 0;
+#else
+    return -ENOTSUPP;
+#endif
 }
 
 static int do_nuke_ext4_sysfs(void __user *arg)
@@ -710,11 +713,7 @@ static void ksu_install_fd_tw_func(struct callback_head *cb)
 
     if (copy_to_user(tw->outp, &fd, sizeof(fd))) {
         pr_err("install ksu fd reply err\n");
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
         close_fd(fd);
-#else
-        ksys_close(fd);
-#endif
     }
 
     kfree(tw);

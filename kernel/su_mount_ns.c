@@ -13,11 +13,20 @@
 #include <linux/syscalls.h>
 #include <linux/task_work.h>
 #include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+#include <linux/sched/task.h>
+#else
+#include <linux/sched.h>
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
 #include <uapi/linux/mount.h>
+#else
+#include <uapi/linux/fs.h>
+#endif
 
-#include "arch.h"
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
+#include "kernel_compat.h"
 #include "su_mount_ns.h"
 
 extern int path_mount(const char *dev_name, struct path *path,
@@ -25,27 +34,49 @@ extern int path_mount(const char *dev_name, struct path *path,
                       void *data_page);
 
 #if defined(__aarch64__)
+#define PT_PARM1(x) (__PT_REGS_CAST(x)->regs[0])
+#define PT_PARM2(x) (__PT_REGS_CAST(x)->regs[1])
 extern long __arm64_sys_setns(const struct pt_regs *regs);
+#define do_sys_setns(regs) (__arm64_sys_setns(regs))
 #elif defined(__x86_64__)
+#define PT_PARM1(x) (__PT_REGS_CAST(x)->di)
+#define PT_PARM2(x) (__PT_REGS_CAST(x)->si)
 extern long __x64_sys_setns(const struct pt_regs *regs);
+#define do_sys_setns(regs) (__x64_sys_setns(regs))
+#elif defined(__arm__) // https://syscalls.mebeim.net/?table=arm/32/eabi/latest
+// taken from:
+// https://github.com/backslashxx/KernelSU/blob/8b71e8bce199e8ac44538648e298092a9b3ef42b/kernel/arch.h#L29
+#define PT_PARM1(x) (__PT_REGS_CAST(x)->uregs[0])
+#define PT_PARM2(x) (__PT_REGS_CAST(x)->uregs[1])
+extern long sys_setns(const struct pt_regs *regs);
+#define do_sys_setns(regs) (sys_setns(regs))
 #endif
 
 static long ksu_sys_setns(int fd, int flags)
 {
+#ifdef PT_PARM1
     struct pt_regs regs;
     memset(&regs, 0, sizeof(regs));
 
-    PT_REGS_PARM1(&regs) = fd;
-    PT_REGS_PARM2(&regs) = flags;
+    PT_PARM1(&regs) = fd;
+    PT_PARM2(&regs) = flags;
 
-#if defined(__aarch64__)
-    return __arm64_sys_setns(&regs);
-#elif defined(__x86_64__)
-    return __x64_sys_setns(&regs);
+    return do_sys_setns(&regs);
 #else
-#error "Unsupported arch"
+    return -ENOSYS;
 #endif
 }
+#else
+static long ksu_sys_setns(int fd, int flags)
+{
+    return sys_setns(fd, flags);
+}
+
+int __weak ksys_unshare(unsigned long unshare_flags)
+{
+    return sys_unshare(unshare_flags);
+}
+#endif
 
 // global mode , need CAP_SYS_ADMIN and CAP_SYS_CHROOT to perform setns
 static void ksu_mnt_ns_global(void)
@@ -117,11 +148,7 @@ try_setns:
     fd_install(fd, ns_file);
     ret = ksu_sys_setns(fd, CLONE_NEWNS);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
-    ksys_close(fd);
-#else
     close_fd(fd);
-#endif
 
     if (ret) {
         pr_warn("call setns failed: %ld\n", ret);

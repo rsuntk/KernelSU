@@ -23,6 +23,7 @@
 #include "arch.h"
 #include "klog.h" // IWYU pragma: keep
 #include "ksud.h"
+#include "kprobes.h"
 #include "util.h"
 #include "selinux/selinux.h"
 #include "throne_tracker.h"
@@ -54,13 +55,15 @@ static const char KERNEL_SU_RC[] =
 
     "\n";
 
-static void stop_init_rc_hook();
-static void stop_execve_hook();
-static void stop_input_hook();
+static void stop_init_rc_hook(void);
+static void stop_execve_hook(void);
+static void stop_input_hook(void);
 
-static struct work_struct stop_init_rc_hook_work;
-static struct work_struct stop_execve_hook_work;
-static struct work_struct stop_input_hook_work;
+#ifndef CONFIG_KSU_KPROBES
+bool ksu_init_rc_hook __read_mostly = true;
+bool ksu_execveat_hook __read_mostly = true;
+bool ksu_input_hook __read_mostly = true;
+#endif
 
 void on_post_fs_data(void)
 {
@@ -115,17 +118,6 @@ void on_boot_completed(void)
 }
 
 #define MAX_ARG_STRINGS 0x7FFFFFFF
-struct user_arg_ptr {
-#ifdef CONFIG_COMPAT
-    bool is_compat;
-#endif
-    union {
-        const char __user *const __user *native;
-#ifdef CONFIG_COMPAT
-        const compat_uptr_t __user *compat;
-#endif
-    } ptr;
-};
 
 static const char __user *get_user_arg_ptr(struct user_arg_ptr argv, int nr)
 {
@@ -374,22 +366,28 @@ static bool is_init_rc(struct file *fp)
         return false;
     }
 
-    if (strcmp(dpath, "/system/etc/init/hw/init.rc")) {
-        return false;
-    }
-
-    return true;
+    pr_info("ksud: init_rc path: %s\n", dpath);
+    return (strcmp(dpath, "/init.rc") == 0 ||
+            strcmp(dpath, "/system/etc/init/hw/init.rc") == 0);
 }
 
-static void ksu_handle_sys_read(unsigned int fd)
+// We only use file_ptr now, buf_ptr, count_ptr and pos is unused.
+int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
+                        size_t *count_ptr, loff_t **pos)
 {
-    struct file *file = fget(fd);
-    if (!file) {
-        return;
+#ifndef CONFIG_KSU_KPROBES
+    if (!ksu_init_rc_hook) {
+        return 0;
+    }
+#endif
+
+    struct file *file = *file_ptr;
+    if (IS_ERR(file)) {
+        return 0;
     }
 
     if (!is_init_rc(file)) {
-        goto skip;
+        return 0;
     }
 
     // we only process the first read
@@ -404,7 +402,7 @@ static void ksu_handle_sys_read(unsigned int fd)
     // now we can sure that the init process is reading
     // `/system/etc/init/init.rc`
 
-    pr_info("read init.rc, comm: %s, rc_count: %zu\n", current->comm,
+    pr_info("ksud: read init.rc, comm: %s, rc_count: %zu\n", current->comm,
             ksu_rc_len);
 
     // Now we need to proxy the read and modify the result!
@@ -421,8 +419,44 @@ static void ksu_handle_sys_read(unsigned int fd)
     }
     // replace the file_operations
     file->f_op = &fops_proxy;
+    return 0;
+}
 
+// At this moment, we should convert ksu_handle_vfs_read to void..
+int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr,
+                        size_t *count_ptr)
+{
+    struct file *file = fget(fd);
+    if (!file) {
+        goto skip;
+    }
+
+    ksu_handle_vfs_read(&file, NULL, NULL, NULL);
+    fput(file);
 skip:
+    return 0;
+}
+
+void ksu_handle_vfs_fstat(int fd, loff_t *kstat_size_ptr)
+{
+    loff_t new_size = *kstat_size_ptr + ksu_rc_len;
+    struct file *file = fget(fd);
+
+#ifndef CONFIG_KSU_KPROBES
+    if (!ksu_init_rc_hook)
+        return;
+#endif
+
+    if (!file)
+        return;
+
+    if (is_init_rc(file)) {
+        pr_info("fstat: stat init.rc");
+        pr_info("fstat: adding ksu_rc_len: %lld -> %lld", *kstat_size_ptr,
+                new_size);
+        *kstat_size_ptr = new_size;
+    }
+
     fput(file);
 }
 
@@ -436,228 +470,77 @@ static bool is_volumedown_enough(unsigned int count)
 int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,
                                   int *value)
 {
-    if (*type == EV_KEY && *code == KEY_VOLUMEDOWN) {
-        int val = *value;
-        pr_info("KEY_VOLUMEDOWN val: %d\n", val);
-        if (val) {
-            // key pressed, count it
-            volumedown_pressed_count += 1;
-            if (is_volumedown_enough(volumedown_pressed_count)) {
-                stop_input_hook();
-            }
+#ifndef CONFIG_KSU_KPROBES
+    if (!ksu_input_hook) {
+        return 0;
+    }
+#endif
+
+    if (*type == EV_KEY && *code == KEY_VOLUMEDOWN && *value) {
+        // key pressed, count it
+        volumedown_pressed_count += 1;
+        pr_info("input_handle_event: vol_down pressed count: %u\n",
+                volumedown_pressed_count);
+        if (is_volumedown_enough(volumedown_pressed_count)) {
+            pr_info(
+                "input_handle_event: vol_down pressed MAX! safe mode is active!\n");
+            stop_input_hook();
         }
     }
 
     return 0;
 }
 
-bool ksu_is_safe_mode()
+bool ksu_is_safe_mode(void)
 {
-    static bool safe_mode = false;
-    if (safe_mode) {
-        // don't need to check again, userspace may call multiple times
-        return true;
-    }
-
-    // stop hook first!
-    stop_input_hook();
-
-    pr_info("volumedown_pressed_count: %d\n", volumedown_pressed_count);
-    if (is_volumedown_enough(volumedown_pressed_count)) {
-        // pressed over 3 times
-        pr_info("KEY_VOLUMEDOWN pressed max times, safe mode detected!\n");
-        safe_mode = true;
-        return true;
-    }
-
-    return false;
+    return is_volumedown_enough(volumedown_pressed_count);
 }
 
-static int sys_execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
+static void stop_init_rc_hook(void)
 {
-    struct pt_regs *real_regs = PT_REAL_REGS(regs);
-    const char __user **filename_user =
-        (const char **)&PT_REGS_PARM1(real_regs);
-    const char __user *const __user *__argv =
-        (const char __user *const __user *)PT_REGS_PARM2(real_regs);
-    struct user_arg_ptr argv = { .ptr.native = __argv };
-    struct filename filename_in, *filename_p;
-    char path[32];
-    long ret;
-    unsigned long addr;
-    const char __user *fn;
-
-    if (!filename_user)
-        return 0;
-
-    addr = untagged_addr((unsigned long)*filename_user);
-    fn = (const char __user *)addr;
-
-    memset(path, 0, sizeof(path));
-    ret = strncpy_from_user_nofault(path, fn, 32);
-    if (ret < 0 && try_set_access_flag(addr)) {
-        ret = strncpy_from_user_nofault(path, fn, 32);
-    }
-    if (ret < 0) {
-        pr_err("Access filename failed for execve_handler_pre\n");
-        return 0;
-    }
-    filename_in.name = path;
-
-    filename_p = &filename_in;
-    return ksu_handle_execveat_ksud(AT_FDCWD, &filename_p, &argv, NULL, NULL);
+#ifdef CONFIG_KSU_KPROBES
+    kp_handle_ksud_stop(KSU_KP_ENUM_MEMBER(INIT_RC));
+#else
+    ksu_init_rc_hook = false;
+    pr_info("ksud: stop init_rc hook\n");
+#endif
 }
 
-static int sys_read_handler_pre(struct kprobe *p, struct pt_regs *regs)
+static void stop_execve_hook(void)
 {
-    struct pt_regs *real_regs = PT_REAL_REGS(regs);
-    unsigned int fd = PT_REGS_PARM1(real_regs);
-
-    ksu_handle_sys_read(fd);
-    return 0;
+#ifdef CONFIG_KSU_KPROBES
+    kp_handle_ksud_stop(KSU_KP_ENUM_MEMBER(EXECVE));
+#else
+    ksu_execveat_hook = false;
+    pr_info("ksud: stop execve hook\n");
+#endif
 }
 
-static int sys_fstat_handler_pre(struct kretprobe_instance *p,
-                                 struct pt_regs *regs)
+static void stop_input_hook(void)
 {
-    struct pt_regs *real_regs = PT_REAL_REGS(regs);
-    unsigned int fd = PT_REGS_PARM1(real_regs);
-    void *statbuf = PT_REGS_PARM2(real_regs);
-    *(void **)&p->data = NULL;
-
-    struct file *file = fget(fd);
-    if (!file)
-        return 1;
-    if (is_init_rc(file)) {
-        pr_info("stat init.rc");
-        fput(file);
-        *(void **)&p->data = statbuf;
-        return 0;
-    }
-    fput(file);
-    return 1;
-}
-
-static int sys_fstat_handler_post(struct kretprobe_instance *p,
-                                  struct pt_regs *regs)
-{
-    void __user *statbuf = *(void **)&p->data;
-    if (statbuf) {
-        void __user *st_size_ptr = statbuf + offsetof(struct stat, st_size);
-        long size, new_size;
-        if (!copy_from_user_nofault(&size, st_size_ptr, sizeof(long))) {
-            new_size = size + ksu_rc_len;
-            pr_info("adding ksu_rc_len: %ld -> %ld", size, new_size);
-            if (!copy_to_user_nofault(st_size_ptr, &new_size, sizeof(long))) {
-                pr_info("added ksu_rc_len");
-            } else {
-                pr_err("add ksu_rc_len failed: statbuf 0x%lx",
-                       (unsigned long)st_size_ptr);
-            }
-        } else {
-            pr_err("read statbuf 0x%lx failed", (unsigned long)st_size_ptr);
-        }
-    }
-
-    return 0;
-}
-
-static int input_handle_event_handler_pre(struct kprobe *p,
-                                          struct pt_regs *regs)
-{
-    unsigned int *type = (unsigned int *)&PT_REGS_PARM2(regs);
-    unsigned int *code = (unsigned int *)&PT_REGS_PARM3(regs);
-    int *value = (int *)&PT_REGS_CCALL_PARM4(regs);
-    return ksu_handle_input_handle_event(type, code, value);
-}
-
-static struct kprobe execve_kp = {
-    .symbol_name = SYS_EXECVE_SYMBOL,
-    .pre_handler = sys_execve_handler_pre,
-};
-
-static struct kprobe sys_read_kp = {
-    .symbol_name = SYS_READ_SYMBOL,
-    .pre_handler = sys_read_handler_pre,
-};
-
-static struct kretprobe sys_fstat_kp = {
-    .kp.symbol_name = SYS_FSTAT_SYMBOL,
-    .entry_handler = sys_fstat_handler_pre,
-    .handler = sys_fstat_handler_post,
-    .data_size = sizeof(void *),
-};
-
-static struct kprobe input_event_kp = {
-    .symbol_name = "input_event",
-    .pre_handler = input_handle_event_handler_pre,
-};
-
-static void do_stop_init_rc_hook(struct work_struct *work)
-{
-    unregister_kprobe(&sys_read_kp);
-    unregister_kretprobe(&sys_fstat_kp);
-}
-
-static void do_stop_execve_hook(struct work_struct *work)
-{
-    unregister_kprobe(&execve_kp);
-}
-
-static void do_stop_input_hook(struct work_struct *work)
-{
-    unregister_kprobe(&input_event_kp);
-}
-
-static void stop_init_rc_hook()
-{
-    bool ret = schedule_work(&stop_init_rc_hook_work);
-    pr_info("unregister init_rc_hook kprobe: %d!\n", ret);
-}
-
-static void stop_execve_hook()
-{
-    bool ret = schedule_work(&stop_execve_hook_work);
-    pr_info("unregister execve kprobe: %d!\n", ret);
-}
-
-static void stop_input_hook()
-{
-    static bool input_hook_stopped = false;
-    if (input_hook_stopped) {
+#ifdef CONFIG_KSU_KPROBES
+    kp_handle_ksud_stop(KSU_KP_ENUM_MEMBER(INPUT_EVENT));
+#else
+    if (!ksu_input_hook) {
+        pr_info("ksud: input hook already stopped\n");
         return;
     }
-    input_hook_stopped = true;
-    bool ret = schedule_work(&stop_input_hook_work);
-    pr_info("unregister input kprobe: %d!\n", ret);
+    ksu_input_hook = false;
+    pr_info("ksud: stop input hook\n");
+#endif
 }
 
 // ksud: module support
-void ksu_ksud_init()
+void ksu_ksud_init(void)
 {
-    int ret;
-
-    ret = register_kprobe(&execve_kp);
-    pr_info("ksud: execve_kp: %d\n", ret);
-
-    ret = register_kprobe(&sys_read_kp);
-    pr_info("ksud: sys_read_kp: %d\n", ret);
-
-    ret = register_kretprobe(&sys_fstat_kp);
-    pr_info("ksud: sys_fstat_kp: %d\n", ret);
-
-    ret = register_kprobe(&input_event_kp);
-    pr_info("ksud: input_event_kp: %d\n", ret);
-
-    INIT_WORK(&stop_init_rc_hook_work, do_stop_init_rc_hook);
-    INIT_WORK(&stop_execve_hook_work, do_stop_execve_hook);
-    INIT_WORK(&stop_input_hook_work, do_stop_input_hook);
+#ifdef CONFIG_KSU_KPROBES
+    kp_handle_ksud_init();
+#endif
 }
 
-void ksu_ksud_exit()
+void ksu_ksud_exit(void)
 {
-    unregister_kprobe(&execve_kp);
-    // this should be done before unregister sys_read_kp
-    // unregister_kprobe(&sys_read_kp);
-    unregister_kprobe(&input_event_kp);
+#ifdef CONFIG_KSU_KPROBES
+    kp_handle_ksud_exit();
+#endif
 }

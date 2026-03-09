@@ -41,8 +41,6 @@ static const struct ksu_feature_handler kernel_umount_handler = {
     .set_handler = kernel_umount_feature_set,
 };
 
-extern int path_umount(struct path *path, int flags);
-
 static void ksu_umount_mnt(struct path *path, int flags)
 {
     int err = path_umount(path, flags);
@@ -126,11 +124,11 @@ int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
     // because some su apps may setuid to untrusted_app but they are in global mount namespace
     // when we umount for such process, that is a disaster!
     // also handle case 4 and 5
-    bool is_zygote_child = is_zygote(get_current_cred());
-    if (!is_zygote_child) {
+    if (!is_zygote(get_current_cred())) {
         pr_info("handle umount ignore non zygote child: %d\n", current->pid);
         return 0;
     }
+
     // umount the target mnt
     pr_info("handle umount for uid: %d, pid: %d\n", new_uid, current->pid);
 
