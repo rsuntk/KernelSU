@@ -135,9 +135,6 @@ fun HomePagerMiuix(
                         } else if (state.showKernelPrBuildWarning) {
                             WarningCard(stringResource(id = R.string.home_pr_kernel_warning), level = WarningLevel.Notice)
                         }
-                        if (state.showGkiWarning) {
-                            WarningCard(stringResource(id = R.string.home_gki_warning), level = WarningLevel.Notice)
-                        }
                         if (state.requiresNewKernel) {
                             WarningCard(
                                 stringResource(
