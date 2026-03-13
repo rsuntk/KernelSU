@@ -1,6 +1,7 @@
 package me.weishu.kernelsu.ui.component.rebootlistpopup
 
 import android.content.Context
+import android.os.Build
 import android.os.PowerManager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PowerSettingsNew
@@ -25,7 +26,8 @@ fun RebootDropdownItems(onItemClick: (String) -> Unit) {
     val pm = LocalContext.current.getSystemService(Context.POWER_SERVICE) as PowerManager?
 
     @Suppress("DEPRECATION")
-    val isRebootingUserspaceSupported = pm?.isRebootingUserspaceSupported == true
+    val isRebootingUserspaceSupported =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && pm?.isRebootingUserspaceSupported == true
 
     val rebootOptions = mutableListOf(
         Pair(R.string.reboot, ""),
