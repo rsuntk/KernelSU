@@ -13,7 +13,7 @@ kernelsu-objs += feature.o
 kernelsu-objs += ksud.o
 kernelsu-objs += seccomp_cache.o
 kernelsu-objs += file_wrapper.o
-kernelsu-objs += simple_shim.o
+kernelsu-objs += simple_shim_compat.o
 
 # In order to add KPROBES support for older kernel, we need to ignore syscall_hook_manager.c and guard util.o a bit.
 ksu_extra_objects-$(CONFIG_KSU_KPROBES) := kprobes.o syscall_hook_manager.o util.o
