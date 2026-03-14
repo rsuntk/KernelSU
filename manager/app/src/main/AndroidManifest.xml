@@ -41,7 +41,8 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
         android:theme="@style/Theme.KernelSU"
-        android:zygotePreloadName="me.weishu.kernelsu.magica.AppZygotePreload">
+        android:zygotePreloadName="me.weishu.kernelsu.magica.AppZygotePreload"
+        tools:targetApi="29">
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
