@@ -196,9 +196,14 @@ void kp_handle_ksud_init(void)
         // Init workqueue
         INIT_WORK(&desc->stop_work, do_stop_probe_work);
 
-        ret = (desc->rp) ? register_kretprobe(desc->rp) :
-                           register_kprobe(desc->kp);
-        pr_info("ksud: %s_kp init: %d\n", desc->name, ret);
+        if (desc->rp) {
+            ret = register_kretprobe(desc->rp);
+            pr_info("ksud: %s kretprobe init: %d\n", desc->name, ret);
+        }
+        if (desc->kp) {
+            ret = register_kprobe(desc->kp);
+            pr_info("ksud: %s kprobe init: %d\n", desc->name, ret);
+        }
     }
 }
 
