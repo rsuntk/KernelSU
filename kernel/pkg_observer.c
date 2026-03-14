@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0
+#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/namei.h>
 #include <linux/fsnotify_backend.h>
 #include <linux/slab.h>
 #include <linux/rculist.h>
-#include <linux/version.h>
 #include "klog.h" // IWYU pragma: keep
 #include "throne_tracker.h"
+#include "pkg_observer.h"
 
 #define MASK_SYSTEM (FS_CREATE | FS_MOVE | FS_EVENT_ON_CHILD)
 

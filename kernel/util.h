@@ -21,4 +21,7 @@
 
 bool try_set_access_flag(unsigned long addr);
 
+bool ksu_retry_filename_access(const char __user **char_usr_ptr, char *dest,
+                               size_t dest_len, bool exit_atomic_ctx);
+
 #endif

@@ -23,6 +23,7 @@
 #include "supercalls.h"
 #include "syscall_hook_manager.h"
 #include "kernel_umount.h"
+#include "kernel_compat.h"
 
 static void ksu_install_manager_fd_tw_func(struct callback_head *cb)
 {
@@ -36,7 +37,9 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
     uid_t new_uid = ruid;
     uid_t old_uid = current_uid().val;
 
+#ifdef CONFIG_KSU_DEBUG
     pr_info("handle_setresuid from %d to %d\n", old_uid, new_uid);
+#endif
 
     if (likely(ksu_is_manager_appid_valid()) &&
         unlikely(ksu_get_manager_appid() == new_uid % PER_USER_RANGE)) {

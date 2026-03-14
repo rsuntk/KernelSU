@@ -19,7 +19,9 @@
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
 #include "ksud.h"
+#include "kernel_compat.h"
 #include "kernel_umount.h"
+#include "kprobes.h"
 #include "manager.h"
 #include "selinux/selinux.h"
 #include "file_wrapper.h"
@@ -48,9 +50,7 @@ bool always_allow(void)
 
 bool allowed_for_su(void)
 {
-    bool is_allowed =
-        is_manager() || ksu_is_allow_uid_for_current(current_uid().val);
-    return is_allowed;
+    return is_manager() || ksu_is_allow_uid_for_current(current_uid().val);
 }
 
 static int do_grant_root(void __user *arg)
@@ -342,7 +342,9 @@ static int do_set_app_profile(void __user *arg)
     ret = ksu_set_app_profile(&cmd.profile);
     if (!ret) {
         ksu_persistent_allow_list();
+#ifdef USE_SYSCALL_MANAGER
         ksu_mark_running_process();
+#endif
     }
     return ret;
 }
@@ -719,39 +721,54 @@ static void ksu_install_fd_tw_func(struct callback_head *cb)
     kfree(tw);
 }
 
-static int reboot_handler_pre(struct kprobe *p, struct pt_regs *regs)
+static int ksu_handle_fd_request(void __user *arg)
 {
-    struct pt_regs *real_regs = PT_REAL_REGS(regs);
-    int magic1 = (int)PT_REGS_PARM1(real_regs);
-    int magic2 = (int)PT_REGS_PARM2(real_regs);
-    unsigned long arg4;
+    struct ksu_install_fd_tw *tw;
 
-    // Check if this is a request to install KSU fd
-    if (magic1 == KSU_INSTALL_MAGIC1 && magic2 == KSU_INSTALL_MAGIC2) {
-        struct ksu_install_fd_tw *tw;
+    tw = kzalloc(sizeof(*tw), GFP_ATOMIC);
+    if (!tw)
+        return -ENOMEM;
 
-        arg4 = (unsigned long)PT_REGS_SYSCALL_PARM4(real_regs);
+    tw->outp = (int __user *)arg;
+    tw->cb.func = ksu_install_fd_tw_func;
 
-        tw = kzalloc(sizeof(*tw), GFP_ATOMIC);
-        if (!tw)
-            return 0;
-
-        tw->outp = (int __user *)arg4;
-        tw->cb.func = ksu_install_fd_tw_func;
-
-        if (task_work_add(current, &tw->cb, TWA_RESUME)) {
-            kfree(tw);
-            pr_warn("install fd add task_work failed\n");
-        }
+    if (task_work_add(current, &tw->cb, TWA_RESUME)) {
+        kfree(tw);
+        pr_warn("install fd add task_work failed\n");
+        return -EINVAL;
     }
 
     return 0;
 }
 
-static struct kprobe reboot_kp = {
-    .symbol_name = REBOOT_SYMBOL,
-    .pre_handler = reboot_handler_pre,
-};
+int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd,
+                          void __user **arg)
+{
+    if (magic1 != KSU_INSTALL_MAGIC1)
+        return -EINVAL;
+
+    // Rare case that unlikely to happen
+    if (unlikely(!arg))
+        return -EINVAL;
+
+#ifdef CONFIG_KSU_DEBUG
+    pr_info("sys_reboot: magic: 0x%x (id: %d)\n", magic1, magic2);
+#endif
+
+    // Dereference **arg.. with IS_ERR check.
+    void __user *argp = (void __user *)*arg;
+    if (IS_ERR(argp)) {
+        pr_err("Failed to deref user arg, err: %lu\n", PTR_ERR(argp));
+        return -EINVAL;
+    }
+
+    // Check if this is a request to install KSU fd
+    if (magic2 == KSU_INSTALL_MAGIC2) {
+        return ksu_handle_fd_request(argp);
+    }
+
+    return 0;
+}
 
 void ksu_supercalls_init(void)
 {
@@ -763,17 +780,16 @@ void ksu_supercalls_init(void)
                 ksu_ioctl_handlers[i].cmd);
     }
 
-    int rc = register_kprobe(&reboot_kp);
-    if (rc) {
-        pr_err("reboot kprobe failed: %d\n", rc);
-    } else {
-        pr_info("reboot kprobe registered successfully\n");
-    }
+#ifdef CONFIG_KSU_KPROBES
+    kp_handle_supercalls_init();
+#endif
 }
 
 void ksu_supercalls_exit(void)
 {
-    unregister_kprobe(&reboot_kp);
+#ifdef CONFIG_KSU_KPROBES
+    kp_handle_supercalls_exit();
+#endif
 }
 
 // IOCTL dispatcher

@@ -1,3 +1,6 @@
+#include <linux/version.h>
+#if (defined(CONFIG_KSU_KPROBES) &&                                            \
+     LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
 #include "linux/compiler.h"
 #include "linux/cred.h"
 #include "linux/printk.h"
@@ -260,9 +263,9 @@ int ksu_handle_init_mark_tracker(const char __user **filename_user)
     fn = (const char __user *)addr;
 
     memset(path, 0, sizeof(path));
-    ret = strncpy_from_user_nofault(path, fn, sizeof(path));
+    ret = ksu_strncpy_from_user_nofault(path, fn, sizeof(path));
     if (ret < 0 && try_set_access_flag(addr)) {
-        ret = strncpy_from_user_nofault(path, fn, sizeof(path));
+        ret = ksu_strncpy_from_user_nofault(path, fn, sizeof(path));
         pr_info("ksu_handle_init_mark_tracker: %ld\n", ret);
     }
 
@@ -312,7 +315,8 @@ static void ksu_sys_enter_handler(void *data, struct pt_regs *regs, long id)
                 if (current->pid != 1 && is_init(get_current_cred())) {
                     ksu_handle_init_mark_tracker(filename_user);
                 } else {
-                    ksu_handle_execve_sucompat(filename_user, NULL, NULL, NULL);
+                    ksu_handle_execve_sucompat(NULL, filename_user, NULL, NULL,
+                                               NULL);
                 }
                 return;
             }
@@ -378,3 +382,4 @@ void ksu_syscall_hook_manager_exit(void)
     ksu_sucompat_exit();
     ksu_setuid_hook_exit();
 }
+#endif

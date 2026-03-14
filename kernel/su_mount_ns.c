@@ -24,6 +24,7 @@
 #include <uapi/linux/fs.h>
 #endif
 
+#include "arch.h"
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
 #include "kernel_compat.h"
@@ -32,6 +33,12 @@
 extern int path_mount(const char *dev_name, struct path *path,
                       const char *type_page, unsigned long flags,
                       void *data_page);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
+// RKSU: tiny arch.h, avoid depending on real arch.h
+#ifndef __PT_REGS_CAST
+#define __PT_REGS_CAST(x) (x)
+#endif
 
 #if defined(__aarch64__)
 #define PT_PARM1(x) (__PT_REGS_CAST(x)->regs[0])

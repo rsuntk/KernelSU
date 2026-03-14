@@ -5,6 +5,7 @@
 #include <linux/workqueue.h>
 
 #include "allowlist.h"
+#include "app_profile.h"
 #include "feature.h"
 #include "klog.h" // IWYU pragma: keep
 #include "throne_tracker.h"
@@ -13,6 +14,13 @@
 #include "supercalls.h"
 #include "ksu.h"
 #include "file_wrapper.h"
+#include "pkg_observer.h"
+#include "lsm_hooks.h"
+
+#ifndef USE_SYSCALL_MANAGER
+#include "sucompat.h"
+#include "setuid_hook.h"
+#endif
 
 struct cred *ksu_cred;
 
@@ -33,11 +41,21 @@ int __init kernelsu_init(void)
         pr_err("prepare cred failed!\n");
     }
 
+    ksu_app_profile_init();
+
     ksu_feature_init();
 
     ksu_supercalls_init();
 
+#ifdef USE_SYSCALL_MANAGER
     ksu_syscall_hook_manager_init();
+#else
+    ksu_setuid_hook_init();
+    ksu_sucompat_init();
+#endif
+#ifdef USE_LSM_HOOKS
+    ksu_lsm_hook_init();
+#endif
 
     ksu_allowlist_init();
 
@@ -55,18 +73,24 @@ int __init kernelsu_init(void)
     return 0;
 }
 
-extern void ksu_observer_exit(void);
 void kernelsu_exit(void)
 {
     ksu_allowlist_exit();
 
     ksu_throne_tracker_exit();
 
+#ifdef USE_PKG_OBSERVER
     ksu_observer_exit();
+#endif
 
     ksu_ksud_exit();
 
+#ifdef USE_SYSCALL_MANAGER
     ksu_syscall_hook_manager_exit();
+#else
+    ksu_sucompat_exit();
+    ksu_setuid_hook_exit();
+#endif
 
     ksu_supercalls_exit();
 
@@ -83,8 +107,10 @@ module_exit(kernelsu_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("weishu");
 MODULE_DESCRIPTION("Android KernelSU");
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
 #else
 MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+#endif
 #endif

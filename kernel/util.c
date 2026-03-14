@@ -1,9 +1,11 @@
 #include <linux/version.h>
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 #include <linux/mm.h>
-#include <linux/pgtable.h>
 #include <linux/printk.h>
+#ifdef KSU_HAS_NEW_PGTABLE
+#include <linux/pgtable.h>
+#else
+#include <asm/pgtable.h>
+#endif
 #include <asm/current.h>
 
 #include "util.h"
@@ -14,9 +16,15 @@ bool try_set_access_flag(unsigned long addr)
     struct mm_struct *mm = current->mm;
     struct vm_area_struct *vma;
     pgd_t *pgd;
+#if CONFIG_PGTABLE_LEVELS > 4
     p4d_t *p4d;
+#endif
+#if CONFIG_PGTABLE_LEVELS > 3
     pud_t *pud;
+#endif
+#if CONFIG_PGTABLE_LEVELS > 2
     pmd_t *pmd;
+#endif
     pte_t *ptep, pte;
     spinlock_t *ptl;
     bool ret = false;
@@ -24,8 +32,13 @@ bool try_set_access_flag(unsigned long addr)
     if (!mm)
         return false;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
     if (!mmap_read_trylock(mm))
         return false;
+#else
+    if (!down_read_trylock(&mm->mmap_sem))
+        return false;
+#endif
 
     vma = find_vma(mm, addr);
     if (!vma || addr < vma->vm_start)
@@ -35,17 +48,23 @@ bool try_set_access_flag(unsigned long addr)
     if (!pgd_present(*pgd))
         goto out_unlock;
 
+#if CONFIG_PGTABLE_LEVELS > 4
     p4d = p4d_offset(pgd, addr);
     if (!p4d_present(*p4d))
         goto out_unlock;
+#endif
 
+#if CONFIG_PGTABLE_LEVELS > 3
     pud = pud_offset(p4d, addr);
     if (!pud_present(*pud))
         goto out_unlock;
+#endif
 
+#if CONFIG_PGTABLE_LEVELS > 2
     pmd = pmd_offset(pud, addr);
     if (!pmd_present(*pmd))
         goto out_unlock;
+#endif
 
     if (pmd_trans_huge(*pmd))
         goto out_unlock;
@@ -71,10 +90,55 @@ bool try_set_access_flag(unsigned long addr)
 out_pte_unlock:
     pte_unmap_unlock(ptep, ptl);
 out_unlock:
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
     mmap_read_unlock(mm);
+#else
+    up_read(&mm->mmap_sem);
+#endif
     return ret;
 #else
     return false;
 #endif
 }
+
+bool ksu_retry_filename_access(const char __user **char_usr_ptr, char *dest,
+                               size_t dest_len, bool exit_atomic_ctx)
+{
+    unsigned long addr;
+    const char __user *fn;
+    long ret;
+
+    if (unlikely(!char_usr_ptr))
+        return false;
+
+    addr = untagged_addr((unsigned long)*char_usr_ptr);
+    fn = (const char __user *)addr;
+    memset(dest, 0, dest_len);
+    ret = ksu_strncpy_from_user_nofault(dest, fn, dest_len);
+
+    if (ret < 0 && try_set_access_flag(addr)) {
+        ret = ksu_strncpy_from_user_nofault(dest, fn, dest_len);
+    }
+
+    /*
+	 * This is crazy, but we know what we are doing:
+         * Temporarily exit atomic context to handle page faults, then restore it.
+         */
+    if (exit_atomic_ctx) {
+        if (ret < 0 && preempt_count()) {
+#ifdef CONFIG_KSU_DEBUG
+            pr_info("util: access to pointer failed, attempting to rescue..\n");
 #endif
+            preempt_enable_no_resched_notrace();
+            ret = strncpy_from_user(dest, fn, dest_len);
+            preempt_disable_notrace();
+        }
+    }
+
+    if (ret < 0) {
+        pr_err("util: all fallback were tried. err: %lu\n", ret);
+        return false;
+    }
+
+    return true;
+}

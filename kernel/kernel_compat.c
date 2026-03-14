@@ -4,6 +4,7 @@
 #include <linux/uaccess.h>
 #include <linux/fdtable.h>
 #include <linux/string.h>
+#include <linux/kconfig.h>
 #include <linux/security.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 #include <linux/sched/task.h>
@@ -13,6 +14,9 @@
 #include <linux/mm.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
+
+#include "kernel_compat.h"
+#include "klog.h"
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0) ||                           \
     defined(CONFIG_IS_HW_HISI) || defined(CONFIG_KSU_ALLOWLIST_WORKAROUND)
@@ -57,35 +61,36 @@ struct file *ksu_filp_open_compat(const char *filename, int flags, umode_t mode)
 ssize_t ksu_kernel_read_compat(struct file *p, void *buf, size_t count,
                                loff_t *pos)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0) ||                          \
-    defined(KSU_OPTIONAL_KERNEL_READ)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
     return kernel_read(p, buf, count, pos);
-#else
-    loff_t offset = pos ? *pos : 0;
-    ssize_t result = kernel_read(p, offset, (char *)buf, count);
-    if (pos && result > 0) {
-        *pos = offset + result;
-    }
-    return result;
+#else // https://elixir.bootlin.com/linux/v4.14.336/source/fs/read_write.c#L418
+    mm_segment_t old_fs;
+    ssize_t res;
+    old_fs = get_fs();
+    set_fs(get_ds());
+    res = vfs_read(p, (void __user *)buf, count, pos);
+    set_fs(old_fs);
+    return res;
 #endif
 }
 
 ssize_t ksu_kernel_write_compat(struct file *p, const void *buf, size_t count,
                                 loff_t *pos)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0) ||                          \
-    defined(KSU_OPTIONAL_KERNEL_WRITE)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
     return kernel_write(p, buf, count, pos);
-#else
-    loff_t offset = pos ? *pos : 0;
-    ssize_t result = kernel_write(p, buf, count, offset);
-    if (pos && result > 0) {
-        *pos = offset + result;
-    }
-    return result;
+#else // https://elixir.bootlin.com/linux/v4.14.336/source/fs/read_write.c#L512
+    mm_segment_t old_fs;
+    ssize_t res;
+    old_fs = get_fs();
+    set_fs(get_ds());
+    res = vfs_write(p, (__force const char __user *)buf, count, pos);
+    set_fs(old_fs);
+    return res;
 #endif
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0)
 int __weak path_mount(const char *dev_name, struct path *path,
                       const char *type_page, unsigned long flags,
                       void *data_page)
@@ -108,6 +113,7 @@ int __weak path_mount(const char *dev_name, struct path *path,
     set_fs(old_fs);
     return ret;
 }
+#endif
 
 static inline long __strncpy_from_user_nofault(char *dst,
                                                const void __user *unsafe_addr,
@@ -146,11 +152,8 @@ long ksu_strncpy_from_user_nofault(char *dst, const void __user *unsafe_addr,
 {
     long ret = __strncpy_from_user_nofault(dst, unsafe_addr, count);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
     if (IS_ENABLED(CONFIG_KSU_KPROBES))
         goto skip_fault_save;
-#endif
-
     if (likely(ret >= 0))
         return ret;
     if (unlikely(!ksu_access_ok(unsafe_addr, count)))
@@ -164,18 +167,12 @@ long ksu_strncpy_from_user_nofault(char *dst, const void __user *unsafe_addr,
         ret++;
     }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 skip_fault_save:
-#endif
     return ret;
 }
 
-int __weak close_fd(unsigned int fd)
-{
-    return __close_fd(current->files, fd);
-}
-
 // https://elixir.bootlin.com/linux/v4.4.302/source/security/apparmor/lib.c#L79
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
 void __weak *kvmalloc(size_t size, gfp_t flags)
 {
     void *buffer = NULL;
@@ -193,22 +190,5 @@ void __weak *kvmalloc(size_t size, gfp_t flags)
             buffer = vmalloc(size);
     }
     return buffer;
-}
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
-// https://elixir.bootlin.com/linux/v5.10.247/source/mm/util.c#L664
-void *ksu_compat_kvrealloc(const void *p, size_t oldsize, size_t newsize,
-                           gfp_t flags)
-{
-    void *newp;
-
-    if (oldsize >= newsize)
-        return (void *)p;
-    newp = kvmalloc(newsize, flags);
-    if (!newp)
-        return NULL;
-    __builtin_memcpy(newp, p, oldsize);
-    kvfree(p);
-    return newp;
 }
 #endif

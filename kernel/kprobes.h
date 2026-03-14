@@ -3,9 +3,6 @@
 
 #ifdef CONFIG_KSU_KPROBES
 
-#include <linux/kprobes.h>
-#include <linux/workqueue.h>
-
 #define KSU_KP_ENUM_MEMBER(name) KSU_##name##_KP_HANDLER
 
 enum ksud_kp_stop {
@@ -15,12 +12,15 @@ enum ksud_kp_stop {
     KSU_KP_HANDLER_MAX,
 };
 
-struct ksu_kp_desc {
-    struct kprobe *kp;
-    struct kretprobe *rp;
-    const char *name;
-    struct work_struct stop_work;
-};
+void kp_handle_ksud_stop(enum ksud_kp_stop stop_code);
+
+void kp_handle_ksud_init(void);
+void kp_handle_supercalls_init(void);
+void kp_handle_sucompat_init(void);
+
+void kp_handle_ksud_exit(void);
+void kp_handle_supercalls_exit(void);
+void kp_handle_sucompat_exit(void);
 
 #endif /* CONFIG_KSU_KPROBES */
 

@@ -4,6 +4,7 @@
 #include "objsec.h"
 #include "linux/version.h"
 #include "../klog.h" // IWYU pragma: keep
+#include "../kernel_compat.h"
 #include "../ksu.h"
 
 /*

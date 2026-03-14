@@ -14,26 +14,31 @@
 #define ZYGOTE_CONTEXT "u:r:zygote:s0"
 #define INIT_CONTEXT "u:r:init:s0"
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)) &&                        \
+    !defined(KSU_COMPAT_USE_SELINUX_STATE)
+#define KSU_COMPAT_USE_SELINUX_STATE
+#endif
+
 void setup_selinux(const char *, struct cred *);
 
 void setenforce(bool);
 
-bool getenforce();
+bool getenforce(void);
 
 void cache_sid(void);
 
 bool is_task_ksu_domain(const struct cred *cred);
 
-bool is_ksu_domain();
+bool is_ksu_domain(void);
 
 bool is_zygote(const struct cred *cred);
 
 bool is_init(const struct cred *cred);
 
-void apply_kernelsu_rules();
+void apply_kernelsu_rules(void);
 
 int handle_sepolicy(unsigned long arg3, void __user *arg4);
 
-void setup_ksu_cred();
+void setup_ksu_cred(void);
 
 #endif

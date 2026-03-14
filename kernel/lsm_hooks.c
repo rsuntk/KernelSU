@@ -1,12 +1,16 @@
+#include <linux/version.h>
 #include <linux/lsm_hooks.h>
 #include <linux/uidgid.h>
-#include <linux/version.h>
+#include <linux/fs.h>
+#include <linux/namei.h>
 #include <linux/dcache.h>
 #include <linux/err.h>
 #include <linux/uidgid.h>
 #include <linux/string.h>
 
 #include "klog.h" // IWYU pragma: keep
+#include "lsm_hooks.h"
+#include "pkg_observer.h"
 #include "kernel_compat.h"
 #include "setuid_hook.h"
 #include "throne_tracker.h"
@@ -32,29 +36,30 @@ static int ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 static int ksu_inode_rename(struct inode *old_inode, struct dentry *old_dentry,
                             struct inode *new_inode, struct dentry *new_dentry)
 {
+#ifndef USE_PKG_OBSERVER
     // skip kernel threads
-    if (!current->mm) {
+    if (unlikely(!current->mm)) {
         return 0;
     }
 
     // skip non system uid
-    if (current_uid().val != 1000) {
+    if (likely(current_uid().val != 1000)) {
         return 0;
     }
 
-    if (!old_dentry || !new_dentry) {
+    // basic null checking
+    if (unlikely(!new_dentry)) {
         return 0;
     }
 
     // /data/system/packages.list.tmp -> /data/system/packages.list
-    if (strcmp(new_dentry->d_iname, "packages.list")) {
+    if (likely(strcmp(new_dentry->d_iname, "packages.list") != 0)) {
         return 0;
     }
 
     char path[128];
     char *buf = dentry_path_raw(new_dentry, path, sizeof(path));
-    if (IS_ERR(buf)) {
-        pr_err("dentry_path_raw failed.\n");
+    if (unlikely(IS_ERR(buf))) {
         return 0;
     }
 
@@ -62,27 +67,24 @@ static int ksu_inode_rename(struct inode *old_inode, struct dentry *old_dentry,
         return 0;
     }
 
-    pr_info("renameat: %s -> %s, new path: %s\n", old_dentry->d_iname,
-            new_dentry->d_iname, buf);
+    pr_info("renameat: packages.list rename detected!\n");
 
     track_throne(false);
-
+#endif
     return 0;
 }
 
 static int ksu_task_fix_setuid(struct cred *new, const struct cred *old,
                                int flags)
 {
-    kuid_t euid, uid;
-
-    if (!new)
+    if (!new || !old)
         return 0;
 
-    euid = new->euid;
-    uid = new->uid;
+    uid_t ruid = __kuid_val(new->uid);
+    uid_t euid = __kuid_val(new->euid);
+    uid_t suid = __kuid_val(new->suid);
 
-    return ksu_handle_setresuid((uid_t)euid.val, (uid_t)uid.val,
-                                (uid_t)uid.val);
+    return ksu_handle_setresuid(ruid, euid, suid);
 }
 
 static struct security_hook_list ksu_hooks[] = {

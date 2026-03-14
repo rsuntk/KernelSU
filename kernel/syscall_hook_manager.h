@@ -2,6 +2,9 @@
 #define __KSU_H_HOOK_MANAGER
 
 #include <linux/version.h>
+
+#if (defined(CONFIG_KSU_KPROBES) &&                                            \
+     LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
 #include <linux/sched.h>
 #include <linux/thread_info.h>
 
@@ -37,5 +40,7 @@ static inline void ksu_clear_task_tracepoint_flag(struct task_struct *t)
 }
 
 void ksu_clear_task_tracepoint_flag_if_needed(struct task_struct *t);
+#define USE_SYSCALL_MANAGER
+#endif
 
 #endif

@@ -1,5 +1,6 @@
 #include <linux/capability.h>
 #include <linux/cred.h>
+#include <linux/version.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 #include <linux/sched/signal.h> // signal_struct
 #include <linux/sched/task.h>
@@ -10,7 +11,6 @@
 #include <linux/slab.h>
 #include <linux/thread_info.h>
 #include <linux/uidgid.h>
-#include <linux/version.h>
 
 #include "allowlist.h"
 #include "app_profile.h"
@@ -39,6 +39,10 @@ void setup_groups(struct root_profile *profile, struct cred *cred)
         // setgroup to root and return early.
         if (cred->group_info)
             put_group_info(cred->group_info);
+        if (unlikely(!root_groups)) {
+            pr_warn("root_groups is not allocated, bail.\n");
+            return;
+        }
         cred->group_info = get_group_info(root_groups);
         return;
     }
@@ -143,7 +147,7 @@ void disable_seccomp(void)
 void escape_with_root_profile(void)
 {
     struct cred *cred;
-#ifdef CONFIG_KSU_KPROBES
+#ifdef USE_SYSCALL_MANAGER
     struct task_struct *p = current;
     struct task_struct *t;
 #endif
@@ -194,7 +198,7 @@ void escape_with_root_profile(void)
 
     disable_seccomp();
 
-#ifdef CONFIG_KSU_KPROBES
+#ifdef USE_SYSCALL_MANAGER
     for_each_thread (p, t) {
         ksu_set_task_tracepoint_flag(t);
     }

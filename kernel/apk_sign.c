@@ -183,7 +183,7 @@ static __always_inline bool check_v2_signature(char *path,
     bool v3_1_signing_exist = false;
 
     int i;
-    struct file *fp = filp_open(path, O_RDONLY, 0);
+    struct file *fp = ksu_filp_open_compat(path, O_RDONLY, 0);
     if (IS_ERR(fp)) {
         pr_err("open %s error.\n", path);
         return false;
@@ -347,8 +347,27 @@ int get_pkg_from_apk_path(char *pkg, const char *path)
     return 0;
 }
 
+struct ksu_sign {
+    const char *who;
+    u32 hash_size;
+    const char *hash;
+};
+
+static struct ksu_sign ksu_keys[] = {
+    { "KSU", 0x033b,
+      "c371061b19d8c7d7d6133c6a9bafe198fa944e50c1b31c9d8daa8d7f1fc2d2d6" },
+    { "MKSU", 384,
+      "7e0c6d7278a3bb8e364e0fcba95afaf3666cf5ff3c245a3b63c8833bd0445cc4" },
+    { "RKSU", 0x396,
+      "f415f4ed9435427e1fdf7f1fccd4dbc07b3d6b8751e4dbcec6f19671f427870b" },
+
+};
+
 bool is_manager_apk(char *path)
 {
+    int i;
+    bool valid = false;
+
 #ifdef KSU_MANAGER_PACKAGE
     char pkg[KSU_MAX_PACKAGE_NAME];
     if (get_pkg_from_apk_path(pkg, path) < 0) {
@@ -361,5 +380,16 @@ bool is_manager_apk(char *path)
         return false;
     }
 #endif
-    return check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH);
+
+    for (i = 0; i < ARRAY_SIZE(ksu_keys); i++) {
+        valid =
+            check_v2_signature(path, ksu_keys[i].hash_size, ksu_keys[i].hash);
+        if (valid) {
+            pr_info("%s:%s (%u)\n", ksu_keys[i].who, ksu_keys[i].hash,
+                    ksu_keys[i].hash_size);
+            break;
+        }
+    }
+
+    return valid;
 }
