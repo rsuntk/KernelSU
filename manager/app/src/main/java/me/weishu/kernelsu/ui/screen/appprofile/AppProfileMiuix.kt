@@ -1,5 +1,6 @@
 package me.weishu.kernelsu.ui.screen.appprofile
 
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -151,7 +152,12 @@ fun AppProfileScreenMiuix(
                     appUid = state.uid,
                     sharedUserId = if (state.isUidGroup) state.sharedUserId else "",
                     appVersionName = if (state.isUidGroup) "" else (state.appGroup.primary.packageInfo.versionName ?: ""),
-                    appVersionCode = if (state.isUidGroup) 0L else state.appGroup.primary.packageInfo.longVersionCode,
+                    appVersionCode = if (state.isUidGroup) 0L else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        state.appGroup.primary.packageInfo.longVersionCode
+                    } else {
+                        @Suppress("DEPRECATION")
+                        state.appGroup.primary.packageInfo.versionCode.toLong()
+                    },
                     profile = state.profile,
                     isUidGroup = state.isUidGroup,
                     affectedApps = state.appGroup.apps,
