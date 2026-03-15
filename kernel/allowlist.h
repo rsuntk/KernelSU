@@ -33,7 +33,7 @@ bool ksu_get_allow_list(int *array, u16 length, u16 *out_length, u16 *out_total,
 
 void ksu_prune_allowlist(bool (*is_uid_exist)(uid_t, char *, void *),
                          void *data);
-void ksu_persistent_allow_list();
+void ksu_persistent_allow_list(void);
 
 bool ksu_get_app_profile(struct app_profile *);
 int ksu_set_app_profile(struct app_profile *);

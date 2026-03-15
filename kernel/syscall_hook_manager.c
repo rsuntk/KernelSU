@@ -65,7 +65,7 @@ void ksu_unmark_all_process(void)
     pr_info("hook_manager: unmark all user process done!\n");
 }
 
-static void ksu_mark_running_process_locked()
+static void ksu_mark_running_process_locked(void)
 {
     struct task_struct *p, *t;
     read_lock(&tasklist_lock);
@@ -95,7 +95,7 @@ static void ksu_mark_running_process_locked()
     read_unlock(&tasklist_lock);
 }
 
-void ksu_mark_running_process()
+void ksu_mark_running_process(void)
 {
     unsigned long flags;
     spin_lock_irqsave(&tracepoint_reg_lock, flags);

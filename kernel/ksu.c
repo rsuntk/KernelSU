@@ -36,7 +36,7 @@
 unsigned long __stack_chk_guard __ro_after_init
     __attribute__((visibility("hidden")));
 
-__attribute__((no_stack_protector)) void ksu_setup_stack_chk_guard()
+__attribute__((no_stack_protector)) void ksu_setup_stack_chk_guard(void)
 {
     unsigned long canary;
 
