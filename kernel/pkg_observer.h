@@ -3,7 +3,9 @@
 
 #include <linux/version.h>
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0) || defined(MODULE))
+#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)) &&                       \
+         (defined(MODULE) && defined(CONFIG_KSU_KPROBES)) ||                   \
+     (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)))
 
 int ksu_observer_init(void);
 
