@@ -8,13 +8,6 @@
 #include "kprobes.h"
 #include "util.h"
 
-struct ksu_kp_desc {
-    struct kprobe *kp;
-    struct kretprobe *rp;
-    const char *name;
-    struct work_struct stop_work;
-};
-
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x)                                                          \
     (sizeof(x) / sizeof(x)[0]) // no __must_be_array, be careful!
@@ -37,6 +30,10 @@ struct ksu_kp_desc {
 //
 // ksud - for executing userspace daemon (ksud)
 //
+
+static struct work_struct stop_init_rc_hook_work;
+static struct work_struct stop_execve_hook_work;
+static struct work_struct stop_input_hook_work;
 
 extern int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr,
                                     struct user_arg_ptr *argv,
@@ -138,88 +135,81 @@ static KSU_KRETPROBE(sys_fstat_kp, SYS_FSTAT_SYMBOL, sys_fstat_handler_pre,
 static KSU_KPROBE(input_event_kp, "input_event",
                   input_handle_event_handler_pre);
 
-static struct ksu_kp_desc ksu_init_probes[] = {
-    [KSU_KP_ENUM_MEMBER(INIT_RC)] = { .kp = &sys_read_kp,
-                                      .rp = &sys_fstat_kp,
-                                      .name = "init_rc" },
-    [KSU_KP_ENUM_MEMBER(EXECVE)] = { .kp = &execve_kp, .name = "execve" },
-    [KSU_KP_ENUM_MEMBER(INPUT_EVENT)] = { .kp = &input_event_kp,
-                                          .name = "input_event" },
-};
-
-static void do_stop_probe_work(struct work_struct *work)
+static void do_stop_init_rc_hook(struct work_struct *work)
 {
-    struct ksu_kp_desc *desc =
-        container_of(work, struct ksu_kp_desc, stop_work);
-
-    if (unlikely(!desc)) {
-        pr_err("ksud: failed to obtain ksu init probes description.\n");
-        return;
-    }
-
-    if (desc->rp) {
-        unregister_kretprobe(desc->rp);
-        pr_info("ksud: %s kretprobe unregistered.\n", desc->name);
-    }
-
-    if (desc->kp) {
-        unregister_kprobe(desc->kp);
-        pr_info("ksud: %s kprobe unregistered.\n", desc->name);
-    }
+    unregister_kprobe(&sys_read_kp);
+    unregister_kretprobe(&sys_fstat_kp);
 }
 
-static bool kp_stop_max(enum ksud_stop_code stop_code)
+static void do_stop_execve_hook(struct work_struct *work)
 {
-    return stop_code == KSU_KP_HANDLER_MAX;
+    unregister_kprobe(&execve_kp);
+}
+
+static void do_stop_input_hook(struct work_struct *work)
+{
+    unregister_kprobe(&input_event_kp);
 }
 
 void kp_handle_ksud_stop(enum ksud_stop_code stop_code)
 {
-    int ret;
-
-    if (kp_stop_max(stop_code))
+    bool ret;
+    switch (stop_code) {
+    case KSU_KP_ENUM_MEMBER(INIT_RC): {
+        ret = schedule_work(&stop_vfs_read_work);
+        pr_info("unregister vfs_read kprobe: %d!\n", ret);
+        break;
+    }
+    case KSU_KP_ENUM_MEMBER(EXECVE): {
+        ret = schedule_work(&stop_execve_hook_work);
+        pr_info("unregister execve kprobe: %d!\n", ret);
+        break;
+    }
+    case KSU_KP_ENUM_MEMBER(INPUT_EVENT): {
+        static bool input_hook_stopped = false;
+        if (input_hook_stopped) {
+            return;
+        }
+        input_hook_stopped = true;
+        ret = schedule_work(&stop_input_hook_work);
+        pr_info("unregister input kprobe: %d!\n", ret);
+        break;
+    }
+    case KSU_KP_HANDLER_MAX:
+    default: {
+        pr_err("ksud: invalid enum / max!\n");
         return;
-
-    ret = schedule_work(&ksu_init_probes[stop_code].stop_work);
-    pr_info("ksud: unregister %s kprobe, ret: %d\n",
-            ksu_init_probes[stop_code].name, ret);
+    }
+    }
 }
 
 void kp_handle_ksud_init(void)
 {
-    int i, ret;
-    struct ksu_kp_desc *desc;
+    int ret;
 
-    for (i = 0; i < ARRAY_SIZE(ksu_init_probes); i++) {
-        desc = &ksu_init_probes[i];
+    ret = register_kprobe(&execve_kp);
+    pr_info("ksud: execve_kp: %d\n", ret);
 
-        // Init workqueue
-        INIT_WORK(&desc->stop_work, do_stop_probe_work);
+    ret = register_kprobe(&sys_read_kp);
+    pr_info("ksud: sys_read_kp: %d\n", ret);
 
-        if (desc->rp) {
-            ret = register_kretprobe(desc->rp);
-            pr_info("ksud: %s kretprobe init: %d\n", desc->name, ret);
-        }
-        if (desc->kp) {
-            ret = register_kprobe(desc->kp);
-            pr_info("ksud: %s kprobe init: %d\n", desc->name, ret);
-        }
-    }
+    ret = register_kretprobe(&sys_fstat_kp);
+    pr_info("ksud: sys_fstat_kp: %d\n", ret);
+
+    ret = register_kprobe(&input_event_kp);
+    pr_info("ksud: input_event_kp: %d\n", ret);
+
+    INIT_WORK(&stop_init_rc_hook_work, do_stop_init_rc_hook);
+    INIT_WORK(&stop_execve_hook_work, do_stop_execve_hook);
+    INIT_WORK(&stop_input_hook_work, do_stop_input_hook);
 }
 
 void kp_handle_ksud_exit(void)
 {
-    int i;
-    struct ksu_kp_desc *desc;
-
-    for (i = 0; i < ARRAY_SIZE(ksu_init_probes); i++) {
-        desc = &ksu_init_probes[i];
-
-        if (desc->rp)
-            unregister_kretprobe(desc->rp);
-        if (desc->kp)
-            unregister_kprobe(desc->kp);
-    }
+    unregister_kprobe(&execve_kp);
+    // this should be done before unregister sys_read_kp
+    // unregister_kprobe(&sys_read_kp);
+    unregister_kprobe(&input_event_kp);
 }
 
 //
