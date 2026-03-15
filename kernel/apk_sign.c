@@ -360,7 +360,8 @@ static struct ksu_sign ksu_keys[] = {
       "7e0c6d7278a3bb8e364e0fcba95afaf3666cf5ff3c245a3b63c8833bd0445cc4" },
     { "RKSU", 0x396,
       "f415f4ed9435427e1fdf7f1fccd4dbc07b3d6b8751e4dbcec6f19671f427870b" },
-
+    { "KowSU", 0x375,
+      "484fcba6e6c43b1fb09700633bf2fb4758f13cb0b2f4457b80d075084b26c588" },
 };
 
 bool is_manager_apk(char *path)
