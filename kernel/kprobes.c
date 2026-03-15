@@ -1,10 +1,14 @@
 #include <linux/task_work.h>
 #include <linux/workqueue.h>
 #include <linux/kprobes.h>
+#include <linux/fs.h>
+#include <linux/file.h>
 #include <linux/slab.h>
 
 #include "arch.h"
 #include "klog.h"
+#include "ksud.h"
+#include "syscall_hook_manager.h" // #define USE_SYSCALL_MANAGER
 #include "kprobes.h"
 #include "util.h"
 
@@ -72,6 +76,8 @@ static int sys_read_handler_pre(struct kprobe *p, struct pt_regs *regs)
     return 0;
 }
 
+extern const size_t ksu_rc_len;
+extern bool is_init_rc(struct file *fp);
 static int sys_fstat_handler_pre(struct kretprobe_instance *p,
                                  struct pt_regs *regs)
 {
@@ -155,17 +161,17 @@ void kp_handle_ksud_stop(enum ksud_stop_code stop_code)
 {
     bool ret;
     switch (stop_code) {
-    case KSU_KP_ENUM_MEMBER(INIT_RC): {
-        ret = schedule_work(&stop_vfs_read_work);
-        pr_info("unregister vfs_read kprobe: %d!\n", ret);
+    case KSU_INIT_RC_KP_HANDLER: {
+        ret = schedule_work(&stop_init_rc_hook_work);
+        pr_info("unregister init_rc hook: %d!\n", ret);
         break;
     }
-    case KSU_KP_ENUM_MEMBER(EXECVE): {
+    case KSU_EXECVE_KP_HANDLER: {
         ret = schedule_work(&stop_execve_hook_work);
         pr_info("unregister execve kprobe: %d!\n", ret);
         break;
     }
-    case KSU_KP_ENUM_MEMBER(INPUT_EVENT): {
+    case KSU_INPUT_EVENT_KP_HANDLER: {
         static bool input_hook_stopped = false;
         if (input_hook_stopped) {
             return;
@@ -309,7 +315,8 @@ static int newfstatat_handler_pre(struct kprobe *p, struct pt_regs *regs)
     return ksu_handle_stat(dfd, filename_user, flags);
 }
 
-extern int ksu_handle_execve_sucompat(const char __user **filename_user,
+extern int ksu_handle_execve_sucompat(int *fd,
+                                      const char __user **filename_user,
                                       void *__never_use_argv,
                                       void *__never_use_envp,
                                       int *__never_use_flags);
@@ -319,8 +326,7 @@ static int execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
     const char __user **filename_user =
         (const char **)&PT_REGS_PARM1(real_regs);
 
-    return ksu_handle_execve_sucompat((int *)AT_FDCWD, filename_user, NULL,
-                                      NULL, NULL);
+    return ksu_handle_execve_sucompat(NULL, filename_user, NULL, NULL, NULL);
 }
 
 void kp_handle_sucompat_init(void)

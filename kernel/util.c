@@ -8,7 +8,15 @@
 #endif
 #include <asm/current.h>
 
+#include "kernel_compat.h"
 #include "util.h"
+
+// Just for precaution
+#ifdef MODULE
+#ifndef __PAGETABLE_P4D_FOLDED
+#define __PAGETABLE_P4D_FOLDED 1
+#endif
+#endif
 
 bool try_set_access_flag(unsigned long addr)
 {
@@ -16,15 +24,11 @@ bool try_set_access_flag(unsigned long addr)
     struct mm_struct *mm = current->mm;
     struct vm_area_struct *vma;
     pgd_t *pgd;
-#if CONFIG_PGTABLE_LEVELS > 4
+#if __PAGETABLE_P4D_FOLDED == 1
     p4d_t *p4d;
 #endif
-#if CONFIG_PGTABLE_LEVELS > 3
-    pud_t *pud;
-#endif
-#if CONFIG_PGTABLE_LEVELS > 2
+    pud_t *pud, *pudp;
     pmd_t *pmd;
-#endif
     pte_t *ptep, pte;
     spinlock_t *ptl;
     bool ret = false;
@@ -48,23 +52,23 @@ bool try_set_access_flag(unsigned long addr)
     if (!pgd_present(*pgd))
         goto out_unlock;
 
-#if CONFIG_PGTABLE_LEVELS > 4
+#if __PAGETABLE_P4D_FOLDED == 1
     p4d = p4d_offset(pgd, addr);
     if (!p4d_present(*p4d))
         goto out_unlock;
+
+    pudp = pud_offset(p4d, addr);
+#else
+    pudp = pud_offset(pgd, addr);
 #endif
 
-#if CONFIG_PGTABLE_LEVELS > 3
-    pud = pud_offset(p4d, addr);
+    pud = pudp;
     if (!pud_present(*pud))
         goto out_unlock;
-#endif
 
-#if CONFIG_PGTABLE_LEVELS > 2
     pmd = pmd_offset(pud, addr);
     if (!pmd_present(*pmd))
         goto out_unlock;
-#endif
 
     if (pmd_trans_huge(*pmd))
         goto out_unlock;

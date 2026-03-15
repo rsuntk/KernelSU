@@ -463,7 +463,7 @@ append_ksu_rc:
     return ret;
 }
 
-static bool is_init_rc(struct file *fp)
+bool is_init_rc(struct file *fp)
 {
     if (strcmp(current->comm, "init")) {
         // we are only interest in `init` process
@@ -619,7 +619,7 @@ bool ksu_is_safe_mode(void)
 static void stop_init_rc_hook(void)
 {
 #ifdef CONFIG_KSU_KPROBES
-    kp_handle_ksud_stop(KSU_KP_ENUM_MEMBER(INIT_RC));
+    kp_handle_ksud_stop(KSU_INIT_RC_KP_HANDLER);
 #else
     ksu_vfs_read_hook = false;
     pr_info("ksud: stop init_rc hook\n");
@@ -629,7 +629,7 @@ static void stop_init_rc_hook(void)
 static void stop_execve_hook(void)
 {
 #ifdef CONFIG_KSU_KPROBES
-    kp_handle_ksud_stop(KSU_KP_ENUM_MEMBER(EXECVE));
+    kp_handle_ksud_stop(KSU_EXECVE_KP_HANDLER);
 #else
     ksu_execveat_hook = false;
     pr_info("ksud: stop execve hook\n");
@@ -639,7 +639,7 @@ static void stop_execve_hook(void)
 static void stop_input_hook(void)
 {
 #ifdef CONFIG_KSU_KPROBES
-    kp_handle_ksud_stop(KSU_KP_ENUM_MEMBER(INPUT_EVENT));
+    kp_handle_ksud_stop(KSU_INPUT_EVENT_KP_HANDLER);
 #else
     if (!ksu_input_hook) {
         pr_info("ksud: input hook already stopped\n");
