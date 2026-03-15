@@ -116,9 +116,7 @@ void kernelsu_exit(void)
 
     ksu_throne_tracker_exit();
 
-#ifdef USE_PKG_OBSERVER
     ksu_observer_exit();
-#endif
 
     ksu_ksud_exit();
 
