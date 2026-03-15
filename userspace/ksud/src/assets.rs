@@ -35,6 +35,11 @@ pub use android::*;
 #[folder = "bin/x86_64"]
 struct Asset;
 
+#[cfg(all(target_arch = "arm", target_os = "android"))]
+#[derive(RustEmbed)]
+#[folder = "bin/arm"]
+struct Asset;
+
 // IF NOT x86_64 ANDROID, ie. macos, linux, windows, always use aarch64
 #[cfg(not(all(target_arch = "x86_64", target_os = "android")))]
 #[derive(RustEmbed)]
