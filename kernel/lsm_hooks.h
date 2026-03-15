@@ -3,15 +3,19 @@
 
 #include <linux/version.h>
 
-// TODO: Fix the logic
+#ifndef MODULE
 
-#if ((!defined(MODULE) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)) ||     \
-     (defined(CONFIG_KSU_KPROBES) &&                                           \
-      LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)))
+#if ((LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0) &&                          \
+      !defined(CONFIG_KSU_KPROBES)) ||                                         \
+     (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0) &&                         \
+      LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0) &&                         \
+      defined(CONFIG_KSU_KPROBES)))
 
 void __init ksu_lsm_hook_init(void);
 
 #define USE_LSM_HOOKS
+
+#endif
 
 #endif
 
