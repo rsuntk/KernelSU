@@ -4,8 +4,8 @@ import sys
 from telethon import TelegramClient
 from telethon.tl.functions.help import GetConfigRequest
 
-API_ID = 611335
-API_HASH = "d524b414d21f4d37f08684c1df41ac9c"
+API_ID = 27819828
+API_HASH = "697659831acf9ea476a0346692c494dd"
 
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
@@ -75,8 +75,7 @@ def check_environ():
         print("[-] Invalid BRANCH")
         exit(1)
     if MESSAGE_THREAD_ID is None:
-        print("[-] Invaild MESSAGE_THREAD_ID")
-        exit(1)
+        print("[-] Invaild MESSAGE_THREAD_ID, ignoring")
     else:
         MESSAGE_THREAD_ID = int(MESSAGE_THREAD_ID)
 
