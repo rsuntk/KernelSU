@@ -1,7 +1,7 @@
 import asyncio
 import os
 import sys
-from telethon import TelegramClient
+from telethon import TelegramClient, types
 from telethon.tl.functions.help import GetConfigRequest
 
 API_ID = 27819828
@@ -75,10 +75,14 @@ def check_environ():
         print("[-] Invalid BRANCH")
         exit(1)
     if MESSAGE_THREAD_ID is None:
-        print("[-] Invaild MESSAGE_THREAD_ID, ignoring")
+        print("[!] No MESSAGE_THREAD_ID detected, sending to main chat")
+        MESSAGE_THREAD_ID = None
     else:
-        MESSAGE_THREAD_ID = int(MESSAGE_THREAD_ID)
-
+        try:
+            MESSAGE_THREAD_ID = int(MESSAGE_THREAD_ID)
+        except ValueError:
+            print("[-] Invalid MESSAGE_THREAD_ID format, ignoring")
+            MESSAGE_THREAD_ID = None
 
 async def main():
     print("[+] Uploading to telegram")
@@ -99,7 +103,9 @@ async def main():
         print(caption)
         print("---")
         print("[+] Sending")
-        await bot.send_file(entity=CHAT_ID, file=files, caption=caption, reply_to=MESSAGE_THREAD_ID, parse_mode="markdown")
+
+	reply_to_param = types.InputReplyParameters(reply_to_msg_id=MESSAGE_THREAD_ID) if MESSAGE_THREAD_ID else None
+        await bot.send_file(entity=CHAT_ID, file=files, caption=caption, reply_to=reply_to_param, parse_mode="markdown")
         print("[+] Done!")
 
 if __name__ == "__main__":
