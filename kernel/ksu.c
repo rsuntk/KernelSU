@@ -138,6 +138,8 @@ static int __init kernelsu_init(void)
 	pr_alert("**     NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE    **");
 	pr_alert("*************************************************************");
 #endif
+	if (allow_shell)
+		pr_alert("shell is allowed at init!");
 
 	ksu_cred = prepare_creds();
 	if (!ksu_cred) {

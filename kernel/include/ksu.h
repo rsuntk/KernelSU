@@ -6,6 +6,12 @@
 struct cred* ksu_cred;
 static bool ksu_late_loaded = false;
 
+#if defined(CONFIG_KSU_DEBUG) || defined(CONFIG_KSU_SHELL_HAS_SU_ALWAYS)
+static bool allow_shell = true;
+#else
+static bool allow_shell = false;
+#endif
+
 static inline int startswith(char *s, char *prefix)
 {
 	return strncmp(s, prefix, strlen(prefix));
