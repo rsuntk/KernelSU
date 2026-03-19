@@ -1,6 +1,8 @@
 package me.weishu.kernelsu.ui.component.material
 
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -49,10 +51,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import me.weishu.kernelsu.ui.util.LocalSnackbarHost
@@ -73,6 +79,9 @@ fun SearchAppBar(
     val focusManager = LocalFocusManager.current
     val interactionSource = remember { MutableInteractionSource() }
 
+    val hasFocusReassignBug = Build.VERSION.SDK_INT <= 27
+    val focusRequester = remember { FocusRequester() }
+
     val scope = rememberCoroutineScope()
     val searchBarState = rememberContainedSearchBarState()
     val textFieldState = rememberTextFieldState()
@@ -89,7 +98,6 @@ fun SearchAppBar(
         shouldClearOnCollapse = false
         clearSearchText()
         scope.launch { searchBarState.animateToCollapsed() }
-        focusManager.clearFocus()
         keyboardController?.hide()
     }
 
@@ -128,10 +136,21 @@ fun SearchAppBar(
                         clearSearchText()
                     }
                     shouldClearOnCollapse = true
-                    focusManager.clearFocus()
                     keyboardController?.hide()
+                    scope.launch {
+                        if (hasFocusReassignBug) delay(100)
+                        focusManager.clearFocus()
+                    }
                 }
             }
+    }
+
+    LaunchedEffect(isSearchExpanded) {
+        if (isSearchExpanded && hasFocusReassignBug) {
+            delay(100)
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        }
     }
 
     BackHandler(isSearchExpanded) {
@@ -140,8 +159,22 @@ fun SearchAppBar(
         }
     }
 
+    val isInputFieldEnabled = !hasFocusReassignBug || isSearchExpanded
+
     val inputField: @Composable () -> Unit = {
+        val expandOnTapModifier = if (hasFocusReassignBug && !isSearchExpanded) {
+            Modifier.pointerInput(Unit) {
+                detectTapGestures {
+                    scope.launch { searchBarState.animateToExpanded() }
+                }
+            }
+        } else {
+            Modifier
+        }
+
         SearchBarDefaults.InputField(
+            modifier = expandOnTapModifier.focusRequester(focusRequester),
+            enabled = isInputFieldEnabled,
             textFieldState = textFieldState,
             searchBarState = searchBarState,
             onSearch = {
