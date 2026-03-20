@@ -3,6 +3,7 @@
 #include <linux/kobject.h>
 #include <linux/module.h>
 #include <linux/workqueue.h>
+#include <linux/version.h>
 
 #include "allowlist.h"
 #include "app_profile.h"
