@@ -143,7 +143,6 @@
     <string name="module_repos_sort_name">名前（A→Z）</string>
     <string name="module_repos_source_code">ソースコード</string>
     <string name="metamodule_uninstall_confirm">モジュール %s をアンインストールしてもよろしいですか? この操作はすべてのモジュールに影響し、メタモジュールによって提供される特定の機能 (マウントなど) は動作しなくなります。</string>
-    <string name="home_gki_warning">バージョン 3.0.0 以降、GKI ワークモードはテスト環境でのみ使用されます。日常的な使用には推奨されません。また、イメージファイルの提供も停止されます。</string>
     <string name="app_profile_affects_following_apps">以下のアプリに影響します</string>
     <string name="install_select_partition">パーティションを選択</string>
     <string name="feature_status_unsupported_summary">カーネルはこの機能をサポートしていません</string>

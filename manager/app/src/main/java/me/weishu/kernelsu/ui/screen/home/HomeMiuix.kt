@@ -144,9 +144,6 @@ fun HomePagerMiuix(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    if (ksuVersion != null && !Natives.isLkmMode) {
-                        WarningCard(stringResource(id = R.string.home_gki_warning))
-                    }
                     if (isManager && Natives.requireNewKernel()) {
                         WarningCard(
                             stringResource(id = R.string.require_kernel_version)
