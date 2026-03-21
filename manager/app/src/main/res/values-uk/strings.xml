@@ -165,7 +165,6 @@
     <string name="module_repos">Репозиторій модулів</string>
     <string name="module_repos_sort_name">Ім\'я (А → Я)</string>
     <string name="module_repos_source_code">Вихідний код</string>
-    <string name="home_gki_warning">Починаючи з версії 3.0.0, робочий режим GKI використовуватиметься лише в тестових середовищах. Ми не рекомендуємо його для щоденного використання, а файли зображень більше не надаватимуться.</string>
     <string name="undo">Відмінити</string>
     <string name="module_undo_uninstall_success">Видалення %s успішно скасовано</string>
     <string name="module_undo_uninstall_failed">Не вдалося відмінити видалення: %s</string>

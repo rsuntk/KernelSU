@@ -139,7 +139,6 @@
     <string name="module_repos_sort_name">이름 (A → Z)</string>
     <string name="module_repos_source_code">소스 코드</string>
     <string name="metamodule_uninstall_confirm">정말 %s 모듈을 제거할까요? 이 동작은 모든 모듈에 영향을 미치며, 메타모듈에서 제공하는 일부 기능(마운트 등)은 더 이상 작동하지 않습니다.</string>
-    <string name="home_gki_warning">v3.0.0 부터, GKI 동작 모드는 테스트 환경에서만 사용됩니다. 일상적인 사용은 권장하지 않으며, 이미지 파일은 더 이상 제공되지 않습니다.</string>
     <string name="app_profile_affects_following_apps">다음 앱에 영향</string>
     <string name="feature_status_unsupported_summary">커널이 이 기능을 지원하지 않습니다.</string>
     <string name="feature_status_managed_summary">이 기능은 모듈에 의해 관리됩니다.</string>

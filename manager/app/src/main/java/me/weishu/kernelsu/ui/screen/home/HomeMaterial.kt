@@ -93,9 +93,6 @@ fun HomePagerMaterial(
                     )
                 )
             }
-            if (state.showGkiWarning) {
-                WarningCard(stringResource(id = R.string.home_gki_warning))
-            }
             if (state.showRequireKernelWarning) {
                 WarningCard(
                     stringResource(id = R.string.require_kernel_version,

@@ -166,7 +166,6 @@
     <string name="module_repos_sort_name">Naziv (A → Z)</string>
     <string name="module_repos_source_code">Izvorni kod</string>
     <string name="safe_mode_module_disabled">Instalacija modula je onemogućena u sigurnom načinu rada</string>
-    <string name="home_gki_warning">Počevši od verzije 3.0.0, GKI način rada koristit će se samo u testnim okruženjima. Ne preporučujemo ga za svakodnevnu upotrebu, a image datoteke više neće biti dostupne.</string>
     <string name="network_offline">Nije povezano s mrežom</string>
     <string name="network_retry">Pokušaj ponovno</string>
     <string name="tab_readme">PROČITAJ ME</string>
