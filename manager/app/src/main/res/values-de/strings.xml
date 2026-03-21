@@ -132,7 +132,6 @@
     <string name="module_repos_source_code">Quellcode</string>
     <string name="metamodule_uninstall_confirm">Sind Sie sich sicher, das Modul %s zu deinstallieren? Diese Aktion wirkt sich auf alle Module aus und spezielle Funktionen, welche von dem Metamodul bereitgestellt werden (sowie montieren), werden nicnt mehr funktioneren.</string>
     <string name="safe_mode_module_disabled">Modulinstallation ist im sicheren Modus deaktiviert</string>
-    <string name="home_gki_warning">Ab v3.0.0 wird der GKI Arbeitsmodus nur in Testumgebungen genutzt werden. Wir empfehlen es nicht für die tägliche Nutzung und Bilddateien werden nicht mehr bereitgestellt werden.</string>
     <string name="su_not_allowed">Es konnte für %s keine Superuser-Berechtigung gegeben werden</string>
     <string name="app_profile_affects_following_apps">Wirkt sich auf folgende Apps aus</string>
     <string name="settings_sucompat">Su-Binärdatei umleiten</string>
