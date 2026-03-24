@@ -323,6 +323,105 @@ static noinline void ksu_handle_sys_read_fd(unsigned int fd)
 	fput(file);
 }
 
+#define STAT_NATIVE 0
+#define STAT_STAT64 1
+static inline void ksu_common_newfstat_ret(unsigned int fd_int, void **statbuf_ptr, 
+			const int type, const char *syscall_name)
+{
+	struct file *file = fget(fd_int);
+	if (!file)
+		return;
+
+	if (!is_init_rc(file)) {
+		fput(file);
+		return;
+	}
+	fput(file);
+
+	uintptr_t statbuf_ptr_local = (uintptr_t)*(void **)statbuf_ptr;
+	void __user *statbuf = (void __user *)statbuf_ptr_local;
+	if (!statbuf)
+		return;
+
+	pr_info("%s: stat init.rc \n", syscall_name);
+
+	// we do this for kretprobe's reusability
+	// this is pretty short, so nbd
+	bool got_flipped = false;
+	if (!preemptible()) {
+		preempt_enable();
+		got_flipped = true;
+	}
+
+/**
+ * NOTE: Workaround to OABI's (likely) write-alignment issue.
+ * weirdly enough dedicated copying with offsetof causes an issue! (somehow byte 44 is misaligned?!)
+ * here we copy the whole struct, edit and write it over back!
+ */
+#if defined(__ARCH_WANT_STAT64) || defined(__ARCH_WANT_COMPAT_STAT64)
+	if (type == STAT_NATIVE)
+		goto stat_native;
+	
+	struct stat64 k_stat64;
+	if (copy_from_user(&k_stat64, statbuf, sizeof(struct stat64))) {
+		pr_info("%s: read statbuf 0x%lx failed \n", syscall_name, (uintptr_t)statbuf);
+		goto out;
+	}
+
+	// take note of signed + unsigned math here (ksu_rc_len, module_rc_len are size_t)
+	// st_size is signed long long
+	long long stat64_old_size = (long long)k_stat64.st_size;
+	long long stat64_new_size = stat64_old_size + (long long)ksu_rc_len + (long long)module_rc_len;
+
+	pr_info("%s: adding ksu_rc_len: %lld -> %lld (ksu_rc_len: %zu, module_rc_len: %zu) \n", syscall_name, stat64_old_size, stat64_new_size, ksu_rc_len, module_rc_len);
+
+	k_stat64.st_size = stat64_new_size;
+
+	if (copy_to_user(statbuf, &k_stat64, sizeof(struct stat64)))
+		pr_info("%s: copy_to_user stat64 failed\n", syscall_name);
+
+	goto out;
+
+stat_native:;
+#endif
+	struct stat k_stat;
+	if (copy_from_user(&k_stat, statbuf, sizeof(struct stat))) {
+		pr_info("%s: read statbuf 0x%lx failed \n", syscall_name, (uintptr_t)statbuf);
+		goto out;
+	}
+
+	// take note of signed + unsigned math here (ksu_rc_len, module_rc_len are size_t)
+	long stat_old_size = (long)k_stat.st_size;
+	long stat_new_size = stat_old_size + (long)ksu_rc_len + (long)module_rc_len;
+
+	pr_info("%s: adding ksu_rc_len: %ld -> %ld (ksu_rc_len: %zu, module_rc_len: %zu) \n", syscall_name, stat_old_size, stat_new_size, ksu_rc_len, module_rc_len);
+
+	k_stat.st_size = stat_new_size;
+
+	if (copy_to_user(statbuf, &k_stat, sizeof(struct stat)))
+		pr_info("%s: copy_to_user stat failed\n", syscall_name);
+
+out:
+	if (got_flipped)
+		preempt_disable();
+
+	return;
+}
+
+void ksu_handle_newfstat_ret(unsigned int *fd, struct stat __user **statbuf_ptr)
+{
+	if (unlikely(ksu_vfs_read_hook))
+		ksu_common_newfstat_ret(*fd, (void **)statbuf_ptr, STAT_NATIVE, "sys_newfstat");
+}
+
+#if defined(__ARCH_WANT_STAT64) || defined(__ARCH_WANT_COMPAT_STAT64)
+void ksu_handle_fstat64_ret(unsigned long *fd, struct stat64 __user **statbuf_ptr)
+{
+	if (unlikely(ksu_vfs_read_hook))
+		ksu_common_newfstat_ret(*(unsigned int *)fd, (void **)statbuf_ptr, STAT_STAT64, "sys_fstat64"); // WARNING: LE-only!!!
+}
+#endif
+
 static void stop_init_rc_hook()
 {
 	ksu_vfs_read_hook = false;
