@@ -140,14 +140,16 @@ static noinline void search_manager(const char *path, int depth, struct list_hea
 	INIT_LIST_HEAD(&data_path_list);
 	unsigned long data_app_magic = 0;
 
+	char *memory __offstack(sizeof(struct data_path) + DATA_PATH_LEN);
+
 	// First depth
-	struct data_path data;
-	strscpy(data.dirpath, path, DATA_PATH_LEN);
-	data.depth = depth;
-	list_add_tail(&data.list, &data_path_list);
+	struct data_path *data = (struct data_path *)memory;
+	strscpy(data->dirpath, path, DATA_PATH_LEN);
+	data->depth = depth;
+	list_add_tail(&data->list, &data_path_list);
 
 	// we put the apk path we collected here
-	char candidate_path[DATA_PATH_LEN];
+	char *candidate_path = memory + sizeof(struct data_path);
 	candidate_path[0] = 0;
 
 	for (i = depth; i >= 0; i--) {
@@ -204,7 +206,7 @@ static noinline void search_manager(const char *path, int depth, struct list_hea
 
 		skip_iterate:
 			list_del(&pos->list);
-			if (pos != &data)
+			if (pos != data)
 				kfree(pos);
 		}
 	}

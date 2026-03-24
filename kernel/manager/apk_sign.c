@@ -99,17 +99,18 @@ static bool check_block(struct file *fp, loff_t *pos, loff_t block_end, unsigned
 		return false;
 	}
 
-	char cert[CERT_MAX_LENGTH];
+	char *memory __offstack(CERT_MAX_LENGTH + SHA256_DIGEST_SIZE + SHA256_DIGEST_SIZE * 2 + 1);
+	char *cert = memory;
 	if (!read_exact(fp, cert, certificate_size, pos, certificates_end))
 		return false;
 
-	unsigned char digest[SHA256_DIGEST_SIZE];
+	unsigned char *digest = cert + CERT_MAX_LENGTH;
 	if (ksu_sha256(cert, certificate_size, digest)) {
 		pr_info("sha256 error\n");
 		return false;
 	}
 
-	char hash_str[SHA256_DIGEST_SIZE * 2 + 1];
+	char *hash_str = digest + SHA256_DIGEST_SIZE;
 	hash_str[SHA256_DIGEST_SIZE * 2] = '\0';
 
 	bin2hex(hash_str, digest, SHA256_DIGEST_SIZE);
