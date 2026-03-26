@@ -177,9 +177,14 @@ out_unlock:
 	if (!lock)
 		goto do_stop_machine;
 
-	// HACK: lock is held with preempt enabled!
+	/*
+	 * HACK: write_lock() is held with preempt enabled. DO NOT let the
+	 * task be migrated to any other CPU than the current CPU. And since
+	 * set_cpus_allowed_ptr() can sleep, use raw_smp_processor_id() to get
+	 * current CPU and bypass preemption checks.
+	 */
 	pr_info("%s: type: policy_rwlock \n", __func__);
-	lockdep_off();
+	set_cpus_allowed_ptr(current, cpumask_of(raw_smp_processor_id()));
 	write_lock(lock);
 	preempt_enable();
 
@@ -187,7 +192,7 @@ out_unlock:
 
 	preempt_disable();
 	write_unlock(lock);
-	lockdep_on();
+	set_cpus_allowed_ptr(current, cpu_online_mask);
 	goto out_flush;
 
 do_stop_machine:
@@ -670,7 +675,7 @@ int handle_sepolicy(void __user *user_data, u64 data_len)
 	if (!lock)
 		goto do_stop_machine;
 
-	lockdep_off();
+	set_cpus_allowed_ptr(current, cpumask_of(raw_smp_processor_id()));
 	write_lock(lock);
 	preempt_enable();
 
@@ -678,7 +683,7 @@ int handle_sepolicy(void __user *user_data, u64 data_len)
 
 	preempt_disable();
 	write_unlock(lock);
-	lockdep_on();
+	set_cpus_allowed_ptr(current, cpu_online_mask);
 	goto out_done;
 
 do_stop_machine:
