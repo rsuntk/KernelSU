@@ -103,9 +103,9 @@ int __init kernelsu_init(void)
     ksu_lsm_hook_init();
 
     ksu_sucompat_init();
-
+#if 0
     ksu_sulog_init(); // dummy
-
+#endif
     ksu_kernel_umount_init();
 
     ksu_allowlist_init();
