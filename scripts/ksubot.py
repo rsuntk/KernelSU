@@ -1,11 +1,12 @@
 import asyncio
 import os
 import sys
-from telethon import TelegramClient
+
+from telethon import TelegramClient, types
 from telethon.tl.functions.help import GetConfigRequest
 
-API_ID = 611335
-API_HASH = "d524b414d21f4d37f08684c1df41ac9c"
+API_ID = 27819828
+API_HASH = "697659831acf9ea476a0346692c494dd"
 
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
@@ -75,10 +76,14 @@ def check_environ():
         print("[-] Invalid BRANCH")
         exit(1)
     if MESSAGE_THREAD_ID is None:
-        print("[-] Invaild MESSAGE_THREAD_ID")
-        exit(1)
+        print("[!] No MESSAGE_THREAD_ID detected, sending to main chat")
+        MESSAGE_THREAD_ID = None
     else:
-        MESSAGE_THREAD_ID = int(MESSAGE_THREAD_ID)
+        try:
+            MESSAGE_THREAD_ID = int(MESSAGE_THREAD_ID)
+        except ValueError:
+            print("[-] Invalid MESSAGE_THREAD_ID format, ignoring")
+            MESSAGE_THREAD_ID = None
 
 
 async def main():
@@ -92,7 +97,9 @@ async def main():
     print("[+] Logging in Telegram with bot")
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
     session_dir = os.path.join(script_dir, "ksubot")
-    async with await TelegramClient(session=session_dir, api_id=API_ID, api_hash=API_HASH).start(bot_token=BOT_TOKEN) as bot:
+    async with await TelegramClient(
+        session=session_dir, api_id=API_ID, api_hash=API_HASH
+    ).start(bot_token=BOT_TOKEN) as bot:
         caption = [""] * len(files)
         caption[-1] = get_caption()
         print("[+] Caption: ")
@@ -100,8 +107,21 @@ async def main():
         print(caption)
         print("---")
         print("[+] Sending")
-        await bot.send_file(entity=CHAT_ID, file=files, caption=caption, reply_to=MESSAGE_THREAD_ID, parse_mode="markdown")
+
+        reply_to_param = (
+            types.InputReplyParameters(reply_to_msg_id=MESSAGE_THREAD_ID)
+            if MESSAGE_THREAD_ID
+            else None
+        )
+        await bot.send_file(
+            entity=CHAT_ID,
+            file=files,
+            caption=caption,
+            reply_to=reply_to_param,
+            parse_mode="markdown",
+        )
         print("[+] Done!")
+
 
 if __name__ == "__main__":
     try:
