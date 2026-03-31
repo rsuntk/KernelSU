@@ -568,10 +568,10 @@ static void stop_input_hook()
 }
 
 // ksud: module support
-void ksu_ksud_init()
+void __init ksu_ksud_init()
 {
 }
 
-void ksu_ksud_exit()
+void __exit ksu_ksud_exit()
 {
 }

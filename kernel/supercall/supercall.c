@@ -106,12 +106,12 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user 
     return 0;
 }
 
-void ksu_supercalls_init(void)
+void __init ksu_supercalls_init(void)
 {
     ksu_supercall_dump_commands();
 }
 
-void ksu_supercalls_exit(void)
+void __exit ksu_supercalls_exit(void)
 {
     ksu_supercall_cleanup_state();
 }
