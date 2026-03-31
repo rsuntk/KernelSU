@@ -1,14 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0
-#include <linux/module.h>
-#include <linux/fs.h>
-#include <linux/namei.h>
-#include <linux/fsnotify_backend.h>
-#include <linux/slab.h>
-#include <linux/rculist.h>
-#include <linux/version.h>
-#include "klog.h" // IWYU pragma: keep
-#include "manager/throne_tracker.h"
-
 #define MASK_SYSTEM (FS_CREATE | FS_MOVE | FS_EVENT_ON_CHILD)
 
 struct watch_dir {
@@ -21,39 +11,62 @@ struct watch_dir {
 
 static struct fsnotify_group *g;
 
-static int ksu_handle_inode_event(struct fsnotify_mark *mark, u32 mask, struct inode *inode, struct inode *dir,
-                                  const struct qstr *file_name, u32 cookie)
+#include "pkg_observer_compat.h" // KSU_DECL_FSNOTIFY_OPS
+static KSU_DECL_FSNOTIFY_OPS(ksu_handle_generic_event)
 {
-    if (!file_name)
+    if (!file_name || (mask & FS_ISDIR))
         return 0;
-    if (mask & FS_ISDIR)
-        return 0;
-    if (file_name->len == 13 && !memcmp(file_name->name, "packages.list", 13)) {
-        pr_info("packages.list detected: %d\n", mask);
+
+    if (ksu_fname_len(file_name) == 13 && !memcmp(ksu_fname_arg(file_name), "packages.list", 13)) {
+        pr_info("packages.list detected (mask=%d)\n", mask);
         track_throne(false);
     }
     return 0;
 }
 
 static const struct fsnotify_ops ksu_ops = {
-    .handle_inode_event = ksu_handle_inode_event,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
+    .handle_inode_event = ksu_handle_generic_event,
+#else
+    .handle_event = ksu_handle_generic_event,
+#endif
 };
+
+static void __maybe_unused m_free(struct fsnotify_mark *m)
+{
+    if (m) {
+        kfree(m);
+    }
+}
 
 static int add_mark_on_inode(struct inode *inode, u32 mask, struct fsnotify_mark **out)
 {
     struct fsnotify_mark *m;
+    int ret;
 
     m = kzalloc(sizeof(*m), GFP_KERNEL);
     if (!m)
         return -ENOMEM;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
+    fsnotify_init_mark(m, m_free);
+    m->mask = mask;
+    ret = fsnotify_add_mark(m, g, inode, NULL, 0);
+#else
     fsnotify_init_mark(m, g);
     m->mask = mask;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0)
+    ret = fsnotify_add_inode_mark(m, inode, 0);
+#else
+    ret = fsnotify_add_mark(m, inode, NULL, 0);
+#endif
+#endif
 
-    if (fsnotify_add_inode_mark(m, inode, 0)) {
+    if (ret < 0) {
         fsnotify_put_mark(m);
-        return -EINVAL;
+        return ret;
     }
+
     *out = m;
     return 0;
 }
@@ -62,7 +75,7 @@ static int watch_one_dir(struct watch_dir *wd)
 {
     int ret = kern_path(wd->path, LOOKUP_FOLLOW, &wd->kpath);
     if (ret) {
-        pr_info("path not ready: %s (%d)\n", wd->path, ret);
+        pr_info("Path not ready: %s (%d)\n", wd->path, ret);
         return ret;
     }
     wd->inode = d_inode(wd->kpath.dentry);
@@ -76,7 +89,7 @@ static int watch_one_dir(struct watch_dir *wd)
         wd->inode = NULL;
         return ret;
     }
-    pr_info("watching %s\n", wd->path);
+    pr_info("Watching %s\n", wd->path);
     return 0;
 }
 
@@ -108,17 +121,11 @@ int ksu_observer_init(void)
 #else
     g = fsnotify_alloc_group(&ksu_ops);
 #endif
+
     if (IS_ERR(g))
         return PTR_ERR(g);
 
     ret = watch_one_dir(&g_watch);
-    pr_info("observer init done\n");
+    pr_info("Observer initialized.\n", __func__);
     return 0;
-}
-
-void ksu_observer_exit(void)
-{
-    unwatch_one_dir(&g_watch);
-    fsnotify_put_group(g);
-    pr_info("observer exit done\n");
 }

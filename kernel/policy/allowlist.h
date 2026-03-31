@@ -1,10 +1,6 @@
 #ifndef __KSU_H_ALLOWLIST
 #define __KSU_H_ALLOWLIST
 
-#include <linux/types.h>
-#include <linux/uidgid.h>
-#include "uapi/app_profile.h"
-
 #define PER_USER_RANGE 100000
 #define FIRST_APPLICATION_UID 10000
 #define LAST_APPLICATION_UID 19999

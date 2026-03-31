@@ -1,15 +1,20 @@
 menu "KernelSU"
 
 config KSU
-	tristate "KernelSU function support"
-	depends on KPROBES && EXT4_FS
+	bool "KernelSU function support"
 	default y
 	help
 	  Enable kernel-level root privileges on Android System.
-	  Requires CONFIG_KPROBES for kernel hooking support.
-	  Requires CONFIG_EXT4_FS for `ext4_unregister_sysfs`.
 	  To compile as a module, choose M here: the
 	  module will be called kernelsu.
+
+config KSU_LSM_HOOKS
+	bool "KernelSU LSM Hook"
+	depends on KSU
+	default y
+	help
+	  Enable Linux Security Module (LSM) hooks support for
+	  KernelSU.
 
 config KSU_DEBUG
 	bool "KernelSU debug mode"
@@ -17,22 +22,5 @@ config KSU_DEBUG
 	default n
 	help
 	  Enable KernelSU debug mode.
-
-config KSU_DISABLE_MANAGER
-	bool "Disable KernelSU manager integration"
-	depends on KSU
-	default n
-	help
-	  Disable manager APK detection and manager-specific handling.
-	  Root will be used in place of manager-only functionality.
-
-config KSU_DISABLE_POLICY
-	bool "Disable KernelSU policy profiles"
-	depends on KSU
-	default n
-	help
-	  Disable per-app root/non-root profile customization.
-	  Escalation will always use the default full root profile, and
-	  non-root handling will follow the global umount policy only.
 
 endmenu

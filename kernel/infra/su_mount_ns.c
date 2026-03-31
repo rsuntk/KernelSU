@@ -1,50 +1,49 @@
-#include <linux/dcache.h>
-#include <linux/errno.h>
-#include <linux/fdtable.h>
-#include <linux/file.h>
-#include <linux/fs.h>
-#include <linux/fs_struct.h>
-#include <linux/limits.h>
-#include <linux/namei.h>
-#include <linux/proc_ns.h>
-#include <linux/pid.h>
-#include <linux/sched/task.h>
-#include <linux/slab.h>
-#include <linux/syscalls.h>
-#include <linux/task_work.h>
-#include <linux/version.h>
-#include <uapi/linux/mount.h>
-
-#include "arch.h"
-#include "klog.h" // IWYU pragma: keep
-#include "ksu.h"
-#include "infra/su_mount_ns.h"
-
 extern int path_mount(const char *dev_name, struct path *path, const char *type_page, unsigned long flags,
                       void *data_page);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
+
+#ifndef __PT_REGS_CAST
+#define __PT_REGS_CAST(x) (x)
+#endif
+
 #if defined(__aarch64__)
+#define PT_PARM1(x) (__PT_REGS_CAST(x)->regs[0])
+#define PT_PARM2(x) (__PT_REGS_CAST(x)->regs[1])
 extern long __arm64_sys_setns(const struct pt_regs *regs);
+#define do_sys_setns(regs) (__arm64_sys_setns(regs))
 #elif defined(__x86_64__)
+#define PT_PARM1(x) (__PT_REGS_CAST(x)->di)
+#define PT_PARM2(x) (__PT_REGS_CAST(x)->si)
 extern long __x64_sys_setns(const struct pt_regs *regs);
+#define do_sys_setns(regs) (__x64_sys_setns(regs))
+#elif defined(__arm__) // https://syscalls.mebeim.net/?table=arm/32/eabi/latest
+// taken from:
+// https://github.com/backslashxx/KernelSU/blob/8b71e8bce199e8ac44538648e298092a9b3ef42b/kernel/arch.h#L29
+#define PT_PARM1(x) (__PT_REGS_CAST(x)->uregs[0])
+#define PT_PARM2(x) (__PT_REGS_CAST(x)->uregs[1])
+extern long sys_setns(const struct pt_regs *regs);
+#define do_sys_setns(regs) (sys_setns(regs))
 #endif
 
 static long ksu_sys_setns(int fd, int flags)
 {
+#ifdef PT_PARM1
     struct pt_regs regs;
     memset(&regs, 0, sizeof(regs));
 
-    PT_REGS_PARM1(&regs) = fd;
-    PT_REGS_PARM2(&regs) = flags;
+    PT_PARM1(&regs) = fd;
+    PT_PARM2(&regs) = flags;
 
-#if defined(__aarch64__)
-    return __arm64_sys_setns(&regs);
-#elif defined(__x86_64__)
-    return __x64_sys_setns(&regs);
+    return do_sys_setns(&regs);
 #else
-#error "Unsupported arch"
+    return -ENOSYS;
 #endif
 }
+#else
+#define ksu_sys_setns sys_setns
+#define ksys_unshare sys_unshare
+#endif
 
 // global mode , need CAP_SYS_ADMIN and CAP_SYS_CHROOT to perform setns
 static void ksu_mnt_ns_global(void)
@@ -90,14 +89,14 @@ try_setns:
         goto out;
     }
     struct path ns_path;
-    long ret = ns_get_path(&ns_path, pid1_task, &mntns_operations);
+    long ret = (long)ns_get_path(&ns_path, pid1_task, &mntns_operations);
     put_task_struct(pid1_task);
     if (ret) {
         pr_warn("failed get path for init mount namespace: %ld\n", ret);
         goto out;
     }
-    struct file *ns_file = dentry_open(&ns_path, O_RDONLY, ksu_cred);
 
+    struct file *ns_file = dentry_open(&ns_path, O_RDONLY, ksu_cred);
     path_put(&ns_path);
     if (IS_ERR(ns_file)) {
         pr_warn("failed open file for init mount namespace: %ld\n", PTR_ERR(ns_file));
@@ -114,11 +113,7 @@ try_setns:
     fd_install(fd, ns_file);
     ret = ksu_sys_setns(fd, CLONE_NEWNS);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
-    ksys_close(fd);
-#else
     close_fd(fd);
-#endif
 
     if (ret) {
         pr_warn("call setns failed: %ld\n", ret);

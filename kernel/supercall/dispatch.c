@@ -1,27 +1,3 @@
-#include <linux/capability.h>
-#include <linux/cred.h>
-#include <linux/slab.h>
-#include <linux/uaccess.h>
-#include <linux/version.h>
-
-#include "uapi/supercall.h"
-#include "supercall/internal.h"
-#include "arch.h" // IWYU pragma: keep
-#include "policy/allowlist.h"
-#include "policy/feature.h"
-#include "klog.h" // IWYU pragma: keep
-#include "ksu.h"
-#include "runtime/ksud_boot.h"
-#include "feature/kernel_umount.h"
-#include "manager/manager_identity.h"
-#include "selinux/selinux.h"
-#include "infra/file_wrapper.h"
-#include "hook/tp_marker.h"
-#include "policy/app_profile.h"
-#include "sulog/event.h"
-#include "sulog/fd.h"
-#include "supercall/supercall.h"
-
 static int do_grant_root(void __user *arg)
 {
     int ret;
@@ -32,7 +8,6 @@ static int do_grant_root(void __user *arg)
 
     pr_info("allow root for: %d\n", audit_uid);
     ret = escape_with_root_profile();
-    ksu_sulog_emit_grant_root(ret, audit_uid, audit_euid, GFP_KERNEL);
 
     return ret;
 }
@@ -41,19 +16,10 @@ static int do_get_info(void __user *arg)
 {
     struct ksu_get_info_cmd cmd = { .version = KERNEL_SU_VERSION, .flags = 0 };
 
-#ifdef MODULE
-    cmd.flags |= KSU_GET_INFO_FLAG_LKM;
-#endif
-
     if (is_manager()) {
         cmd.flags |= KSU_GET_INFO_FLAG_MANAGER;
     }
-    if (ksu_late_loaded) {
-        cmd.flags |= KSU_GET_INFO_FLAG_LATE_LOAD;
-    }
-#ifdef EXPECTED_SIZE2
-    cmd.flags |= KSU_GET_INFO_FLAG_PR_BUILD;
-#endif
+
     cmd.features = KSU_FEATURE_MAX;
 
     if (copy_to_user(arg, &cmd, sizeof(cmd))) {
@@ -77,12 +43,8 @@ static int do_report_event(void __user *arg)
         static bool post_fs_data_lock = false;
         if (!post_fs_data_lock) {
             post_fs_data_lock = true;
-            if (ksu_late_loaded) {
-                pr_info("post-fs-data skipped (late load)\n");
-            } else {
-                pr_info("post-fs-data triggered\n");
-                on_post_fs_data();
-            }
+            pr_info("post-fs-data triggered\n");
+            on_post_fs_data();
         }
         break;
     }
@@ -90,12 +52,8 @@ static int do_report_event(void __user *arg)
         static bool boot_complete_lock = false;
         if (!boot_complete_lock) {
             boot_complete_lock = true;
-            if (ksu_late_loaded) {
-                pr_info("boot_complete skipped (late load)\n");
-            } else {
-                pr_info("boot_complete triggered\n");
-                on_boot_completed();
-            }
+            pr_info("boot_complete triggered\n");
+            on_boot_completed();
         }
         break;
     }
@@ -143,6 +101,7 @@ static int do_check_safemode(void __user *arg)
 static int do_new_get_allow_list_common(void __user *arg, bool allow)
 {
     struct ksu_new_get_allow_list_cmd cmd;
+    bool success = false;
     int *arr = NULL;
     int err = 0;
 
@@ -157,8 +116,7 @@ static int do_new_get_allow_list_common(void __user *arg, bool allow)
         }
     }
 
-    bool success = ksu_get_allow_list(arr, cmd.count, &cmd.count, &cmd.total_count, allow);
-
+    success = ksu_get_allow_list(arr, cmd.count, &cmd.count, &cmd.total_count, allow);
     if (!success) {
         err = -EFAULT;
         goto out;
@@ -198,6 +156,7 @@ static int do_get_allow_list_common(void __user *arg, bool allow)
     int err = 0;
     u16 count;
     u32 out_count;
+    bool success = false;
     static const u16 kSize = 128;
 
     arr = kmalloc(sizeof(int) * kSize, GFP_KERNEL);
@@ -205,8 +164,7 @@ static int do_get_allow_list_common(void __user *arg, bool allow)
         return -ENOMEM;
     }
 
-    bool success = ksu_get_allow_list(arr, kSize, &count, NULL, allow);
-
+    success = ksu_get_allow_list(arr, kSize, &count, NULL, allow);
     if (!success) {
         err = -EFAULT;
         goto out;
@@ -294,10 +252,6 @@ static int do_get_manager_appid(void __user *arg)
 
 static int do_get_app_profile(void __user *arg)
 {
-#ifdef CONFIG_KSU_DISABLE_POLICY
-    return -EOPNOTSUPP;
-#endif
-
     struct ksu_get_app_profile_cmd cmd;
 
     if (copy_from_user(&cmd, arg, sizeof(cmd))) {
@@ -319,10 +273,6 @@ static int do_get_app_profile(void __user *arg)
 
 static int do_set_app_profile(void __user *arg)
 {
-#ifdef CONFIG_KSU_DISABLE_POLICY
-    return -EOPNOTSUPP;
-#endif
-
     struct ksu_set_app_profile_cmd cmd;
     int ret;
 
@@ -332,10 +282,8 @@ static int do_set_app_profile(void __user *arg)
     }
 
     ret = ksu_set_app_profile(&cmd.profile);
-    if (!ret) {
+    if (!ret)
         ksu_persistent_allow_list();
-        ksu_mark_running_process();
-    }
     return ret;
 }
 
@@ -402,65 +350,7 @@ static int do_get_wrapper_fd(void __user *arg)
 
 static int do_manage_mark(void __user *arg)
 {
-    struct ksu_manage_mark_cmd cmd;
-    int ret = 0;
-
-    if (copy_from_user(&cmd, arg, sizeof(cmd))) {
-        pr_err("manage_mark: copy_from_user failed\n");
-        return -EFAULT;
-    }
-
-    switch (cmd.operation) {
-    case KSU_MARK_GET: {
-        // Get task mark status
-        ret = ksu_get_task_mark(cmd.pid);
-        if (ret < 0) {
-            pr_err("manage_mark: get failed for pid %d: %d\n", cmd.pid, ret);
-            return ret;
-        }
-        cmd.result = (u32)ret;
-        break;
-    }
-    case KSU_MARK_MARK: {
-        if (cmd.pid == 0) {
-            ksu_mark_all_process();
-        } else {
-            ret = ksu_set_task_mark(cmd.pid, true);
-            if (ret < 0) {
-                pr_err("manage_mark: set_mark failed for pid %d: %d\n", cmd.pid, ret);
-                return ret;
-            }
-        }
-        break;
-    }
-    case KSU_MARK_UNMARK: {
-        if (cmd.pid == 0) {
-            ksu_unmark_all_process();
-        } else {
-            ret = ksu_set_task_mark(cmd.pid, false);
-            if (ret < 0) {
-                pr_err("manage_mark: set_unmark failed for pid %d: %d\n", cmd.pid, ret);
-                return ret;
-            }
-        }
-        break;
-    }
-    case KSU_MARK_REFRESH: {
-        ksu_mark_running_process();
-        pr_info("manage_mark: refreshed running processes\n");
-        break;
-    }
-    default: {
-        pr_err("manage_mark: invalid operation %u\n", cmd.operation);
-        return -EINVAL;
-    }
-    }
-    if (copy_to_user(arg, &cmd, sizeof(cmd))) {
-        pr_err("manage_mark: copy_to_user failed\n");
-        return -EFAULT;
-    }
-
-    return 0;
+    return -ENOTSUPP;
 }
 
 static int do_nuke_ext4_sysfs(void __user *arg)
@@ -477,7 +367,7 @@ static int do_nuke_ext4_sysfs(void __user *arg)
 
     memset(mnt, 0, sizeof(mnt));
 
-    ret = strncpy_from_user(mnt, cmd.arg, sizeof(mnt));
+    ret = ksu_strncpy_from_user_nofault(mnt, cmd.arg, sizeof(mnt));
     if (ret < 0) {
         pr_err("nuke ext4 copy mnt failed: %ld\n", ret);
         return -EFAULT;
@@ -521,7 +411,7 @@ static int add_try_umount(void __user *arg)
     }
 
     case KSU_UMOUNT_ADD: {
-        long len = strncpy_from_user(buf, (const char __user *)cmd.arg, 256);
+        long len = ksu_strncpy_from_user_nofault(buf, (const char __user *)cmd.arg, 256);
         if (len <= 0)
             return -EFAULT;
 
@@ -568,7 +458,7 @@ static int add_try_umount(void __user *arg)
 
     // this is just strcmp'd wipe anyway
     case KSU_UMOUNT_DEL: {
-        long len = strncpy_from_user(buf, (const char __user *)cmd.arg, sizeof(buf) - 1);
+        long len = ksu_strncpy_from_user_nofault(buf, (const char __user *)cmd.arg, sizeof(buf) - 1);
         if (len <= 0)
             return -EFAULT;
 
@@ -633,19 +523,7 @@ out:
 
 static int do_get_sulog_fd(void __user *arg)
 {
-    struct ksu_get_sulog_fd_cmd cmd;
-
-    if (copy_from_user(&cmd, arg, sizeof(cmd))) {
-        pr_err("get_sulog_fd: copy_from_user failed\n");
-        return -EFAULT;
-    }
-
-    if (cmd.flags) {
-        pr_err("get_sulog_fd: unsupported flags 0x%x\n", cmd.flags);
-        return -EINVAL;
-    }
-
-    return ksu_install_sulog_fd();
+    return -ENOTSUPP;
 }
 
 // IOCTL handlers mapping table
@@ -828,13 +706,4 @@ void ksu_supercall_dump_commands(void)
 
 void ksu_supercall_cleanup_state(void)
 {
-    struct mount_entry *entry, *tmp;
-
-    down_write(&mount_list_lock);
-    list_for_each_entry_safe (entry, tmp, &mount_list, list) {
-        list_del(&entry->list);
-        kfree(entry->umountable);
-        kfree(entry);
-    }
-    up_write(&mount_list_lock);
 }

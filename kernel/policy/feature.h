@@ -1,9 +1,6 @@
 #ifndef __KSU_H_FEATURE
 #define __KSU_H_FEATURE
 
-#include <linux/types.h>
-#include "uapi/feature.h" // IWYU pragma: keep
-
 typedef int (*ksu_feature_get_t)(u64 *value);
 typedef int (*ksu_feature_set_t)(u64 value);
 

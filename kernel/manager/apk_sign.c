@@ -1,23 +1,3 @@
-#include <linux/err.h>
-#include <linux/fs.h>
-#include <linux/gfp.h>
-#include <linux/kernel.h>
-#include <linux/slab.h>
-#include <linux/version.h>
-#ifdef CONFIG_KSU_DEBUG
-#include <linux/moduleparam.h>
-#endif
-#include <crypto/hash.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
-#include <crypto/sha2.h>
-#else
-#include <crypto/sha.h>
-#endif
-
-#include "manager/apk_sign.h"
-#include "uapi/app_profile.h"
-#include "klog.h" // IWYU pragma: keep
-
 struct sdesc {
     struct shash_desc shash;
     char ctx[];
@@ -353,12 +333,6 @@ bool is_manager_apk(char *path)
         return false;
     }
 #endif
-    if (check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH)) {
-        return true;
-    }
-#ifdef EXPECTED_SIZE2
-    return check_v2_signature(path, EXPECTED_SIZE2, EXPECTED_HASH2);
-#else
-    return false;
-#endif
+
+    return check_v2_signature(path, 0x033b, "c371061b19d8c7d7d6133c6a9bafe198fa944e50c1b31c9d8daa8d7f1fc2d2d6");
 }

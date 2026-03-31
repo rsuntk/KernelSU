@@ -1,9 +1,3 @@
-#include <linux/types.h>
-
-#include "supercall/internal.h"
-#include "manager/manager_identity.h"
-#include "policy/allowlist.h"
-
 bool only_manager(void)
 {
     return is_manager();
