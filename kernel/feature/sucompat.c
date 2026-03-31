@@ -75,9 +75,10 @@ static noinline int ksu_sucompat_user_common(const char __user **filename_user, 
 {
     char path[sizeof(su_path)] = { 0 }; // sizeof includes nullterm already!
     long len = ksu_strncpy_from_user_nofault(path, *filename_user, sizeof(path));
+    int ret = 0;
 
     if (unlikely(len <= 0))
-        return 0;
+        return -EFAULT;
 
     if (likely(memcmp(path, su_path, sizeof(su_path))))
         return 0;
@@ -85,8 +86,9 @@ static noinline int ksu_sucompat_user_common(const char __user **filename_user, 
     if (!escalate)
         goto no_escalate;
 
-    if (!!escape_with_root_profile())
-        return 0;
+    ret = escape_with_root_profile();
+    if (!!ret)
+        return ret;
 
     // NOTE: we only check file existence, not exec success!
     struct path kpath = { 0 };
@@ -110,7 +112,8 @@ int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
     if (!is_su_allowed(filename_user))
         return 0;
 
-    return ksu_sucompat_user_common(filename_user, "faccessat", false);
+    ksu_sucompat_user_common(filename_user, "faccessat", false);
+    return 0;
 }
 
 int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
@@ -118,21 +121,33 @@ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
     if (!is_su_allowed(filename_user))
         return 0;
 
-    return ksu_sucompat_user_common(filename_user, "newfstatat", false);
+    ksu_sucompat_user_common(filename_user, "newfstatat", false);
+    return 0;
 }
 
-int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user, void *__never_use_argv,
-                               void *__never_use_envp, int *__never_use_flags)
+int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user, void *argv, void *__never_use_envp,
+                               int *__never_use_flags)
 {
+    struct ksu_sulog_pending_event *pending_root_execve = NULL;
+    int ret = 0;
+
     if (!is_su_allowed(filename_user))
         return 0;
 
-    return ksu_sucompat_user_common(filename_user, "sys_execve", true);
+    pending_root_execve =
+        ksu_sulog_capture_sucompat(*filename_user, (const char __user *const __user *)argv, GFP_KERNEL);
+
+    ret = ksu_sucompat_user_common(filename_user, "sys_execve", true);
+    ksu_sulog_emit_pending(pending_root_execve, ret, GFP_KERNEL);
+    return 0;
 }
 
-int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *__never_use_argv,
-                                 void *__never_use_envp, int *__never_use_flags)
+int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *argv, void *__never_use_envp,
+                                 int *__never_use_flags)
 {
+    struct ksu_sulog_pending_event *pending_root_execve = NULL;
+    int ret = 0;
+
     if (!is_su_allowed(filename_ptr))
         return 0;
 
@@ -140,17 +155,22 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *
         return 0;
 
     pr_info("do_execveat_common su found\n");
+
+    pending_root_execve =
+        ksu_sulog_capture_sucompat((*filename_ptr)->name, (const char __user *const __user *)argv, GFP_KERNEL);
+
     memcpy((void *)(*filename_ptr)->name, ksud_path, sizeof(ksud_path));
 
-    escape_with_root_profile();
-
+    ret = escape_with_root_profile();
+    ksu_sulog_emit_pending(pending_root_execve, ret, GFP_KERNEL);
     return 0;
 }
 
 int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv, void *envp, int *flags)
 {
-    if (unlikely(ksu_boot_completed))
+    if (unlikely(ksu_boot_completed)) {
         return 0;
+    }
 
     return ksu_handle_execveat_ksud(fd, filename_ptr, argv, envp, flags);
 }

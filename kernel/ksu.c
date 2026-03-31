@@ -5,6 +5,7 @@
 #include "include/uapi/feature.h"
 #include "include/uapi/selinux.h"
 #include "include/uapi/supercall.h"
+#include "include/uapi/sulog.h"
 
 // includes
 #include "include/klog.h"
@@ -24,10 +25,13 @@
 #include "supercall/supercall.h"
 #include "infra/su_mount_ns.h"
 #include "infra/file_wrapper.h"
+#include "infra/event_queue.h"
 #include "feature/kernel_umount.h"
 #include "feature/sucompat.h"
 #include "feature/sulog.h"
 #include "runtime/ksud.h"
+#include "sulog/event.h"
+#include "sulog/fd.h"
 
 #include "selinux/selinux.h"
 #include "selinux/sepolicy.h"
@@ -56,11 +60,15 @@
 
 #include "infra/su_mount_ns.c"
 #include "infra/file_wrapper.c"
+#include "infra/event_queue.c"
 
 #include "feature/kernel_umount.c"
 #include "feature/sucompat.c"
 #include "feature/sulog.c"
 #include "runtime/ksud.c"
+
+#include "sulog/event.c"
+#include "sulog/fd.c"
 
 #include "hook/lsm_hook.c"
 
@@ -103,9 +111,9 @@ int __init kernelsu_init(void)
     ksu_lsm_hook_init();
 
     ksu_sucompat_init();
-#if 0
-    ksu_sulog_init(); // dummy
-#endif
+
+    ksu_sulog_init();
+
     ksu_kernel_umount_init();
 
     ksu_allowlist_init();
