@@ -40,6 +40,4 @@ jobs:
         with:
           files: |
             manager/*.apk
-            android*-lkm/*_kernelsu.ko
             ksud/ksud-*
-            ksuinit/**
