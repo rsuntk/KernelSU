@@ -35,4 +35,6 @@ int handle_sepolicy(void __user *user_data, u64 data_len);
 
 void setup_ksu_cred(void);
 
+void escape_to_root_for_adb_root();
+
 #endif
