@@ -23,6 +23,13 @@ config KSU_MANUAL_HOOK
 	help
 	  Always Enabled now, do not disable.
 
+config KSU_FEATURE_ADBROOT
+	bool "KernelSU ADB Root feature"
+	depends on KSU
+	default y
+	help
+	  Build KernelSU's adb root feature.
+
 config KSU_DEBUG
 	bool "KernelSU debug mode"
 	depends on KSU

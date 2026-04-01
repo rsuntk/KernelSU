@@ -26,6 +26,7 @@
 #include "infra/su_mount_ns.h"
 #include "infra/file_wrapper.h"
 #include "infra/event_queue.h"
+#include "feature/adb_root.h"
 #include "feature/kernel_umount.h"
 #include "feature/sucompat.h"
 #include "feature/sulog.h"
@@ -62,6 +63,9 @@
 #include "infra/file_wrapper.c"
 #include "infra/event_queue.c"
 
+#ifdef CONFIG_KSU_FEATURE_ADBROOT
+#include "feature/adb_root.c"
+#endif
 #include "feature/kernel_umount.c"
 #include "feature/sucompat.c"
 #include "feature/sulog.c"
@@ -113,6 +117,8 @@ int __init kernelsu_init(void)
     ksu_sucompat_init();
 
     ksu_sulog_init();
+
+    ksu_adb_root_init();
 
     ksu_kernel_umount_init();
 
