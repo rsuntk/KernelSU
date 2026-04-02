@@ -80,27 +80,6 @@ fun HomePagerMaterial(
                 state = state,
                 actions = actions,
             )
-            if (state.showManagerPrBuildWarning) {
-                WarningCard(stringResource(id = R.string.home_pr_build_warning))
-            } else if (state.showKernelPrBuildWarning) {
-                WarningCard(stringResource(id = R.string.home_pr_kernel_warning))
-            }
-            if (state.showVersionMismatchWarning) {
-                WarningCard(
-                    stringResource(id = R.string.home_version_mismatch,
-                        state.currentManagerVersionCode,
-                        state.ksuVersion ?: 0
-                    )
-                )
-            }
-            if (state.showRequireKernelWarning) {
-                WarningCard(
-                    stringResource(id = R.string.require_kernel_version,
-                        state.ksuVersion ?: 0,
-                        me.weishu.kernelsu.Natives.MINIMAL_SUPPORTED_KERNEL
-                    )
-                )
-            }
             if (state.showRootWarning) {
                 WarningCard(stringResource(id = R.string.grant_root_failed))
             }
@@ -253,17 +232,6 @@ private fun StatusCard(
                                 text = stringResource(R.string.home_click_to_install),
                                 style = MaterialTheme.typography.bodyMedium
                             )
-                        }
-                        if (state.isSELinuxPermissive) {
-                            Button(
-                                onClick = actions.onJailbreakClick,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.error,
-                                    contentColor = MaterialTheme.colorScheme.onError
-                                )
-                            ) {
-                                Text(stringResource(R.string.home_jailbreak))
-                            }
                         }
                     }
 

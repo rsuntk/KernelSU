@@ -123,20 +123,6 @@ fun HomePagerMiuix(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    if (state.showManagerPrBuildWarning) {
-                        WarningCard(stringResource(id = R.string.home_pr_build_warning))
-                    } else if (state.showKernelPrBuildWarning) {
-                        WarningCard(stringResource(id = R.string.home_pr_kernel_warning))
-                    }
-                    if (state.showVersionMismatchWarning) {
-                        WarningCard(
-                            stringResource(
-                                id = R.string.home_version_mismatch,
-                                state.currentManagerVersionCode,
-                                state.ksuVersion ?: 0
-                            )
-                        )
-                    }
                     if (state.showRequireKernelWarning) {
                         WarningCard(
                             stringResource(
@@ -392,15 +378,6 @@ private fun StatusCard(
                                     modifier = Modifier.padding(end = 16.dp),
                                     tint = colorScheme.onBackground,
                                 )
-                            },
-                            endActions = {
-                                if (state.isSELinuxPermissive) {
-                                    TextButton(
-                                        text = stringResource(R.string.home_jailbreak),
-                                        onClick = actions.onJailbreakClick,
-                                        colors = ButtonDefaults.textButtonColorsPrimary()
-                                    )
-                                }
                             }
                         )
                     }
