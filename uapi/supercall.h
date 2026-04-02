@@ -51,7 +51,7 @@ struct ksu_sepolicy_cmd_hdr {
 /*
  * After each ksu_sepolicy_cmd_hdr, command arguments are encoded sequentially as:
  * [u32 len][len bytes][\0], where len excludes the trailing '\0'.
- * len= 0 represents ALL.
+ * len== 0 represents ALL.
  * Argument count is derived from cmd:
  * KSU_SEPOLICY_CMD_NORMAL_PERM=4, KSU_SEPOLICY_CMD_XPERM=5,
  * KSU_SEPOLICY_CMD_TYPE_STATE=1, KSU_SEPOLICY_CMD_TYPE=2,
@@ -149,7 +149,7 @@ DECLARE(__u32, KSU_IOCTL_GRANT_ROOT, _IOC(_IOC_NONE, 'K', 1, 0));
 DECLARE(__u32, KSU_IOCTL_GET_INFO, _IOC(_IOC_READ, 'K', 2, 0));
 DECLARE(__u32, KSU_IOCTL_REPORT_EVENT, _IOC(_IOC_WRITE, 'K', 3, 0));
 DECLARE(__u32, KSU_IOCTL_SET_SEPOLICY, _IOC(_IOC_READ | _IOC_WRITE, 'K', 4, 0));
-DECLARE(__u32, KSU_IOCTL_CHECK_SAFEMODE, _IOC(_IOC_READ, 'K', 5, 0))
+DECLARE(__u32, KSU_IOCTL_CHECK_SAFEMODE, _IOC(_IOC_READ, 'K', 5, 0));
 /* deprecated */
 DECLARE(__u32, KSU_IOCTL_GET_ALLOW_LIST, _IOC(_IOC_READ | _IOC_WRITE, 'K', 6, 0));
 /* deprecated */
