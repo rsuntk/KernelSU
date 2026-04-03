@@ -2,7 +2,14 @@ obj-$(CONFIG_KSU) := ksu.o
 
 ccflags-y += -I$(srctree)/security/selinux -I$(srctree)/security/selinux/include
 ccflags-y += -I$(objtree)/security/selinux -include $(srctree)/include/uapi/asm-generic/errno.h
-ccflags-y += -I$(srctree)/$(src) -I$(srctree)/$(src)/include
+
+ifeq ($(filter /%,$(src)),)
+KSU_KERNEL_DIR := $(srctree)/$(src)
+else
+KSU_KERNEL_DIR := $(src)
+endif
+
+ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include
 
 ccflags-y += -DKSU_VERSION=32447
 
