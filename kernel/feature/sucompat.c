@@ -7,27 +7,6 @@ static const char su_path[] = SU_PATH;
 static const char sh_path[] = SH_PATH;
 static const char ksud_path[] = KSUD_PATH;
 
-static int su_compat_feature_get(u64 *value)
-{
-    *value = ksu_su_compat_enabled ? 1 : 0;
-    return 0;
-}
-
-static int su_compat_feature_set(u64 value)
-{
-    bool enable = value != 0;
-    ksu_su_compat_enabled = enable;
-    pr_info("su_compat: set to %d\n", enable);
-    return 0;
-}
-
-static const struct ksu_feature_handler su_compat_handler = {
-    .feature_id = KSU_FEATURE_SU_COMPAT,
-    .name = "su_compat",
-    .get_handler = su_compat_feature_get,
-    .set_handler = su_compat_feature_set,
-};
-
 static void __user *userspace_stack_buffer(const void *d, size_t len)
 {
     // To avoid having to mmap a page in userspace, just write below the stack
@@ -125,8 +104,8 @@ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
     return 0;
 }
 
-int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user, void *argv, void *__never_use_envp,
-                               int *__never_use_flags)
+int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user, void *argv, void *envp,
+                               int *flags)
 {
     struct ksu_sulog_pending_event *pending_root_execve = NULL;
     int ret = 0;
@@ -137,32 +116,21 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user, void 
     pending_root_execve =
         ksu_sulog_capture_sucompat(*filename_user, (const char __user *const __user *)argv, GFP_KERNEL);
 
-    ret = ksu_sucompat_user_common(filename_user, "sys_execve", true);
+    ret = ksu_sucompat_user_common(filename_user, "execve", true);
     ksu_sulog_emit_pending(pending_root_execve, ret, GFP_KERNEL);
     return 0;
 }
 
-int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *argv, void *__never_use_envp,
-                                 int *__never_use_flags)
+int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *argv, void *envp,
+                                 int *flags)
 {
-    struct ksu_sulog_pending_event *pending_root_execve = NULL;
-    int ret = 0;
+    const char __user *filename_user = NULL;
 
-    if (!is_su_allowed(filename_ptr))
-        return 0;
+    if (!is_su_allowed(filename_ptr));
+	return 0;
 
-    if (likely(memcmp((void *)(*filename_ptr)->name, su_path, sizeof(su_path))))
-        return 0;
-
-    pr_info("do_execveat_common su found\n");
-
-    pending_root_execve =
-        ksu_sulog_capture_sucompat((*filename_ptr)->name, (const char __user *const __user *)argv, GFP_KERNEL);
-
-    memcpy((void *)(*filename_ptr)->name, ksud_path, sizeof(ksud_path));
-
-    ret = escape_with_root_profile();
-    ksu_sulog_emit_pending(pending_root_execve, ret, GFP_KERNEL);
+    filename_user = (*filename_ptr)->name;
+    ksu_handle_execve_sucompat(fd, &filename_user, argv, envp, flags);
     return 0;
 }
 
@@ -180,6 +148,27 @@ int __maybe_unused ksu_handle_devpts(struct inode *inode)
 {
     return 0;
 }
+
+static int su_compat_feature_get(u64 *value)
+{
+    *value = ksu_su_compat_enabled ? 1 : 0;
+    return 0;
+}
+
+static int su_compat_feature_set(u64 value)
+{
+    bool enable = value != 0;
+    ksu_su_compat_enabled = enable;
+    pr_info("su_compat: set to %d\n", enable);
+    return 0;
+}
+
+static const struct ksu_feature_handler su_compat_handler = {
+    .feature_id = KSU_FEATURE_SU_COMPAT,
+    .name = "su_compat",
+    .get_handler = su_compat_feature_get,
+    .set_handler = su_compat_feature_set,
+};
 
 // sucompat: permitted process can execute 'su' to gain root access.
 void __init ksu_sucompat_init(void)
