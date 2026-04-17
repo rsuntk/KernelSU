@@ -17,6 +17,15 @@ config KSU_LSM_SECURITY_HOOKS
 	  Disabling this is mostly useful for non-ARM64 with kernel > 6.8.
 	  Make sure to implement manual hooks on security/security.c.
 
+config KSU_ENABLE_FULL_UID_CHECKS
+	bool "perform full uid checks (reduced performance)"
+	depends on KSU
+	default n
+	help
+	  Validate every non-root UID against the allowlist. When disabled, only shell (2000)
+	  is checked. Recommended for permissive selinux / seccomp disabled scenarios.
+	  Enable for extended security; keep disabled for performance.
+
 config KSU_THRONE_TRACKER_ALWAYS_THREADED
 	bool "Always run throne tracker in a kthread"
 	depends on KSU
