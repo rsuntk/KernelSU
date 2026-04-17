@@ -116,6 +116,10 @@ static int apply_kernelsu_rules_fn(void *ptr)
 	// our ksud triggered by init
 	ksu_allow(db, "init", KERNEL_SU_DOMAIN, ALL, ALL);
 
+	// restored from https://github.com/tiann/KernelSU/pull/3031 
+	ksu_allow(db, "init", "adb_data_file", "file", ALL);
+	ksu_allow(db, "init", "adb_data_file", "dir", ALL); // #1289
+
 	// copied from Magisk rules
 	// suRights
 	ksu_allow(db, "servicemanager", KERNEL_SU_DOMAIN, "dir", "search");
