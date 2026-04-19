@@ -241,8 +241,9 @@ __weak void groups_sort(struct group_info *group_info)
     ({                                                                                                                 \
         typeof(a) _a = (a);                                                                                            \
         typeof(b) _b = (b);                                                                                            \
-        *(d) = _a + _b;                                                                                                \
-        *(d) < _a;                                                                                                     \
+        typeof(*(d)) _res = _a + _b;                                                                                   \
+        *(d) = _res;                                                                                                   \
+        _res < _a;                                                                                                     \
     })
 #endif
 
