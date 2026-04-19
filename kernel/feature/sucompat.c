@@ -184,7 +184,7 @@ int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv, voi
 #ifdef CONFIG_KSU_FEATURE_ADBROOT
     int ret = 0;
     if (current_uid().val != 1 && is_init(get_current_cred())) {
-        ret = ksu_adb_root_handle_execve_manual(filename, (struct user_arg_ptr *)envp);
+        ret = ksu_adb_root_handle_execve_manual((*filename_ptr)->name, (struct user_arg_ptr *)envp);
         if (ret) {
             pr_err("adb root failed: %d\n", (int)ret);
         }
