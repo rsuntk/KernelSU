@@ -40,6 +40,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberContainedSearchBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.pointerInput
@@ -77,6 +79,7 @@ fun SearchAppBar(
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
+    val scaledDensity = LocalDensity.current
     val interactionSource = remember { MutableInteractionSource() }
 
     val hasFocusReassignBug = Build.VERSION.SDK_INT <= 27
@@ -171,36 +174,37 @@ fun SearchAppBar(
         } else {
             Modifier
         }
-
-        SearchBarDefaults.InputField(
-            modifier = expandOnTapModifier.focusRequester(focusRequester),
-            enabled = isInputFieldEnabled,
-            textFieldState = textFieldState,
-            searchBarState = searchBarState,
-            onSearch = {
-                focusManager.clearFocus()
-                keyboardController?.hide()
-            },
-            leadingIcon = {
-                if (isSearchExpanded) {
-                    IconButton(
-                        onClick = { collapseAndClear() },
-                        content = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
-                    )
-                } else {
-                    Icon(Icons.Filled.Search, null)
-                }
-            },
-            trailingIcon = {
-                if (isSearchExpanded && currentQuery.isNotEmpty()) {
-                    IconButton(
-                        onClick = { clearSearchText() },
-                        content = { Icon(Icons.Filled.Close, null) }
-                    )
-                }
-            },
-            interactionSource = interactionSource
-        )
+        CompositionLocalProvider(LocalDensity provides scaledDensity) {
+            SearchBarDefaults.InputField(
+                modifier = expandOnTapModifier.focusRequester(focusRequester),
+                enabled = isInputFieldEnabled,
+                textFieldState = textFieldState,
+                searchBarState = searchBarState,
+                onSearch = {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                },
+                leadingIcon = {
+                    if (isSearchExpanded) {
+                        IconButton(
+                            onClick = { collapseAndClear() },
+                            content = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
+                        )
+                    } else {
+                        Icon(Icons.Filled.Search, null)
+                    }
+                },
+                trailingIcon = {
+                    if (isSearchExpanded && currentQuery.isNotEmpty()) {
+                        IconButton(
+                            onClick = { clearSearchText() },
+                            content = { Icon(Icons.Filled.Close, null) }
+                        )
+                    }
+                },
+                interactionSource = interactionSource
+            )
+        }
     }
 
     Surface {

@@ -358,31 +358,33 @@ private fun ThemePreviewCard(
     val screenRatio = screenWidth / screenHeight
     val dynamicColor = keyColor == 0
 
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val baseScheme = if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            rememberDynamicColorScheme(
-                seedColor = Color.Unspecified,
-                isDark = isDark,
-                style = paletteStyle,
-                specVersion = colorSpec,
-                primary = baseScheme.primary,
-                secondary = baseScheme.secondary,
-                tertiary = baseScheme.tertiary,
-                neutral = baseScheme.surface,
-                neutralVariant = baseScheme.surfaceVariant,
-                error = baseScheme.error
-            )
+    val colorScheme = if (dynamicColor) {
+        val baseScheme = when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            else ->
+                if (isDark) darkColorScheme() else expressiveLightColorScheme()
         }
-        !dynamicColor -> rememberDynamicColorScheme(
+        rememberDynamicColorScheme(
+            seedColor = Color.Unspecified,
+            isDark = isDark,
+            style = paletteStyle,
+            specVersion = colorSpec,
+            primary = baseScheme.primary,
+            secondary = baseScheme.secondary,
+            tertiary = baseScheme.tertiary,
+            neutral = baseScheme.surface,
+            neutralVariant = baseScheme.surfaceVariant,
+            error = baseScheme.error
+        )
+    } else {
+        rememberDynamicColorScheme(
             seedColor = Color(keyColor),
             isDark = isDark,
             style = paletteStyle,
             specVersion = colorSpec,
         )
-        else -> {
-            if (isDark) darkColorScheme() else expressiveLightColorScheme()
-        }
+
     }
 
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
@@ -485,6 +487,7 @@ private fun ThemePreviewCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ColorButtonMaterial(
     color: Color,
@@ -497,23 +500,24 @@ private fun ColorButtonMaterial(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val colorScheme = if (color == Color.Unspecified) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val baseScheme = if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            rememberDynamicColorScheme(
-                seedColor = Color.Unspecified,
-                isDark = isDark,
-                style = paletteStyle,
-                specVersion = colorSpec,
-                primary = baseScheme.primary,
-                secondary = baseScheme.secondary,
-                tertiary = baseScheme.tertiary,
-                neutral = baseScheme.surface,
-                neutralVariant = baseScheme.surfaceVariant,
-                error = baseScheme.error
-            )
-        } else {
-            MaterialTheme.colorScheme
+        val baseScheme = when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            else ->
+                if (isDark) darkColorScheme() else expressiveLightColorScheme()
         }
+        rememberDynamicColorScheme(
+            seedColor = Color.Unspecified,
+            isDark = isDark,
+            style = paletteStyle,
+            specVersion = colorSpec,
+            primary = baseScheme.primary,
+            secondary = baseScheme.secondary,
+            tertiary = baseScheme.tertiary,
+            neutral = baseScheme.surface,
+            neutralVariant = baseScheme.surfaceVariant,
+            error = baseScheme.error
+        )
     } else {
         rememberDynamicColorScheme(
             seedColor = color,

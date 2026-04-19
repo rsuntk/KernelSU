@@ -32,35 +32,34 @@ fun MaterialKernelSUTheme(
     val colorStyle = appSettings.paletteStyle
     val colorSpec = appSettings.colorSpec
 
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val baseScheme = if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            rememberDynamicColorScheme(
-                seedColor = Color.Unspecified,
-                isDark = darkTheme,
-                isAmoled = amoledMode,
-                style = colorStyle,
-                specVersion = colorSpec,
-                primary = baseScheme.primary,
-                secondary = baseScheme.secondary,
-                tertiary = baseScheme.tertiary,
-                neutral = baseScheme.surface,
-                neutralVariant = baseScheme.surfaceVariant,
-                error = baseScheme.error
-            )
+    val colorScheme = if (dynamicColor) {
+        val baseScheme = when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            else ->
+                if (darkTheme) darkColorScheme() else expressiveLightColorScheme()
         }
-        !dynamicColor -> {
-            rememberDynamicColorScheme(
-                seedColor = Color(appSettings.keyColor),
-                isDark = darkTheme,
-                isAmoled = amoledMode,
-                style = colorStyle,
-                specVersion = colorSpec,
-            )
-        }
-        else -> {
-            if (darkTheme) darkColorScheme() else expressiveLightColorScheme()
-        }
+        rememberDynamicColorScheme(
+            seedColor = baseScheme.primary,
+            isDark = darkTheme,
+            isAmoled = amoledMode,
+            style = colorStyle,
+            specVersion = colorSpec,
+            primary = baseScheme.primary,
+            secondary = baseScheme.secondary,
+            tertiary = baseScheme.tertiary,
+            neutral = baseScheme.surface,
+            neutralVariant = baseScheme.surfaceVariant,
+            error = baseScheme.error
+        )
+    } else {
+        rememberDynamicColorScheme(
+            seedColor = Color(appSettings.keyColor),
+            isDark = darkTheme,
+            isAmoled = amoledMode,
+            style = colorStyle,
+            specVersion = colorSpec,
+        )
     }
 
     LaunchedEffect(darkTheme) {
