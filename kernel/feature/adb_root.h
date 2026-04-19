@@ -5,10 +5,8 @@
 void ksu_adb_root_init(void);
 void ksu_adb_root_exit(void);
 #else
-void ksu_adb_root_init(void)
-{
-} // no-op
-void ksu_adb_root_exit(void)
-{
-} // no-op
+void ksu_adb_root_init(void) { } // no-op
+void ksu_adb_root_exit(void) { } // no-op
+#endif
+
 #endif
