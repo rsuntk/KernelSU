@@ -125,15 +125,11 @@ int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
     return 0;
 }
 
-int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user, void *argv, void *envp,
+int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user, void *argv, void *__never_use_envp,
                                int *__never_use_flags)
 {
     struct ksu_sulog_pending_event *pending_root_execve = NULL;
     int ret = 0;
-
-#ifdef CONFIG_KSU_FEATURE_ADBROOT
-    ksu_adb_root_handle_execve(filename_user, (void ***)envp);
-#endif
 
     if (!is_su_allowed(filename_user))
         return 0;
@@ -146,15 +142,11 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user, void 
     return 0;
 }
 
-int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *argv, void *envp,
+int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *argv, void *__never_use_envp,
                                  int *__never_use_flags)
 {
     struct ksu_sulog_pending_event *pending_root_execve = NULL;
     int ret = 0;
-
-#ifdef CONFIG_KSU_FEATURE_ADBROOT
-    ksu_adb_root_handle_execveat((void *)*filename_ptr, envp);
-#endif
 
     if (!is_su_allowed(filename_ptr))
         return 0;
@@ -189,6 +181,12 @@ no_ksud:
 extern bool ksu_execveat_hook __read_mostly;
 int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv, void *envp, int *flags)
 {
+#ifdef CONFIG_KSU_FEATURE_ADBROOT
+    int ret = ksu_adb_root_handle_execve_manual(filename, (struct user_arg_ptr *)envp);
+    if (ret) {
+        pr_err("adb root failed: %d\n", (int)ret);
+    }
+#endif
     if (unlikely(ksu_execveat_hook)) {
         return ksu_handle_execveat_ksud(fd, filename_ptr, argv, envp, flags);
     }
