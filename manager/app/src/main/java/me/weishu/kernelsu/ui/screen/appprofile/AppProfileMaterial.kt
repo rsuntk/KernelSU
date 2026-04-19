@@ -162,7 +162,6 @@ private fun AppProfileInner(
     onManageTemplate: () -> Unit = {},
     onProfileChange: (Natives.Profile) -> Unit,
 ) {
-    val haptic = LocalHapticFeedback.current
     val isRootGranted = profile.allowSu
     val userId = appUid / 100000
     val appId = appUid % 100000
@@ -333,7 +332,7 @@ private fun AppProfileInner(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun TopBar(
     onBack: () -> Unit,
