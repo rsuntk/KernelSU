@@ -1,18 +1,15 @@
-static bool ksu_adb_root __read_mostly = false;
+bool ksu_adb_root __read_mostly = false;
 
-static long is_exec_adbd(const char __user **filename_user)
+static const char kAdbd[] = "/adbd";
+static const size_t kAdbdLen = sizeof(kAdbd) - 1;
+
+static inline long is_exec_adbd(const char *filename)
 {
-    // should be bigger than `/apex/com.android.adbd/bin/adbd`
-    char buf[40] = { 0 };
-    size_t copysize = sizeof("/apex/com.android.adbd/bin/adbd");
+    size_t len = strlen(filename);
 
-    if (!!copy_from_user(buf, *filename_user, copysize))
+    if (len < kAdbdLen || memcmp(filename + len - kAdbdLen, kAdbd, kAdbdLen) != 0) {
         return 0;
-
-    if (!!endswith(buf, "/adbd"))
-        return 0;
-
-    pr_info("%s: adbd: %s \n", __func__, buf);
+    }
 
     return 1;
 }
@@ -46,23 +43,25 @@ static long setup_ld_preload(void ***envp_arg)
     static const size_t kPtrSize = sizeof(unsigned long);
     unsigned long stackp = current_user_stack_pointer();
     unsigned long envp, ld_preload_p, ld_library_path_p;
-    unsigned long *envp_p = (uintptr_t)envp_arg;
+
+    unsigned long *envp_p = (unsigned long *)envp_arg;
     unsigned long *tmp_env_p = NULL, *tmp_env_p2 = NULL;
     size_t env_count = 0, total_size;
     long ret;
 
-    envp = (char __user **)untagged_addr((unsigned long)*envp_p);
+    envp = (unsigned long)untagged_addr((unsigned long)*envp_p);
 
-    ld_preload_p = stackp =
-        ALIGN_DOWN(stackp - sizeof(kLdPreload), 8); // 2 words on 32-bit, 32-on-64 its gonna be fine dw.
-    ret = copy_to_user(ld_preload_p, kLdPreload, sizeof(kLdPreload));
+    ld_preload_p = stackp = ALIGN_DOWN(stackp - sizeof(kLdPreload), 8);
+
+    ret = copy_to_user((void __user *)ld_preload_p, kLdPreload, sizeof(kLdPreload));
     if (ret != 0) {
         pr_warn("write ld_preload when adb_root_handle_execve failed: %ld\n", ret);
         return -EFAULT;
     }
 
     ld_library_path_p = stackp = ALIGN_DOWN(stackp - sizeof(kLdLibraryPath), 8);
-    ret = copy_to_user(ld_library_path_p, kLdLibraryPath, sizeof(kLdLibraryPath));
+
+    ret = copy_to_user((void __user *)ld_library_path_p, kLdLibraryPath, sizeof(kLdLibraryPath));
     if (ret != 0) {
         pr_warn("write ld_library_path when adb_root_handle_execve failed: %ld\n", ret);
         return -EFAULT;
@@ -76,7 +75,9 @@ static long setup_ld_preload(void ***envp_arg)
             goto out_release_env_p;
         }
         tmp_env_p = tmp_env_p2;
-        ret = copy_from_user(&tmp_env_p[env_count], envp + env_count * kPtrSize, kReadEnvBatch * kPtrSize);
+
+        ret = copy_from_user(&tmp_env_p[env_count], (const void __user *)(envp + env_count * kPtrSize),
+                             kReadEnvBatch * kPtrSize);
         if (ret < 0) {
             pr_warn("Access envp when adb_root_handle_execve failed: %ld\n", ret);
             ret = -EFAULT;
@@ -115,7 +116,8 @@ static long setup_ld_preload(void ***envp_arg)
     total_size = env_count * kPtrSize;
 
     stackp -= total_size;
-    ret = copy_to_user(stackp, tmp_env_p, total_size);
+
+    ret = copy_to_user((void __user *)stackp, tmp_env_p, total_size);
     if (ret != 0) {
         pr_err("copy new env failed: %ld\n", ret);
         ret = -EFAULT;
@@ -133,84 +135,35 @@ out_release_env_p:
     return ret;
 }
 
-__attribute__((cold)) static noinline long do_ksu_adb_root_handle_execve(const char __user **filename_user,
-                                                                         void ***envp)
+static long do_ksu_adb_root_handle_execve(const char *filename, struct user_arg_ptr *envp)
 {
-    if (likely(!is_exec_adbd(filename_user)))
+    if (likely(is_exec_adbd(filename) != 1)) {
         return 0;
+    }
 
-    if (unlikely(!is_libadbroot_ok()))
+    if (unlikely(is_libadbroot_ok() != 1)) {
         return 0;
+    }
 
-    long ret = setup_ld_preload(envp);
-    if (ret)
+    long ret = setup_ld_preload((void ***)&(envp->ptr.native));
+    if (ret) {
         return ret;
+    }
 
     pr_info("escape to root for adb\n");
     escape_to_root_for_adb_root();
-    escape_with_root_profile(); // why is this needed for 3.x?
     return 0;
 }
 
-// sys_execve, syscall hooks
-static __always_inline long ksu_adb_root_handle_execve(const char __user **filename_user, void ***envp)
+long ksu_adb_root_handle_execve_manual(const char *filename, struct user_arg_ptr *envp)
 {
-    if (likely(!ksu_adb_root))
-        return 0;
+    if (!filename) {
+	return -EINVAL;
+    }
 
-    if (likely(!!current->seccomp.mode))
-        return 0;
-
-    do_ksu_adb_root_handle_execve(filename_user, envp);
-
-    return 0;
-}
-
-__attribute__((cold)) static noinline long do_ksu_adb_root_handle_execveat(char *filename, void *envp_in)
-{
-    if (!!endswith(filename, "/adbd"))
-        return 0;
-
-    if (unlikely(!is_libadbroot_ok()))
-        return 0;
-
-    struct user_arg_ptr *envp = (struct user_arg_ptr *)envp_in;
-
-    void ***envp_addr = (void ***)&envp->ptr.native;
-#ifdef CONFIG_COMPAT
-    if (unlikely(envp->is_compat))
-        envp_addr = (void ***)&envp->ptr.compat;
-#endif
-
-    pr_info("%s: envp 0x%lx \n", __func__, (uintptr_t)*envp_addr);
-
-    long ret = setup_ld_preload(envp_addr);
-    if (ret)
-        return ret;
-
-    pr_info("escape to root for adb\n");
-    escape_to_root_for_adb_root();
-    escape_with_root_profile(); // why is this needed?
-    return 0;
-}
-
-// do_execve, do_execve_common, do_execveat_common
-static __always_inline long ksu_adb_root_handle_execveat(char *filename, void *envp_in)
-{
-    if (likely(!ksu_adb_root))
-        return 0;
-
-    if (likely(!!current->seccomp.mode))
-        return 0;
-
-    if (!filename)
-        return 0;
-
-    if (!envp_in)
-        return 0;
-
-    do_ksu_adb_root_handle_execveat(filename, envp_in);
-
+    if (unlikely(ksu_adb_root)) {
+        return do_ksu_adb_root_handle_execve(filename, envp);
+    }
     return 0;
 }
 
@@ -223,11 +176,7 @@ static int kernel_adb_root_feature_get(u64 *value)
 static int kernel_adb_root_feature_set(u64 value)
 {
     bool enable = value != 0;
-    if (enable) {
-        ksu_adb_root = true;
-    } else {
-        ksu_adb_root = false;
-    }
+    ksu_adb_root = enable;
     pr_info("adb_root: set to %d\n", enable);
     return 0;
 }
