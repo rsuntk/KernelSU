@@ -135,7 +135,7 @@ int ksu_handle_execve_sucompat(int *fd, const char __user **filename_user, void 
         return 0;
 
     pending_root_execve =
-        ksu_sulog_capture_sucompat(*filename_user, (const char __user *const __user *)argv, GFP_KERNEL);
+        ksu_sulog_capture_sucompat(*filename_user, *((struct user_arg_ptr *)argv), GFP_KERNEL);
 
     ret = ksu_sucompat_user_common(filename_user, "sys_execve", true);
     ksu_sulog_emit_pending(pending_root_execve, ret, GFP_KERNEL);
@@ -155,7 +155,7 @@ int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *
         return 0;
 
     pending_root_execve =
-        ksu_sulog_capture_sucompat((*filename_ptr)->name, (const char __user *const __user *)argv, GFP_KERNEL);
+        ksu_sulog_capture_sucompat((*filename_ptr)->name, *((struct user_arg_ptr *)argv), GFP_KERNEL);
 
     ret = escape_with_root_profile();
     ksu_sulog_emit_pending(pending_root_execve, ret, GFP_KERNEL);
@@ -182,14 +182,19 @@ extern bool ksu_execveat_hook __read_mostly;
 int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv, void *envp, int *flags)
 {
 #ifdef CONFIG_KSU_FEATURE_ADBROOT
-    int ret = ksu_adb_root_handle_execve_manual(filename, (struct user_arg_ptr *)envp);
-    if (ret) {
-        pr_err("adb root failed: %d\n", (int)ret);
+    int ret = 0;
+    if (current_uid().val != 1 && is_init(get_current_cred())) {
+        ret = ksu_adb_root_handle_execve_manual(filename, (struct user_arg_ptr *)envp);
+        if (ret) {
+            pr_err("adb root failed: %d\n", (int)ret);
+        }
     }
 #endif
+
     if (unlikely(ksu_execveat_hook)) {
         return ksu_handle_execveat_ksud(fd, filename_ptr, argv, envp, flags);
     }
+
     return ksu_handle_execveat_sucompat(fd, filename_ptr, argv, envp, flags);
 }
 
