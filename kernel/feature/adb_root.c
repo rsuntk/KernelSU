@@ -166,18 +166,6 @@ static __always_inline long ksu_adb_root_handle_execve(const char __user **filen
     return 0;
 }
 
-struct user_arg_ptr {
-#ifdef CONFIG_COMPAT
-    bool is_compat;
-#endif
-    union {
-        const char __user *const __user *native;
-#ifdef CONFIG_COMPAT
-        const compat_uptr_t __user *compat;
-#endif
-    } ptr;
-};
-
 __attribute__((cold)) static noinline long do_ksu_adb_root_handle_execveat(char *filename, void *envp_in)
 {
     if (!!endswith(filename, "/adbd"))
