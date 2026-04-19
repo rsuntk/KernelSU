@@ -9,6 +9,7 @@ else
 KSU_KERNEL_DIR := $(src)
 endif
 
+$(info -- KernelSU: Multi-managers: RKSU, MKSU, Official KernelSU, KowSU, KSUN, WKSU)
 ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include
 
 ccflags-y += -DKSU_VERSION=32473
