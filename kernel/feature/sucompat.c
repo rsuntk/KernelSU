@@ -1,3 +1,9 @@
+#if defined(CONFIG_KSU_TAMPER_SYSCALL_TABLE) || defined(CONFIG_KSU_HACK_ARM64_BRANCH_LINK)
+#define SUCOMPAT_HOOK_TYPE static __always_inline int
+#else
+#define SUCOMPAT_HOOK_TYPE int
+#endif
+
 #define SU_PATH "/system/bin/su"
 #define SH_PATH "/system/bin/sh"
 
@@ -343,28 +349,28 @@ static __always_inline void ksu_sucompat_user_common(const char __user **filenam
 }
 
 // sys_faccessat
-int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode, int *flags)
+SUCOMPAT_HOOK_TYPE ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode, int *flags)
 {
 	ksu_sucompat_user_common(filename_user, "sys_faccessat");
 	return 0;
 }
 
 // sys_newfstatat, sys_fstat64
-int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
+SUCOMPAT_HOOK_TYPE ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags)
 {
 	ksu_sucompat_user_common(filename_user, "sys_newfstatat");
 	return 0;
 }
 
 // sys_execve, compat_sys_execve
-int ksu_handle_sys_execve(const char __user **filename_user, void *argv, void *envp)
+SUCOMPAT_HOOK_TYPE ksu_handle_sys_execve(const char __user **filename_user, void *argv, void *envp)
 {
 	ksu_sucompat_user_execve(filename_user, argv, envp, "sys_execve");
 	return 0;
 }
 
 // sys_execveat, compat_sys_execveat
-int ksu_handle_sys_execveat(int *fd, const char __user **filename_user, void *argv, void *envp, int *flags)
+SUCOMPAT_HOOK_TYPE ksu_handle_sys_execveat(int *fd, const char __user **filename_user, void *argv, void *envp, int *flags)
 {
 	ksu_sucompat_user_execve(filename_user, argv, envp, "sys_execveat");
 	return 0;
@@ -432,7 +438,7 @@ static __always_inline void ksu_sucompat_kernel_execve(int *restrict fd, void **
 }
 
 struct filename; // take note: struct filename *filename, for do_execveat_common / do_execve_common on >= 3.14
-int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv, void *envp, int *flags)
+SUCOMPAT_HOOK_TYPE ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv, void *envp, int *flags)
 {
 	void *struct_filename = *(void **)filename_ptr;
 	if (IS_ERR(struct_filename)) // see getname_flags
@@ -449,7 +455,7 @@ int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv, voi
 }
 
 // take note: char *filename, for do_execve_common on < 3.14
-int ksu_legacy_execve_sucompat(const char **filename_ptr, void *argv, void *envp)
+SUCOMPAT_HOOK_TYPE ksu_legacy_execve_sucompat(const char **filename_ptr, void *argv, void *envp)
 {
 	ksu_sucompat_kernel_execve((int *)AT_FDCWD, (void **)filename_ptr, argv, envp, nullptr, "do_execve_common");
 	return 0;
