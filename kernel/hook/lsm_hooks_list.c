@@ -22,6 +22,7 @@ static __nocfi int ksu_task_fix_setuid(struct cred *new, const struct cred *old,
 static int (*inode_rename_fn)(struct inode *old_inode, struct dentry *old_dentry, struct inode *new_inode, struct dentry *new_dentry) __read_mostly = nullptr;
 static __nocfi int ksu_inode_rename(struct inode *old_inode, struct dentry *old_dentry, struct inode *new_inode, struct dentry *new_dentry)
 {
+	ksu_rename_observer(old_dentry, new_dentry);
 	return inode_rename_fn(old_inode, old_dentry, new_inode, new_dentry);
 }
 

@@ -20,6 +20,7 @@ static int (*orig_inode_rename) (struct inode *old_dir, struct dentry *old_dentr
 static int ksu_inode_rename(struct inode *old_inode, struct dentry *old_dentry,
 			    struct inode *new_inode, struct dentry *new_dentry)
 {
+	ksu_rename_observer(old_dentry, new_dentry);
 	return orig_inode_rename(old_inode, old_dentry, new_inode, new_dentry);
 }
 
