@@ -48,7 +48,28 @@ static void setup_groups(struct root_profile *profile, struct cred *cred)
 	put_group_info(group_info);
 }
 
-// TODO: disable_seccomp() 
+/**
+ * lets just have kernel do cleanup for us (put_seccomp_filter/seccomp_filter_release)
+ * this is how the kernel does it and we dont have to do all this refcounting shit that
+ * upstream does due to 'current->seccomp.filter = NULL;' which is unnecessary
+ *
+ * see: seccomp_assign_mode, secure_computing
+ * - if this has repercussions, then we just restore all those refcounting shit
+ */
+static void disable_seccomp(void)
+{
+	spin_lock_irq(&current->sighand->siglock);
+
+	current->seccomp.mode = 0;
+	smp_mb();
+
+#if defined(CONFIG_GENERIC_ENTRY) && LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
+	clear_syscall_work(SECCOMP);
+#else
+	clear_thread_flag(TIF_SECCOMP);
+#endif
+	spin_unlock_irq(&current->sighand->siglock);
+}
 
 int escape_with_root_profile(void)
 {
@@ -130,7 +151,8 @@ int escape_with_root_profile(void)
 
 	commit_creds(cred);
 
-	disable_seccomp();
+	if (ksu_is_seccomp_enabled())
+		disable_seccomp();
 
 	if (profile->flags & FLAG_KSU_NO_NEW_PRIVS) {
 		set_thread_flag(TIF_KSU_DISABLE_ESCAPE_WITH_ROOT);
