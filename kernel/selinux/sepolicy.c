@@ -146,6 +146,36 @@ static bool is_redundant_avtab_node(struct avtab_node *node)
 	return node->datum.u.data == 0U;
 }
 
+// 4.1, https://github.com/torvalds/linux/commit/ba39db6e0519aa8362dbda6523ceb69349a18dc3
+// 5.1, https://github.com/torvalds/linux/commit/acdf52d97f824019888422842757013b37441dd1
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 1, 0) || LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0) || defined(KSU_TYPE_VAL_TO_STRUCT) || defined(KSU_TYPE_VAL_TO_STRUCT_ARRAY)
+static inline struct avtab_node *avtab_get_slot(struct avtab *ab, int i)
+{
+	// htable is **
+	// struct avtab_node **htable;
+	return ab->htable[i];
+}
+static inline void avtab_set_slot(struct avtab *ab, int i, struct avtab_node *node)
+{
+	ab->htable[i] = node;
+}
+#else
+static inline struct avtab_node *avtab_get_slot(struct avtab *ab, int i)
+{
+	// htable is **
+	// this can ret NULL!
+	struct avtab_node **p = flex_array_get(ab->htable, i);
+	if (!p)
+		return NULL;
+
+	return *p;
+}
+static inline void avtab_set_slot(struct avtab *ab, int i, struct avtab_node *node)
+{
+	flex_array_put_ptr(ab->htable, i, node, GFP_KERNEL | __GFP_ZERO);
+}
+#endif
+
 static bool remove_avtab_node(struct policydb *db, struct avtab_node *node)
 {
 	int i;
@@ -162,14 +192,14 @@ static bool remove_avtab_node(struct policydb *db, struct avtab_node *node)
 
 	for (i = 0; i < db->te_avtab.nslot; i++) {
 		prev = NULL;
-		for (n = db->te_avtab.htable[i]; n; prev = n, n = n->next) {
+		for (n = avtab_get_slot(&db->te_avtab, i); n; prev = n, n = n->next) {
 			if (n != node)
 				continue;
 
 			if (prev)
 				prev->next = n->next;
 			else
-				db->te_avtab.htable[i] = n->next;
+				avtab_set_slot(&db->te_avtab, i, n->next);
 
 			if (db->te_avtab.nel > 0)
 				db->te_avtab.nel--;
@@ -184,7 +214,7 @@ static bool remove_avtab_node(struct policydb *db, struct avtab_node *node)
 				// data is u32
 				shrink_size += sizeof(n->datum.u.data);
 			n->next = NULL;
-			removed.htable[0] = n;
+			avtab_set_slot(&removed, 0, n);
 			removed.nel = 1;
 			avtab_destroy(&removed);
 			if (db->len >= shrink_size)
