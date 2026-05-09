@@ -57,15 +57,6 @@ config KSU_DEBUG
 	help
 	  Enable KernelSU debug mode.
 
-config KSU_THRONE_TRACKER_ALWAYS_THREADED
-	bool "Always run throne tracker in a kthread"
-	default n
-	help
-	  Enable this option to run throne tracker in a kthread for the first
-	  run, which happens at boot time / decryption stage. This can decrease
-	  boot time, but can cause crowning failure on some FDE/FBEv1 setups.
-	  If unsure, say n.
-
 config KSU_LSM_SECURITY_HOOKS
 	bool "Use LSM security hooks"
         depends on KSU

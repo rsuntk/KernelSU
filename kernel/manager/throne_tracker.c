@@ -388,7 +388,6 @@ start_tt:
 
 void track_throne(bool prune_only)
 {
-#ifndef CONFIG_KSU_THRONE_TRACKER_ALWAYS_THREADED
 	static bool throne_tracker_first_run __read_mostly = true;
 	if (unlikely(throne_tracker_first_run)) {
 		mutex_lock(&throne_tracker_mutex);
@@ -397,7 +396,6 @@ void track_throne(bool prune_only)
 		throne_tracker_first_run = false;
 		return;
 	}
-#endif
 
 	// HACK: force cast prune_only to be a void *
 	kthread_run(throne_tracker_thread, (void *)prune_only, "ksu_throne");
