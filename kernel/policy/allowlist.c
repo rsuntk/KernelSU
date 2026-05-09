@@ -415,7 +415,9 @@ out:
 // us to have our own context. we give it a full escaped-to-root one.
 static int persistent_allow_list_pre(void *data)
 {
+#ifdef CONFIG_KSU_DEBUG
 	pr_info("do_persistent_allow_list: pid: %d started\n", current->pid);
+#endif
 
 	/**
 	 * repurpose the mutex they were holding on ksu_persistent_allow_list_fn

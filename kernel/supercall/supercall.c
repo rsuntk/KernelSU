@@ -1,6 +1,6 @@
 static int anon_ksu_release(struct inode *inode, struct file *filp)
 {
-	pr_info("ksu fd released\n");
+//	pr_info("ksu fd released\n");
 	return 0;
 }
 
@@ -40,17 +40,18 @@ int ksu_install_fd(void)
 
 	// Install fd
 	fd_install(fd, filp);
-
+#ifdef CONFIG_KSU_DEBUG
 	pr_info("ksu fd installed: %d for pid %d\n", fd, current->pid);
-
+#endif
 	return fd;
 }
 
 static inline int ksu_handle_fd_request(void __user *arg4)
 {
 	int fd = ksu_install_fd();
+#ifdef CONFIG_KSU_DEBUG
 	pr_info("[%d] install ksu fd: %d\n", current->pid, fd);
-
+#endif
 	if (copy_to_user(arg4, &fd, sizeof(fd))) {
 		pr_err("install ksu fd reply err\n");
 		close_fd(fd);
@@ -67,10 +68,12 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user 
 
 	// when ternary on fmt?
 	// cold syscall, we can splurge xD
+#ifdef CONFIG_KSU_DEBUG
 	if (magic2 == KSU_INSTALL_MAGIC2)
 		pr_info("sys_reboot: magic: 0x%x id: 0x%x pid: %d comm: %s \n", magic1, magic2, current->pid, current->comm);
 	else
 		pr_info("sys_reboot: magic: 0x%x id: %d pid: %d pid: %s \n", magic1, magic2, current->pid, current->comm);
+#endif
 
 	// arg4 = (unsigned long)PT_REGS_SYSCALL_PARM4(real_regs);
 	// downstream: dereference arg as arg4 so we can be inline to upstream
@@ -205,7 +208,7 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user 
 void __init ksu_supercalls_init(void)
 {
 	ksu_supercall_dump_commands();
-	
+
 	tiny_sulog_init_heap(); // grab heap memory for sulog
 }
 
