@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.compose.compiler) apply false
 }
 
-extra["androidMinSdkVersion"] = 26
+extra["androidMinSdkVersion"] = 25
 extra["androidTargetSdkVersion"] = 37
 extra["androidCompileSdkVersion"] = 37
 extra["androidCompileSdkVersionMinor"] = 0

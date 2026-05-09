@@ -3,6 +3,7 @@ package me.weishu.kernelsu.ui.util
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.Process
 import android.os.UserManager
 import android.util.Log
@@ -158,12 +159,16 @@ object AppIconCache {
             withContext(Dispatchers.IO) {
                 val bitmap = loadIconBitmap(context, applicationInfo, size)
 
-                val gpuBitmap = try {
-                    bitmap.copy(Bitmap.Config.HARDWARE, false)?.also {
-                        bitmap.recycle()
-                    } ?: bitmap.also { it.prepareToDraw() }
-                } catch (e: Exception) {
-                    Log.d(TAG, "Failed to copy bitmap to HARDWARE config", e)
+                val gpuBitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    try {
+                        bitmap.copy(Bitmap.Config.HARDWARE, false)?.also {
+                            bitmap.recycle()
+                        } ?: bitmap.also { it.prepareToDraw() }
+                    } catch (e: Exception) {
+                        Log.d(TAG, "Failed to copy bitmap to HARDWARE config", e)
+                        bitmap.also { it.prepareToDraw() }
+                    }
+                } else {
                     bitmap.also { it.prepareToDraw() }
                 }
 
