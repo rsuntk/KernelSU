@@ -65,4 +65,11 @@ config KSU_LSM_SECURITY_HOOKS
 	  Disabling this is mostly useful for kernel > 6.8.
 	  Make sure to implement manual hooks on security/security.c.
 
+config KSU_TOOLKIT
+	bool "Enable toolkit support"
+	depends on KSU
+	default y
+	help
+	  Enable toolkit support for advanced tweaking.
+
 endmenu

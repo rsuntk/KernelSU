@@ -1,3 +1,5 @@
+#ifdef CONFIG_KSU_TOOLKIT
+
 // half assed ringbuffer
 // 8 bytes
 struct sulog_entry {
@@ -123,3 +125,11 @@ static int send_sulog_dump(void __user *uptr)
 
 	return 0;
 }
+#else
+static void tiny_sulog_init_heap() {} // no-opt
+static void write_sulog(uint8_t sym) {} // no-opt
+static int send_sulog_dump(void __user *uptr)
+{
+	return 0;
+}
+#endif

@@ -66,9 +66,9 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user 
 	if (magic1 != KSU_INSTALL_MAGIC1)
 		return 0;
 
+#ifdef CONFIG_KSU_DEBUG
 	// when ternary on fmt?
 	// cold syscall, we can splurge xD
-#ifdef CONFIG_KSU_DEBUG
 	if (magic2 == KSU_INSTALL_MAGIC2)
 		pr_info("sys_reboot: magic: 0x%x id: 0x%x pid: %d comm: %s \n", magic1, magic2, current->pid, current->comm);
 	else
@@ -84,10 +84,11 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user 
 		return ksu_handle_fd_request(arg4);
 	}
 
+#ifdef CONFIG_KSU_TOOLKIT
 	// only root is allowed for these commands
 	if (current_uid().val != 0)
 		return 0;
-	
+
 	// extensions
 	u64 reply = (u64)*arg;
 
@@ -201,6 +202,7 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user 
 		if (copy_to_user((void __user *)*arg, &reply, sizeof(reply) ))
 			return 0;
 	}
+#endif
 
 	return 0;
 }
