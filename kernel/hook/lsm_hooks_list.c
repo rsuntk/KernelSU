@@ -60,6 +60,64 @@ capability_fn:
 }
 #endif
 
+#define SETPROCATTR_TYPE_task	struct task_struct *p, char *name, void *, size_t
+#define SETPROCATTR_TYPE_name	const char *name, void *, size_t
+#define SETPROCATTR_TYPE_lsm	const char *lsm, const char *name, void *, size_t
+#define SETPROCATTR_TYPE_lsmid	int lsmid, const char *name, void *, size_t
+
+static void *setprocattr_fn __read_mostly = nullptr;
+__overloaded static __nocfi int ksu_setprocattr_new(const char *name, void *value, size_t size)
+{
+	ksu_hide_setprocattr_inline(name, value, size);
+	return ((typeof(ksu_setprocattr_new) *)setprocattr_fn)(name, value, size);
+}
+
+__overloaded static __nocfi int ksu_setprocattr_task(struct task_struct *p, char *name, void *value, size_t size)
+{
+	ksu_hide_setprocattr_inline(name, value, size);
+	return ((typeof(ksu_setprocattr_task) *)setprocattr_fn)(p, name, value, size);
+}
+
+#define ksu_setprocattr_overloaded _Generic(			\
+(security_setprocattr),						\
+	int (*)(SETPROCATTR_TYPE_task)  :ksu_setprocattr_task,	\
+	int (*)(SETPROCATTR_TYPE_name)  :ksu_setprocattr_new, 	\
+	int (*)(SETPROCATTR_TYPE_lsm)   :ksu_setprocattr_new,	\
+	int (*)(SETPROCATTR_TYPE_lsmid) :ksu_setprocattr_new	\
+)
+
+static void *inode_setxattr_fn __read_mostly = nullptr;
+
+struct mnt_idmap;
+#define INODE_SETXATTR_TYPE_idmap	struct mnt_idmap *idmap, struct dentry *dentry, const char *name, const void *value, size_t size, int flags
+__overloaded static __nocfi int ksu_inode_setxattr_idmap(INODE_SETXATTR_TYPE_idmap)
+{
+	ksu_hide_setxattr_inline(name, value, size);
+	return ((typeof(ksu_inode_setxattr_idmap) *)inode_setxattr_fn)(idmap, dentry, name, value, size, flags);
+}
+
+struct user_namespace;
+#define INODE_SETXATTR_TYPE_userns	struct user_namespace *mnt_userns, struct dentry *dentry, const char *name, const void *value, size_t size, int flags
+__overloaded static __nocfi int ksu_inode_setxattr_userns(INODE_SETXATTR_TYPE_userns)
+{
+	ksu_hide_setxattr_inline(name, value, size);
+	return ((typeof(ksu_inode_setxattr_userns) *)inode_setxattr_fn)(mnt_userns, dentry, name, value, size, flags);
+}
+
+#define INODE_SETXATTR_TYPE_legacy	struct dentry *dentry, const char *name, const void *value, size_t size, int flags
+__overloaded static __nocfi int ksu_inode_setxattr_legacy(INODE_SETXATTR_TYPE_legacy)
+{
+	ksu_hide_setxattr_inline(name, value, size);
+	return ((typeof(ksu_inode_setxattr_legacy) *)inode_setxattr_fn)(dentry, name, value, size, flags);
+}
+
+#define ksu_inode_setxattr_overloaded _Generic(				\
+(security_inode_setxattr),						\
+	int (*)(INODE_SETXATTR_TYPE_idmap)  :ksu_inode_setxattr_idmap,	\
+	int (*)(INODE_SETXATTR_TYPE_userns) :ksu_inode_setxattr_userns, \
+	int (*)(INODE_SETXATTR_TYPE_legacy) :ksu_inode_setxattr_legacy 	\
+)
+
 /**
  *
  * Instead of using list/hlist abstractions and shit, since we know these things exist
@@ -228,10 +286,26 @@ static int ksu_restore_bprm_set_creds(void *data)
 }
 #endif
 
+static void ksu_decide_inode_setxattr(bool sh_hooked)
+{
+	if (!sh_hooked)
+		return;
+	LSM_HACK_RESTORE(inode_setxattr);
+}
+static void ksu_decide_setprocattr(bool sh_hooked)
+{
+	if (!sh_hooked)
+		return;
+	LSM_HACK_RESTORE(setprocattr);
+}
+
 static __init void ksu_lsm_hook_init(void)
 {
 	LSM_HACK_INIT(task_fix_setuid, ksu_task_fix_setuid);
 	LSM_HACK_INIT(inode_rename, ksu_inode_rename);
+
+	LSM_HACK_INIT(setprocattr, ksu_setprocattr_overloaded);
+	LSM_HACK_INIT(inode_setxattr, ksu_inode_setxattr_overloaded);
 
 #if !defined(CONFIG_KSU_TAMPER_SYSCALL_TABLE) && !defined(CONFIG_KSU_HACK_ARM64_BRANCH_LINK)
 	LSM_HACK_INIT(file_permission, ksu_file_permission);
@@ -244,3 +318,14 @@ static __init void ksu_lsm_hook_init(void)
 #endif
 
 }
+
+#undef INODE_SETXATTR_TYPE_idmap
+#undef INODE_SETXATTR_TYPE_userns
+#undef INODE_SETXATTR_TYPE_legacy
+#undef ksu_inode_setxattr_overloaded
+
+#undef SETPROCATTR_TYPE_task
+#undef SETPROCATTR_TYPE_name
+#undef SETPROCATTR_TYPE_lsm
+#undef SETPROCATTR_TYPE_lsmid
+#undef ksu_setprocattr_overloaded

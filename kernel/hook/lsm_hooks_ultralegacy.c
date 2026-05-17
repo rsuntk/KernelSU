@@ -15,6 +15,20 @@
 
 static uintptr_t selinux_ops_addr = 0x0;
 
+static int (*orig_setprocattr)(struct task_struct *p, char *name, void *value, size_t size) __read_mostly = nullptr;
+static int ksu_setprocattr(struct task_struct *p, char *name, void *value, size_t size)
+{
+	ksu_hide_setprocattr_inline(name, value, size);
+	return orig_setprocattr(p, name, value, size);
+}
+
+static int (*orig_inode_setxattr)(struct dentry *dentry, const char *name, const void *value, size_t size, int flags) __read_mostly = nullptr;
+static int ksu_inode_setxattr(struct dentry *dentry, const char *name, const void *value, size_t size, int flags)
+{
+	ksu_hide_setxattr_inline(name, value, size);
+	return orig_inode_setxattr(dentry, name, value, size, flags);
+}
+
 static int (*orig_inode_rename) (struct inode *old_dir, struct dentry *old_dentry,
 			     struct inode *new_dir, struct dentry *new_dentry) __read_mostly = nullptr;
 static int ksu_inode_rename(struct inode *old_inode, struct dentry *old_dentry,
@@ -323,6 +337,20 @@ static int ksu_restore_bprm_set_creds(void *data)
 	return 0;
 }
 
+static void ksu_decide_inode_setxattr(bool sh_hooked)
+{
+	if (!sh_hooked)
+		return;
+	LSM_HACK_RESTORE(inode_setxattr);
+}
+
+static void ksu_decide_setprocattr(bool sh_hooked)
+{
+	if (!sh_hooked)
+		return;
+	LSM_HACK_RESTORE(setprocattr);
+}
+
 static inline void ksu_register_lsm_hook(void)
 {
 	LSM_HACK_INIT(task_fix_setuid, ksu_task_fix_setuid);
@@ -330,6 +358,9 @@ static inline void ksu_register_lsm_hook(void)
 
 	LSM_HACK_INIT(bprm_set_creds, ksu_bprm_set_creds);
 	kthread_run(ksu_restore_bprm_set_creds, NULL, "kthread");
+
+	LSM_HACK_INIT(setprocattr, ksu_setprocattr);
+	LSM_HACK_INIT(inode_setxattr, ksu_inode_setxattr);
 
 #if !defined(CONFIG_KSU_TAMPER_SYSCALL_TABLE) && !defined(CONFIG_KSU_HACK_ARM64_BRANCH_LINK)
 	LSM_HACK_INIT(file_permission, ksu_file_permission);
