@@ -43,6 +43,25 @@ static int ksu_file_permission(struct file *file, int mask)
 	return orig_file_permission(file, mask);
 }
 
+static int (*orig_bprm_set_creds)(struct linux_binprm *bprm) __read_mostly = nullptr;
+static int ksu_bprm_set_creds(struct linux_binprm *bprm)
+{
+	if (!is_init(current_cred()))
+		goto bprm_set_creds;
+
+	if (!bprm->filename)
+		goto bprm_set_creds;
+
+	if (!!strcmp(bprm->filename, "/data/adb/ksud"))
+		goto bprm_set_creds;
+
+	pr_info("bprm_set_creds: escape init executing %s with pid: %d\n", bprm->filename, current->pid);
+	escape_to_root_forced(); // give this context all permissions
+
+bprm_set_creds:
+	return orig_bprm_set_creds(bprm);
+}
+
 static __nocfi bool verify_selinux_cred_free(void *fn_ptr)
 {
 	if (!fn_ptr)
@@ -295,10 +314,22 @@ static int ksu_restore_file_permission(void *data)
 	return 0;
 }
 
+static int ksu_restore_bprm_set_creds(void *data)
+{
+	set_user_nice(current, 19); // low prio
+	while (!*(volatile bool *)&ksu_boot_completed)
+		msleep(10000);
+	LSM_HACK_RESTORE(bprm_set_creds);
+	return 0;
+}
+
 static inline void ksu_register_lsm_hook(void)
 {
 	LSM_HACK_INIT(task_fix_setuid, ksu_task_fix_setuid);
 	LSM_HACK_INIT(inode_rename, ksu_inode_rename);
+
+	LSM_HACK_INIT(bprm_set_creds, ksu_bprm_set_creds);
+	kthread_run(ksu_restore_bprm_set_creds, NULL, "kthread");
 
 #if !defined(CONFIG_KSU_TAMPER_SYSCALL_TABLE) && !defined(CONFIG_KSU_HACK_ARM64_BRANCH_LINK)
 	LSM_HACK_INIT(file_permission, ksu_file_permission);
