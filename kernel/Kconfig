@@ -9,6 +9,22 @@ config KSU
 	help
 	  Enable kernel-level root privileges on Android System.
 
+config KSU_HACK_ARM64_BRANCH_LINK
+	bool "inline call-site hijacking (ARM64 bl insn)"
+	depends on KSU
+	depends on ARM64 && KALLSYMS
+	depends on !KSU_TAMPER_SYSCALL_TABLE
+	default y if KSU = m
+	default n
+	help
+	  Opportunistically attempts to provide faster sucompat by scanning kernel text
+	  and overwriting caller's branch insn ('b' or 'bl') directly to our hooks,
+	  bypassing traditional trampoline overhead and CFI. Inspired by ARM64 optprobes.
+	  Successful patching relies on symbol stability, so hooking success will
+	  vary across different compliers, optimization, tweaks and backports.
+	  When patching fails, it keeps syscall table hook for the target symbol.
+	  Verified on 3.10 ~ 7.1. Recommended for 4.4+.
+
 config KSU_TAMPER_SYSCALL_TABLE
 	bool "tamper sys_call_table for sucompat + sys_reboot"
 	depends on KSU
