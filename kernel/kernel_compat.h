@@ -426,6 +426,18 @@ static char *ksu_strchrnul(const char *s, int c)
 #define d_inode(dentry)		((dentry)->d_inode)
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION (5, 16, 0)
+static inline struct file *anon_inode_getfile_unqual(const char *name,
+				const struct file_operations *fops,
+				void *priv, int flags)
+{
+	// mostly an issue on 3.x/4.x with strict compilers, but this is actually < 5.16 
+	// using a function rather than chained macros keeps type-checking
+	return anon_inode_getfile(name, (void *)fops, priv, flags);
+}
+#define anon_inode_getfile(name, fops, priv, flags) anon_inode_getfile_unqual(name, fops, priv, flags)
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0) && !defined(replace_fops)
 #define replace_fops(f, fops)			\
 do {						\

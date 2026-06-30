@@ -52,6 +52,32 @@
 #include "selinux/selinux.h"
 #include "selinux/sepolicy.h"
 
+// syscall table defs and patcher
+#include "downstream/syscall_table_common.h"
+#include "downstream/vmap_patch.h"
+
+#ifdef CONFIG_KALLSYMS
+#include "external/chibihash64.h"
+#include "downstream/kallsyms_common.h"
+#else
+#define find_kernel_symbol_exact(...) ({ 0x0; })
+#define ksu_lookup_kernel_symbols(...) ({ -ENOSYS; })
+#endif
+
+#ifdef CONFIG_ARM64
+#include "downstream/arm64_branch_patch.h"
+#include "downstream/arm64_syscall_table_mirror.h"
+#include "downstream/arm64_tiny_trampoline.h"
+#endif
+
+#ifdef CONFIG_KPROBES
+#include "downstream/kprobes_common.h"
+#endif
+
+#include "downstream/slow_avc_audit_defs.h"
+#include "downstream/tiny_sulog.h"
+#include "downstream/toolkit.h"
+
 // unity build
 #include "policy/allowlist.c"
 #include "policy/app_profile.c"
