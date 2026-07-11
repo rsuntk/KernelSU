@@ -111,13 +111,19 @@ jobs:
       matrix:
         include:
           - target: aarch64-linux-android
+            pack_lkm: true
+            pack_ksuinit: true
           - target: armv7-linux-androideabi
+            pack_lkm: false
+            pack_ksuinit: true
           - target: x86_64-linux-android
+            pack_lkm: false
+            pack_ksuinit: false
     uses: ./.github/workflows/ksud.yml
     with:
       target: ${{ matrix.target }}
-      pack_lkm: true
-      pack_ksuinit: true
+      pack_lkm: ${{ matrix.pack_lkm }}
+      pack_ksuinit: ${{ matrix.pack_ksuinit }}
   
   build-ksud-extra:
     needs: [build-lkm, build-ksuinit]
