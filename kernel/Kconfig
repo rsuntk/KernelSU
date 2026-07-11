@@ -1,7 +1,7 @@
 menu "KernelSU"
 
 config KSU
-	bool "KernelSU function support"
+	tristate "KernelSU function support"
 	depends on !CPU_BIG_ENDIAN
 	depends on SECURITY_SELINUX
 	select SECCOMP
@@ -103,5 +103,12 @@ config KSU_DEBUG
 	default n
 	help
 	  Enable KernelSU debug mode.
+
+config KSU_HEURISTIC_IN_TREE_BUILD
+	bool "heuristic. do NOT touch"
+	depends on KSU
+	default y
+	help
+	  Note: if youre building out-of-tree, configure by editing ksu.c #defines instead.
 
 endmenu

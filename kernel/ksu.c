@@ -1,3 +1,23 @@
+#ifdef MODULE
+#ifndef CONFIG_ARM64
+#error "LKM is only supported on ARM64!"
+#endif
+
+// for OOT builds like on ddk, just enable everything
+#ifndef CONFIG_KSU_HEURISTIC_IN_TREE_BUILD
+	// #define LSM_USES_BRANCH_LINK 1
+	#define CONFIG_KSU_LSM_SECURITY_HOOKS 1
+	#define CONFIG_KSU_HACK_ARM64_BRANCH_LINK 1
+	#define CONFIG_KSU_FEATURE_ADBROOT 1
+	#define CONFIG_KSU_THRONE_TRACKER_ALWAYS_THREADED 1
+#endif // CONFIG_KSU_HEURISTIC_IN_TREE_BUILD
+
+// for in-tree, this has to be detected
+#ifndef CONFIG_KALLSYMS_ALL
+#error "LKM requires KALLSYMS_ALL!"
+#endif
+#endif // MODULE
+
 #include "kernel_includes.h"
 
 // selinux includes
@@ -215,7 +235,68 @@ static int __init kernelsu_init(void)
 	return 0;
 }
 
+#if !defined(MODULE)
 device_initcall(kernelsu_init);
+#else
+
+#ifndef CONFIG_KSU_SHELL_HAS_SU_ALWAYS
+/**
+ * as per tiann/KernelSU ca2799c, lkm is allowed to flip this param post-compile.
+ * however this is also offerred to be overriden by a kconfig. so if kconfig is
+ * enabled, we must compile-out this option.
+ *
+ */
+module_param(allow_shell, bool, 0); 
+#endif
+
+static int __init kernelsu_lkm_init(void)
+{
+	kernelsu_init();
+
+	// list_del(&THIS_MODULE->list);
+	kobject_del(&THIS_MODULE->mkobj.kobj); // tiann/KernelSU fefb02e
+
+	if (current->pid == 1)
+		return 0;
+
+	ksu_late_loaded = true;
+
+	stop_init_rc_hook();
+	apply_kernelsu_rules();
+	cache_sid();
+	setup_ksu_cred();
+	escape_to_root_forced();
+
+	track_throne(false);
+	on_post_fs_data();
+	on_boot_completed();
+
+	ksu_feature_apply_forced();
+	kthread_run(ksu_disable_preinit_branch, nullptr, "kthread");
+
+	if (!!getenforce())
+		return 0;
+	pr_info("Permissive SELinux, enforcing\n");
+	setenforce(true);
+
+	return 0;
+}
+
+static void __exit kernelsu_lkm_exit(void)
+{
+	__builtin_trap();
+	__builtin_unreachable();
+}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+MODULE_IMPORT_NS("VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
+MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+#endif
+
+module_init(kernelsu_lkm_init);
+module_exit(kernelsu_lkm_exit);
+#endif // MODULE
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("weishu");
