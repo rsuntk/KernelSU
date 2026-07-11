@@ -4,12 +4,8 @@ use std::io::{ErrorKind, Write};
 use anyhow::{Context, Result};
 use rustix::fs::{Mode, symlink, unlink};
 use rustix::{
-    fd::AsFd,
     fs::{Access, CWD, FileType, access, makedev, mkdir, mknodat},
-    mount::{
-        FsMountFlags, FsOpenFlags, MountAttrFlags, MoveMountFlags, UnmountFlags, fsconfig_create,
-        fsmount, fsopen, move_mount, unmount,
-    },
+    mount::{UnmountFlags, mount, unmount, MountFlags},
 };
 
 struct AutoUmount {
@@ -31,20 +27,8 @@ fn mount_filesystem(name: &str, mountpoint: &str) -> Result<()> {
         ErrorKind::AlreadyExists => Ok(()),
         _ => Err(err),
     })?;
-    let fs_fd = fsopen(name, FsOpenFlags::FSOPEN_CLOEXEC)?;
-    fsconfig_create(fs_fd.as_fd())?;
-    let mount_fd = fsmount(
-        fs_fd.as_fd(),
-        FsMountFlags::FSMOUNT_CLOEXEC,
-        MountAttrFlags::empty(),
-    )?;
-    move_mount(
-        mount_fd.as_fd(),
-        "",
-        CWD,
-        mountpoint,
-        MoveMountFlags::MOVE_MOUNT_F_EMPTY_PATH,
-    )?;
+    
+    mount(name, mountpoint, name, MountFlags::empty(), "")?;
     Ok(())
 }
 
