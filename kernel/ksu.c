@@ -105,6 +105,19 @@
 #include "sulog/event.c"
 #include "sulog/fd.c"
 
+#ifdef CONFIG_KSU_LSM_SECURITY_HOOKS
+	#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0) || defined(LSM_USES_BRANCH_LINK)
+	#include "hook/lsm_hooks_static.c"
+	#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0)
+	#include "hook/lsm_hooks_list.c"
+	#else
+	#include "hook/lsm_hooks_ultralegacy.c"
+	#endif
+#else
+	#include "hook/lsm_hooks_manual.c"
+#endif
+
+
 #include "selinux/selinux.c"
 #include "selinux/sepolicy.c"
 #include "selinux/rules.c"
@@ -145,6 +158,7 @@ static int __init kernelsu_init(void)
 	ksu_ksud_init();
 	ksu_file_wrapper_init();
 
+	ksu_lsm_hook_init();
 	return 0;
 }
 

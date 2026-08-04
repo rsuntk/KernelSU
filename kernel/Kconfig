@@ -9,6 +9,14 @@ config KSU
 	help
 	  Enable kernel-level root privileges on Android System.
 
+config KSU_LSM_SECURITY_HOOKS
+	bool "Use LSM security hooks"
+	depends on KSU
+	default y
+	help
+	  Disabling this is mostly useful for non-ARM64 with kernel > 6.8.
+	  Make sure to implement manual hooks on security/security.c.
+
 config KSU_NOPRINTK
 	bool "disable ALL dmesg logging"
 	depends on KSU
