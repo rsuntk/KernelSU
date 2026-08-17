@@ -211,7 +211,7 @@ private fun StatusCard(
             else -> Icons.Rounded.Block
         }
         val statusTitle = when {
-            ksuActive -> stringResource(R.string.home_working)
+            ksuActive -> "${stringResource(R.string.home_working)} 🍉"
             notInstalled -> stringResource(R.string.home_not_installed)
             else -> stringResource(R.string.home_unsupported)
         }
