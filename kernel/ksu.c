@@ -102,6 +102,10 @@
 #include "downstream/tiny_sulog.h"
 #include "downstream/toolkit.h"
 
+#ifdef CONFIG_KSU_HOSTSREDIRECT
+#include "downstream/ksu_hostsredirect.h"
+#endif
+
 // unity build
 #include "policy/allowlist.c"
 #include "policy/app_profile.c"

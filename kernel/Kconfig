@@ -63,6 +63,18 @@ config KSU_FEATURE_ADBROOT
 	help
 	  Build KernelSU's adb root feature.
 
+config KSU_HOSTSREDIRECT
+	bool "/system/etc/hosts redirection"
+	depends on KSU
+	depends on (ARM || ARM64)
+	default n
+	help
+	  Kernel-level sys_openat fd redirect targeting /system/etc/hosts to /data/adb/hosts.
+	  Allows hosts file modification without mounting hosts file directly, this is meant to
+	  be used with bindhosts mode 3. If /data/adb/hosts does NOT exist at boot, the syscall
+	  hook is automatically skipped. See like ZN-hostsredirect / APatch hosts file redirect.
+	  If unsure, say n.
+
 config KSU_ENABLE_FULL_UID_CHECKS
 	bool "perform full uid checks (reduced performance)"
 	depends on KSU
