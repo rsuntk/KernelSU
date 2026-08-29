@@ -32,7 +32,7 @@ type PropertyReadCallback = unsafe extern "C" fn(*mut c_void, *const c_char, *co
 
 unsafe extern "C" {
     fn __system_property_find(name: *const c_char) -> *const c_void;
-    fn __system_property_read_callback(
+    fn compat_system_property_read_callback(
         property_info: *const c_void,
         callback: PropertyReadCallback,
         cookie: *mut c_void,
@@ -138,7 +138,7 @@ pub fn getprop(name: &str) -> Option<String> {
 
     let mut value = None;
     unsafe {
-        __system_property_read_callback(
+        compat_system_property_read_callback(
             property_info,
             property_read_callback,
             std::ptr::addr_of_mut!(value).cast(),
