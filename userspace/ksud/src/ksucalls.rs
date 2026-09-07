@@ -66,6 +66,7 @@ extern "C" fn sigsys_handler(
 }
 
 pub fn setup_sigsys_handler() {
+    #[cfg(not(target_arch = "arm"))]
     unsafe {
         let mut sa: libc::sigaction = std::mem::zeroed();
         sa.sa_flags = libc::SA_SIGINFO;
