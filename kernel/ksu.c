@@ -21,6 +21,9 @@
 #include "include/arch.h"
 #include "include/klog.h"
 #include "include/ksu.h"
+
+// kernel compat
+#include "kernel_compat.h"
 #include "include/util.h"
 
 #include "policy/app_profile.h"
