@@ -1,12 +1,15 @@
 #ifndef __KSU_H_UTIL
 #define __KSU_H_UTIL
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0) // ksyscall start
 #if defined(__aarch64__)
 #define KSU_SYS_PREFIX(name) __arm64_sys_##name
 #elif defined(__x86_64__)
 #define KSU_SYS_PREFIX(name) __x64_sys_##name
 #elif defined(__riscv)
 #define KSU_SYS_PREFIX(name) __riscv_sys_##name
+#elif defined(__arm__)
+#define KSU_SYS_PREFIX(name) sys_##name
 #else // wire up your arch here.
 static_assert(1 == 0, "Unsupported architecture!");
 #define KSU_SYS_PREFIX(name) sys_##name
@@ -39,12 +42,54 @@ static_assert(1 == 0, "Unsupported architecture!");
 #define ksyscall_5(name, a, b, c, d, e) __ksyscall(name, a, b, c, d, e, 0)
 #define ksyscall_6(name, a, b, c, d, e, f) __ksyscall(name, a, b, c, d, e, f)
 
+#else /* < 4.19 */
+
+#define KSU_SYS_PREFIX(name) sys_##name
+
+#define ksyscall_0(name) ({						\
+	extern typeof(KSU_SYS_PREFIX(name)) KSU_SYS_PREFIX(name);	\
+	(long)KSU_SYS_PREFIX(name)();					\
+})
+
+#define ksyscall_1(name, a) ({						\
+	extern typeof(KSU_SYS_PREFIX(name)) KSU_SYS_PREFIX(name);	\
+	(long)KSU_SYS_PREFIX(name)(a);					\
+})
+
+#define ksyscall_2(name, a, b) ({					\
+	extern typeof(KSU_SYS_PREFIX(name)) KSU_SYS_PREFIX(name);	\
+	(long)KSU_SYS_PREFIX(name)(a, b);				\
+})
+
+#define ksyscall_3(name, a, b, c) ({					\
+	extern typeof(KSU_SYS_PREFIX(name)) KSU_SYS_PREFIX(name);	\
+	(long)KSU_SYS_PREFIX(name)(a, b, c);				\
+})
+
+#define ksyscall_4(name, a, b, c, d) ({					\
+	extern typeof(KSU_SYS_PREFIX(name)) KSU_SYS_PREFIX(name);	\
+	(long)KSU_SYS_PREFIX(name)(a, b, c, d);				\
+})
+
+#define ksyscall_5(name, a, b, c, d, e) ({				\
+	extern typeof(KSU_SYS_PREFIX(name)) KSU_SYS_PREFIX(name);	\
+	(long)KSU_SYS_PREFIX(name)(a, b, c, d, e);			\
+})
+
+#define ksyscall_6(name, a, b, c, d, e, f) ({				\
+	extern typeof(KSU_SYS_PREFIX(name)) KSU_SYS_PREFIX(name);	\
+	(long)KSU_SYS_PREFIX(name)(a, b, c, d, e, f);			\
+})
+
+#endif /* < 4.19 */
+
 #define __ksyscall_arg_n(_1, _2, _3, _4, _5, _6, _7, N, ...) N
 #define __ksyscall_count_args(...) __ksyscall_arg_n(__VA_ARGS__, 6, 5, 4, 3, 2, 1, 0)
 #define __ksyscall_concat(a, b) a##b
 #define __ksyscall_exp(func, arg) __ksyscall_concat(func, arg)
 #define ksyscall(...) __ksyscall_exp(ksyscall_, __ksyscall_count_args(__VA_ARGS__))(__VA_ARGS__)
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 static void __user *userspace_stack_buffer(const void *d, size_t len)
 {
 	// To avoid having to mmap a page in userspace, just write below the stack
@@ -53,6 +98,32 @@ static void __user *userspace_stack_buffer(const void *d, size_t len)
 
 	return copy_to_user(p, d, len) ? NULL : p;
 }
+#else
+static void __user *userspace_stack_buffer(const void *d, size_t len)
+{
+	if (!current->mm)
+		return nullptr;
+
+	volatile unsigned long start_stack = current->mm->start_stack;
+	unsigned int step = 32;
+	
+start_loop:;
+	char __user *p = (void __user *)(start_stack - step - len);
+
+	if (IS_ENABLED(CONFIG_KSU_DEBUG))
+		pr_info("%s: start_stack: %lx p: %lx len: %zu\n", __func__, start_stack, (unsigned long)p, len );
+
+	if (!copy_to_user(p, d, len))
+		return p;
+
+	step = step + step;
+
+	if (step <= 2048)
+		goto start_loop;
+
+	return nullptr;
+}
+#endif
 
 #define ksu_close_fd(fd) ({ ksyscall(close, fd); })
 
