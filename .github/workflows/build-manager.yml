@@ -112,7 +112,6 @@ jobs:
         include:
           - target: aarch64-linux-android
           - target: x86_64-linux-android
-          - target: riscv64-linux-android
     uses: ./.github/workflows/ksud.yml
     with:
       target: ${{ matrix.target }}
@@ -245,12 +244,6 @@ jobs:
           name: ksud-x86_64-linux-android
           path: artifacts/ksud-x86_64-linux-android
 
-      - name: Download RISC-V ksud
-        uses: actions/download-artifact@v8
-        with:
-          name: ksud-riscv64-linux-android
-          path: artifacts/ksud-riscv64-linux-android
-
       - name: Place manager apk and ksud artifacts
         run: |
           mkdir -p manager/app/build/outputs/apk/release
@@ -260,16 +253,12 @@ jobs:
 
           mkdir -p target/aarch64-linux-android/release
           mkdir -p target/x86_64-linux-android/release
-          mkdir -p target/riscv64-linux-android/release
           ARM64_KSUD=$(find artifacts/ksud-aarch64-linux-android -type f -name ksud | head -n 1)
           X86_64_KSUD=$(find artifacts/ksud-x86_64-linux-android -type f -name ksud | head -n 1)
-          RISCV64_KSUD=$(find artifacts/ksud-riscv64-linux-android -type f -name ksud | head -n 1)
           test -n "$ARM64_KSUD"
           test -n "$X86_64_KSUD"
-          test -n "$RISCV64_KSUD"
           cp -f "$ARM64_KSUD" target/aarch64-linux-android/release/ksud
           cp -f "$X86_64_KSUD" target/x86_64-linux-android/release/ksud
-          cp -f "$RISCV64_KSUD" target/riscv64-linux-android/release/ksud
 
       - name: Prepare signing inputs
         env:
@@ -303,7 +292,6 @@ jobs:
             -t release \
             -a arm64-v8a \
             -a x86_64 \
-            -a riscv64 \
             -K "$SIGN_KEYSTORE_FILE" \
             -A "$SIGN_KEY_ALIAS" \
             -P "$SIGN_KEYSTORE_PASSWORD" \
