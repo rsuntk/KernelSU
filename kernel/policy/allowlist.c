@@ -448,7 +448,9 @@ void ksu_load_allow_list()
 	size_t app_profile_size;
 
 	// load allowlist now!
+	const struct cred *saved = override_creds(ksu_cred);
 	fp = filp_open(KERNEL_SU_ALLOWLIST, O_RDONLY, 0);
+	revert_creds(saved);
 	if (IS_ERR(fp)) {
 		pr_err("load_allow_list open file failed: %ld\n", PTR_ERR(fp));
 		return;
