@@ -94,6 +94,12 @@
 #include "infra/file_wrapper.c"
 #include "infra/event_queue.c"
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0) && defined(CONFIG_KALLSYMS_ALL) && defined(CONFIG_MODULES)
+#define KSU_CAN_USE_MODULE_BLACKLIST
+#include "feature/module_blacklist.h"
+#include "feature/module_blacklist.c"
+#endif
+
 #include "feature/adb_root.c"
 #include "feature/kernel_umount.c"
 #if defined(CONFIG_ARM64) && defined(CONFIG_KALLSYMS)
@@ -189,6 +195,10 @@ static int __init kernelsu_init(void)
 
 #ifdef CONFIG_KSU_HACK_ARM64_BRANCH_LINK
 	ksu_branch_link_patch_init();
+#endif
+
+#ifdef KSU_CAN_USE_MODULE_BLACKLIST
+	ksu_module_blacklist_init(); // Block modules early, before vendor modules are loaded in second stage.
 #endif
 
 	ksu_lsm_hook_init();
