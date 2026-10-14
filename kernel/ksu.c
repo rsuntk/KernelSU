@@ -52,6 +52,10 @@
 #include "selinux/selinux.h"
 #include "selinux/sepolicy.h"
 
+#ifdef CONFIG_KSU_DISABLE_32BIT_HOOKS
+#undef CONFIG_COMPAT
+#endif
+
 // syscall table defs and patcher
 #include "downstream/syscall_table_common.h"
 #include "downstream/vmap_patch.h"

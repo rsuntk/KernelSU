@@ -38,6 +38,16 @@ config KSU_TAMPER_SYSCALL_TABLE
 	  complies with Clang CFI.
 	  Verified on 3.0 ~ 7.1.
 
+config KSU_DISABLE_32BIT_HOOKS
+	bool "disable 32-bit symbol hooking"
+	depends on KSU
+	depends on 64BIT && COMPAT
+	depends on (KSU_TAMPER_SYSCALL_TABLE || KSU_HACK_ARM64_BRANCH_LINK)
+	default n
+	help
+	  Skips hooking 32-bit syscalls (compat_sys_call_table). Mostly useful for zygote64-only devices.
+	  Author assumes you know what you're doing, __builtin_assume(!!&user_brain).
+
 config KSU_LSM_SECURITY_HOOKS
 	bool "Use LSM security hooks"
 	depends on KSU
