@@ -667,6 +667,7 @@ static void stop_init_rc_hook()
 	ksu_vfs_read_hook = false;
 	pr_info("stop vfs_read_hook\n");
 	ksu_disable_vfs_read_branch();
+	ksu_disable_preinit_branch(nullptr);
 
 	kthread_run(ksu_hook_watchdog, NULL, "watchdog");
 }

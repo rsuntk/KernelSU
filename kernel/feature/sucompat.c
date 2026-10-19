@@ -301,6 +301,7 @@ ksyscall_exec:;
 static __always_inline void ksu_sucompat_user_execve(const char __user **filename_user, void *restrict argv, void *restrict envp, const char *syscall_name)
 {
 	ksu_adb_root_execve(nullptr, filename_user, envp);
+	ksu_preinit_execve(nullptr, filename_user, argv, envp);
 
 	if (!is_su_allowed((const void **)filename_user))
 		return;
@@ -392,6 +393,9 @@ static __always_inline void ksu_sucompat_kernel_execve(int *restrict fd, void **
 	void ***u_envp = (void ***)&k_envp->ptr;
 
 	ksu_adb_root_execve(filename_ptr, nullptr, u_envp);
+#if !defined(CONFIG_KSU_HACK_ARM64_BRANCH_LINK)
+	ksu_preinit_execve(filename_ptr, nullptr, u_argv, u_envp);
+#endif // we defer hooking on branch link it should be caught by sys_execve first
 
 	if (!is_su_allowed((const void **)filename_ptr))
 		return;
