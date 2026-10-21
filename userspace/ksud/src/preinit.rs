@@ -121,7 +121,7 @@ fn disk_usage(path: &Path) -> u64 {
 fn available(path: &Path) -> Result<u64> {
     let st = rustix::fs::statvfs(path)
         .with_context(|| format!("Failed to statvfs {}", path.display()))?;
-    Ok(st.f_bavail * st.f_frsize)
+    Ok(st.f_bfree * st.f_frsize)
 }
 
 /// The runner refuses anything that is not owned by root or is writable by group/other.
