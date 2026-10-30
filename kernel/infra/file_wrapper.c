@@ -384,7 +384,45 @@ static const struct dentry_operations ksu_file_wrapper_d_ops = {
 #define ksu_anon_inode_create_getfile_compat(a, b, c, d, e) anon_inode_getfile(a, b, c, d)
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 7, 0) && defined(MODULE)
+static bool use_default_offset __read_mostly = true;
+
+static void test_selinux_blob_size(void)
+{
+	constexpr long compiled_sz = sizeof(struct lsm_blob_sizes);
+	uintptr_t sym_addr = kallsyms_lookup_name("selinux_blob_sizes");
+	if (!sym_addr)
+		return;
+
+	long offset = 0;
+	long runtime_sz = 0;
+	kallsyms_lookup_size_offset(sym_addr, &runtime_sz, &offset);
+	if (!runtime_sz && !offset)
+		return;
+
+	pr_info("%s: compiled: %ld runtime: %ld \n", __func__, compiled_sz, runtime_sz);
+	if (runtime_sz != compiled_sz)
+		use_default_offset = false;
+
+	pr_info("%s: use_default_offset: %d \n", __func__, use_default_offset);
+}
+
+static struct inode_security_struct *ksu_selinux_inode(const struct inode *inode)
+{
+	if (unlikely(!inode->i_security))
+		return NULL;
+
+	if (use_default_offset)
+		return inode->i_security + selinux_blob_sizes.lbs_inode;
+
+	// grab 4th int
+	int *p = (int *)&selinux_blob_sizes;
+	return inode->i_security + p[3];
+}
+#else
+#define test_selinux_blob_size() do { } while (0)
 #define ksu_selinux_inode selinux_inode
+#endif
 
 int ksu_install_file_wrapper(int fd)
 {
@@ -475,4 +513,7 @@ done:
 	return ret;
 }
 
-void __init ksu_file_wrapper_init(void) { }
+void __init ksu_file_wrapper_init(void)
+{
+	test_selinux_blob_size();
+}
