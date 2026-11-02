@@ -30,12 +30,25 @@ static void reset_avc_cache(u32 seqno)
 #if defined(KSU_COMPAT_USE_SELINUX_STATE)
 static struct policydb *get_policydb(void) { return &selinux_state.ss->policydb; }
 static rwlock_t *get_policy_rwlock(void) { return &selinux_state.ss->policy_rwlock; }
+static u32 get_latest_granting_inc(void)
+{
+	selinux_state.ss->latest_granting++;
+	return selinux_state.ss->latest_granting;
+}
 #else /* ! KSU_COMPAT_USE_SELINUX_STATE */
 static struct policydb *get_policydb(void) { return &policydb; }
 static rwlock_t *get_policy_rwlock(void)
 {
 	extern rwlock_t policy_rwlock __weak;
 	return &policy_rwlock;
+}
+static u32 get_latest_granting_inc(void)
+{
+	extern u32 latest_granting __weak;
+	if (!&latest_granting)
+		return 0;	
+	latest_granting++;
+	return latest_granting;
 }
 #endif /* ! KSU_COMPAT_USE_SELINUX_STATE */
 
@@ -53,6 +66,23 @@ static noinline rwlock_t *ksym_get_policy_rwlock(void)
 	return lock;
 }
 #define get_policy_rwlock ksym_get_policy_rwlock
+
+static noinline u32 ksym_get_latest_granting_inc(void)
+{
+	static bool initialized = false;
+	static u32 *granting = nullptr;
+	if (!initialized) {
+		granting = (u32 *)kallsyms_lookup_name("latest_granting");
+		initialized = true;
+	}
+
+	if (!granting)
+		return 0;
+
+	(*granting)++;
+	return *granting;
+}
+#define get_latest_granting_inc ksym_get_latest_granting_inc
 #endif
 
 #endif // < 5.10
@@ -201,7 +231,7 @@ do_stop_machine:
 
 out_flush:
 	smp_mb();
-	reset_avc_cache(0);
+	reset_avc_cache(get_latest_granting_inc());
 #endif
 }
 
@@ -694,7 +724,7 @@ out_done:
 		goto out_free;
 
 	smp_mb();
-	reset_avc_cache(0);
+	reset_avc_cache(get_latest_granting_inc());
 	ret = success_cmd_count;
 
 out_free:
