@@ -303,12 +303,14 @@ static __always_inline void ksu_sucompat_user_execve(const char __user **filenam
 	if (!is_su_allowed((const void **)filename_user))
 		return;
 
+	ksu_sulog_emit_sucompat_pre(nullptr, *filename_user, argv);
 	if (!is_user_filename_su(filename_user))
 		return;
 
 	if (!!escape_with_root_profile())
 		return;
 
+	ksu_sulog_emit_sucompat_post(nullptr, *filename_user, argv);
 	if (!ksyscall_execve_ksud(syscall_name, argv, envp))
 		return;
 
@@ -396,12 +398,14 @@ static __always_inline void ksu_sucompat_kernel_execve(int *restrict fd, void **
 	if (!!flags && !!*flags)
 		return;
 
+	ksu_sulog_emit_sucompat_pre(*filename_ptr, nullptr, u_argv);
 	if (!is_kernel_filename_su((const char **)filename_ptr))
 		return;
 
 	if (!!escape_with_root_profile())
 		return;
 
+	ksu_sulog_emit_sucompat_post(*filename_ptr, nullptr, u_argv);
 	if (!ksyscall_execve_ksud(function_name, u_argv, u_envp))
 		return;
 
