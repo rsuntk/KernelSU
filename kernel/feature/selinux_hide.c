@@ -359,8 +359,12 @@ try_again:
 	goto try_again;
 
 page_ok:
+#if defined(KSU_HAS_ARM64_SELINUX_HIDE)
+	init_arm64_selinux_hide();
+#else
 	ksu_init_hook_sel_handle_status_ops_open();
 	ksu_init_hook_transaction_ops_write();
+#endif
 
 	// selinux_setprocattr hook init is on lsm.
 	

@@ -96,6 +96,9 @@
 
 #include "feature/adb_root.c"
 #include "feature/kernel_umount.c"
+#if defined(CONFIG_ARM64) && defined(CONFIG_KALLSYMS)
+#include "feature/selinux_hide_arm64.c"
+#endif
 #include "feature/selinux_hide.c"
 #include "feature/shell_su_adb_only.c"
 #include "feature/sucompat.c"
